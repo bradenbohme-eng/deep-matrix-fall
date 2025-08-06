@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useMatrixSettings } from '@/contexts/MatrixSettingsContext';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 
@@ -14,6 +15,7 @@ const MATRIX_QUOTES = [
 ];
 
 export default function MatrixHUD() {
+  const { settings } = useMatrixSettings();
   const [currentQuote, setCurrentQuote] = useState(0);
   const [isVisible, setIsVisible] = useState(true);
 
@@ -25,6 +27,8 @@ export default function MatrixHUD() {
     return () => clearInterval(interval);
   }, []);
 
+  if (!settings.showUI) return null;
+
   return (
     <div className="fixed inset-0 pointer-events-none z-30">
       {/* Top HUD */}
@@ -32,7 +36,11 @@ export default function MatrixHUD() {
         <Card className="bg-card/80 backdrop-blur-sm border-primary/30 p-4">
           <div className="text-primary font-mono text-sm">
             <div className="text-primary-glow">MATRIX SIMULATION</div>
-            <div className="text-muted-foreground mt-1">Status: ACTIVE</div>
+            <div className="text-muted-foreground mt-1">
+              Status: {settings.isPaused ? 'PAUSED' : 'ACTIVE'} | 
+              Speed: {settings.globalSpeed}x | 
+              Mode: {settings.show3D ? '3D' : `2D v${settings.currentVersion}`}
+            </div>
           </div>
         </Card>
         
