@@ -72,24 +72,174 @@ const AdvancedNeoChat: React.FC = () => {
     setMemories(prev => [...prev, newMemory].slice(-100)); // Keep last 100 memories
   };
 
-  const simulateHacking = (target: string) => {
-    const hackingSteps = [
-      `Initiating connection to ${target}...`,
-      'Scanning for vulnerabilities...',
-      'Found open ports: 22, 80, 443, 8080',
-      'Attempting SSH brute force...',
-      'Access granted. Escalating privileges...',
-      'Root access obtained.',
-      `Full control of ${target} established.`
-    ];
-    
-    hackingSteps.forEach((step, index) => {
+  const simulateAdvancedSecurity = (tool: string, target: string, args: string[] = []) => {
+    const securityTools = {
+      nmap: {
+        steps: [
+          `Starting Nmap 7.94 ( https://nmap.org ) at ${new Date().toISOString()}`,
+          `Nmap scan report for ${target}`,
+          'Host is up (0.012s latency).',
+          'PORT     STATE SERVICE    VERSION',
+          '21/tcp   open  ftp        vsftpd 3.0.3',
+          '22/tcp   open  ssh        OpenSSH 8.9p1',
+          '80/tcp   open  http       Apache httpd 2.4.52',
+          '443/tcp  open  https      Apache httpd 2.4.52',
+          '3306/tcp open  mysql      MySQL 8.0.33',
+          'Service detection performed. Please report any incorrect results.',
+          `Nmap done: 1 IP address (1 host up) scanned in 15.23 seconds`
+        ],
+        category: 'recon'
+      },
+      metasploit: {
+        steps: [
+          'Starting Metasploit Framework Console...',
+          'msf6 > use exploit/multi/handler',
+          'msf6 exploit(multi/handler) > set payload windows/meterpreter/reverse_tcp',
+          `msf6 exploit(multi/handler) > set LHOST ${target}`,
+          'msf6 exploit(multi/handler) > set LPORT 4444',
+          'msf6 exploit(multi/handler) > exploit',
+          '[*] Started reverse TCP handler on 0.0.0.0:4444',
+          '[*] Sending stage (175686 bytes) to target',
+          '[*] Meterpreter session 1 opened',
+          'meterpreter > getuid',
+          'Server username: NT AUTHORITY\\SYSTEM'
+        ],
+        category: 'exploit'
+      },
+      cobalt: {
+        steps: [
+          'Cobalt Strike 4.9 - Advanced Threat Emulation',
+          'Starting team server...',
+          `Connecting to ${target}:50050`,
+          'Authenticated to team server',
+          'Generating beacon payload...',
+          'Payload: windows/beacon_https/reverse_https',
+          'Initial beacon deployed successfully',
+          'Beacon check-in received from target',
+          'Establishing C2 channel...',
+          'Full C2 established - Target compromised'
+        ],
+        category: 'c2'
+      },
+      bloodhound: {
+        steps: [
+          'BloodHound 4.3.1 - Active Directory Attack Path Analysis',
+          'Connecting to Neo4j database...',
+          'Running SharpHound collector...',
+          'Collecting domain information...',
+          '✓ Domain Controllers: 2 found',
+          '✓ Users: 1,247 enumerated',
+          '✓ Groups: 89 discovered',
+          '✓ Computers: 456 mapped',
+          'Analyzing attack paths...',
+          'CRITICAL: 15 users have DCSync rights',
+          'HIGH: 89 kerberoastable accounts found',
+          'Attack path to Domain Admin: 3 hops identified'
+        ],
+        category: 'ad'
+      },
+      burp: {
+        steps: [
+          'Burp Suite Professional 2023.12',
+          'Starting intercepting proxy on 127.0.0.1:8080',
+          `Scanning ${target} for web vulnerabilities...`,
+          'Spider completed: 247 unique URLs discovered',
+          'Passive scan results:',
+          '  HIGH: SQL Injection in /login.php',
+          '  MEDIUM: Cross-Site Scripting in /search.php',
+          '  LOW: Information disclosure in HTTP headers',
+          'Active scan initiated...',
+          'Scanner found 12 vulnerabilities total'
+        ],
+        category: 'web'
+      },
+      wireshark: {
+        steps: [
+          'Wireshark 4.2.0 - Network Protocol Analyzer',
+          `Capturing on interface: ${target}`,
+          'Capture filter: host 192.168.1.0/24',
+          'Packets captured: 15,429',
+          'Protocols detected: HTTP, HTTPS, SMB, Kerberos, LDAP',
+          'Suspicious activity detected:',
+          '  • Unusual DNS queries to malicious domains',
+          '  • Large data exfiltration via HTTPS',
+          '  • Lateral movement via SMB',
+          'Exporting PCAP for further analysis...'
+        ],
+        category: 'forensics'
+      },
+      empire: {
+        steps: [
+          'PowerShell Empire 5.0 - Post-Exploitation Framework',
+          'Empire Console started',
+          `(Empire) > listeners http ${target}`,
+          'Listener "http" started successfully',
+          '(Empire) > generate stager windows',
+          'PowerShell stager generated',
+          'Agent check-in received: DESKTOP-ABC123',
+          'Agent established: empire-agent-001',
+          'Privilege escalation module loaded',
+          'System-level access achieved'
+        ],
+        category: 'post-exploit'
+      },
+      responder: {
+        steps: [
+          'Responder 3.1.4.0 - LLMNR, NBT-NS and MDNS Poisoner',
+          `Listening on interface ${target}`,
+          'NBT-NS & MDNS poisoning started',
+          'LLMNR poisoning started',
+          'HTTP Server started on port 80',
+          'SMB Server started on port 445',
+          '[+] LLMNR poisoning response sent to 192.168.1.100',
+          '[+] NBT-NS poisoning response sent to WORKSTATION-01',
+          '[+] Hash captured: user::domain:hash...',
+          'Credentials harvested and saved'
+        ],
+        category: 'lateral'
+      },
+      sqlmap: {
+        steps: [
+          'sqlmap 1.7.12 - Automatic SQL injection tool',
+          `Testing connection to the target URL ${target}`,
+          'Testing for SQL injection vulnerabilities...',
+          'Parameter "id" appears to be injectable',
+          'Testing MySQL backend...',
+          'Confirmed: MySQL >= 5.0.12',
+          'Available databases: information_schema, users, products',
+          'Extracting database schema...',
+          'Tables found: users (id, username, password_hash)',
+          'Password hashes dumped successfully'
+        ],
+        category: 'web'
+      },
+      aipowered: {
+        steps: [
+          'AI-Powered Security Analysis Engine v3.0',
+          'Loading ML models for threat detection...',
+          'Behavioral analysis engine initialized',
+          'Threat intelligence feeds connected',
+          `Analyzing target: ${target}`,
+          'AI Model 1: Anomaly detection - 94% confidence threat detected',
+          'AI Model 2: Malware classification - APT29 toolset identified',
+          'AI Model 3: Lateral movement prediction - 87% probability',
+          'Generating attack graph with AI assistance...',
+          'Automated exploitation path discovered'
+        ],
+        category: 'ai'
+      }
+    };
+
+    const tool_data = securityTools[tool as keyof typeof securityTools];
+    if (!tool_data) return;
+
+    tool_data.steps.forEach((step, index) => {
       setTimeout(() => {
         addMessage(step, 'hack');
-        if (index === hackingSteps.length - 1) {
-          addMemory(`Successfully penetrated ${target}`, 3, ['hack', 'security', target]);
+        if (index === tool_data.steps.length - 1) {
+          addMemory(`${tool.toUpperCase()} scan completed on ${target}`, 3, ['security', tool_data.category, tool]);
         }
-      }, index * 1000);
+      }, index * 800);
     });
   };
 
@@ -119,13 +269,330 @@ const AdvancedNeoChat: React.FC = () => {
   const executeAdvancedCommand = (command: string) => {
     const [cmd, ...args] = command.toLowerCase().split(' ');
     const arg = args.join(' ');
+    const argArray = args;
 
     switch (cmd) {
+      // RECONNAISSANCE TOOLS
+      case '/nmap':
+        if (arg) {
+          simulateAdvancedSecurity('nmap', arg, argArray);
+        } else {
+          addMessage('Usage: /nmap [target]. Example: /nmap 192.168.1.1', 'system');
+        }
+        break;
+
+      case '/masscan':
+        addMessage(`Masscan 1.3.2 - Mass IP port scanner
+Starting masscan on ${arg || 'target'}
+Rate: 1000 packets/sec
+Scanning 65535 ports on target...
+Discovered open port 80/tcp on 192.168.1.100
+Discovered open port 443/tcp on 192.168.1.100  
+Discovered open port 22/tcp on 192.168.1.100
+Scan complete: 3 open ports found`, 'hack');
+        break;
+
+      case '/recon-ng':
+        addMessage(`Recon-ng v5.1.2 - Web Reconnaissance Framework
+[recon-ng][default] > workspaces create ${arg}
+[recon-ng][${arg}] > modules search
+[*] 89 modules loaded
+[recon-ng] > use recon/domains-hosts/google_site_web
+[recon-ng] > set SOURCE ${arg}
+[recon-ng] > run
+[*] 15 total (0 new) hosts found`, 'hack');
+        break;
+
+      // VULNERABILITY SCANNING
+      case '/nessus':
+        addMessage(`Nessus Professional 10.6.4
+Starting comprehensive vulnerability scan...
+Target: ${arg || 'target network'}
+Policies: Advanced Scan, Web Application Tests
+Progress: [████████████████████] 100%
+High: 5 vulnerabilities
+Medium: 12 vulnerabilities  
+Low: 23 vulnerabilities
+Critical vulnerabilities require immediate attention`, 'hack');
+        break;
+
+      case '/openvas':
+        addMessage(`OpenVAS 22.7 - Vulnerability Scanner
+Creating new scan task for ${arg}
+Loading 92,000+ vulnerability tests...
+Scan started at ${new Date().toLocaleString()}
+Progress: Scanning ports and services...
+Found critical vulnerability: CVE-2023-4966 (Citrix Bleed)
+Generating comprehensive vulnerability report...`, 'hack');
+        break;
+
+      // WEB APPLICATION TESTING
+      case '/burp':
+        if (arg) {
+          simulateAdvancedSecurity('burp', arg, argArray);
+        } else {
+          addMessage('Usage: /burp [target]. Example: /burp https://target.com', 'system');
+        }
+        break;
+
+      case '/sqlmap':
+        if (arg) {
+          simulateAdvancedSecurity('sqlmap', arg, argArray);
+        } else {
+          addMessage('Usage: /sqlmap [target]. Example: /sqlmap http://target.com/page?id=1', 'system');
+        }
+        break;
+
+      case '/nikto':
+        addMessage(`Nikto 2.5.0 - Web server scanner
+Target: ${arg || 'target.com'}
+Port: 80
+Start Time: ${new Date().toLocaleString()}
+Server: Apache/2.4.41
++ Retrieved x-powered-by header: PHP/7.4.3
++ Admin console found at /admin/
++ Default file found: /phpinfo.php
++ Potentially dangerous file found: /config.bak
+Scan completed: 15 issues identified`, 'hack');
+        break;
+
+      // EXPLOITATION FRAMEWORKS  
+      case '/metasploit':
+        if (arg) {
+          simulateAdvancedSecurity('metasploit', arg, argArray);
+        } else {
+          addMessage('Usage: /metasploit [target]. Metasploit Framework loaded.', 'system');
+        }
+        break;
+
+      case '/cobalt':
+        if (arg) {
+          simulateAdvancedSecurity('cobalt', arg, argArray);
+        } else {
+          addMessage('Usage: /cobalt [target]. Cobalt Strike team server required.', 'system');
+        }
+        break;
+
+      case '/empire':
+        if (arg) {
+          simulateAdvancedSecurity('empire', arg, argArray);
+        } else {
+          addMessage('Usage: /empire [target]. PowerShell Empire framework.', 'system');
+        }
+        break;
+
+      // ACTIVE DIRECTORY TESTING
+      case '/bloodhound':
+        if (arg) {
+          simulateAdvancedSecurity('bloodhound', arg, argArray);
+        } else {
+          addMessage('Usage: /bloodhound [domain]. Active Directory attack path analysis.', 'system');
+        }
+        break;
+
+      case '/mimikatz':
+        addMessage(`Mimikatz 2.2.0 (x64) - "A little tool to play with Windows security"
+mimikatz # privilege::debug
+Privilege '20' OK
+mimikatz # sekurlsa::logonpasswords
+Authentication Id : 0 ; 123456
+Session           : Interactive from 1
+User Name         : Administrator  
+Domain            : CORP
+NTLM              : aad3b435b51404eeaad3b435b51404ee
+SHA1              : da39a3ee5e6b4b0d3255bfef95601890afd80709
+Credentials extracted successfully`, 'hack');
+        break;
+
+      case '/responder':
+        if (arg) {
+          simulateAdvancedSecurity('responder', arg, argArray);
+        } else {
+          addMessage('Usage: /responder [interface]. LLMNR/NBT-NS poisoning tool.', 'system');
+        }
+        break;
+
+      // NETWORK ANALYSIS & FORENSICS
+      case '/wireshark':
+        if (arg) {
+          simulateAdvancedSecurity('wireshark', arg, argArray);
+        } else {
+          addMessage('Usage: /wireshark [interface]. Network protocol analyzer.', 'system');
+        }
+        break;
+
+      case '/volatility':
+        addMessage(`Volatility Framework 3.2.0 - Memory Forensics
+Loading memory dump: ${arg || 'memory.dump'}
+Detecting profile... Win10x64_19041
+Extracting running processes...
+PID    PPID   ImageFileName
+4      0      System
+428    4      smss.exe  
+536    428    csrss.exe
+612    604    winlogon.exe
+Suspicious process detected: evil.exe (PID: 1337)
+Extracting network connections and registry keys...`, 'hack');
+        break;
+
+      // AI-POWERED SECURITY TOOLS
+      case '/ai-recon':
+        simulateAdvancedSecurity('aipowered', arg || 'target', ['recon']);
+        break;
+
+      case '/ai-exploit':
+        addMessage(`AI Exploitation Engine v2.0
+Loading neural networks for exploit generation...
+Target analysis: ${arg || 'target system'}
+Vulnerability correlation using transformer models...
+Generated 15 potential exploitation vectors
+Ranked by success probability:
+1. Buffer overflow in service X (94% confidence)
+2. SQL injection in web app (89% confidence)  
+3. Privilege escalation via DLL hijacking (76% confidence)
+Autonomous exploitation mode: READY`, 'hack');
+        break;
+
+      case '/ai-defense':
+        addMessage(`AI Defensive Security Suite v3.1
+Behavioral analysis engine: ACTIVE
+Threat hunting algorithms: RUNNING
+Anomaly detection models loaded: 47
+Real-time analysis of ${arg || 'network traffic'}:
+• Detected 3 potential lateral movement attempts
+• Identified 1 data exfiltration pattern
+• Blocked 12 malicious C2 communications
+• Quarantined 5 suspicious executables
+AI recommendation: Immediate incident response required`, 'hack');
+        break;
+
+      // ADVANCED PERSISTENT THREAT SIMULATION
+      case '/apt-sim':
+        addMessage(`APT Simulation Framework v4.0
+Simulating Advanced Persistent Threat: ${arg || 'APT29'}
+Phase 1: Initial Compromise via spear phishing
+Phase 2: Establishing persistence with WMI events
+Phase 3: Credential harvesting with custom tools
+Phase 4: Lateral movement via admin shares
+Phase 5: Data exfiltration over DNS tunneling
+Campaign duration: 90 days
+Stealth score: 95% (Undetected by most EDR)
+Simulation complete: Full kill-chain demonstrated`, 'hack');
+        break;
+
+      // MALWARE ANALYSIS
+      case '/cuckoo':
+        addMessage(`Cuckoo Sandbox 3.0 - Malware Analysis
+Submitting sample: ${arg || 'suspicious.exe'}
+VM Environment: Windows 10 x64
+Analysis duration: 300 seconds
+Behavioral analysis in progress...
+Network activity: C2 communication to 192.168.100.50
+File operations: Registry persistence keys created
+Process injection: svchost.exe (PID: 1234)
+Classification: Banking Trojan (Confidence: 97%)`, 'hack');
+        break;
+
+      case '/yara':
+        addMessage(`YARA 4.3.2 - Pattern matching engine
+Loading ruleset: apt_detection.yar
+Scanning: ${arg || 'target directory'}
+Rules loaded: 2,456 signatures
+Matches found:
+• APT29_Cozy_Bear rule matched (5 hits)
+• Emotet_Banking_Trojan rule matched (2 hits)  
+• Cobalt_Strike_Beacon rule matched (1 hit)
+Threat indicators extracted and added to IOC database`, 'hack');
+        break;
+
+      // SOCIAL ENGINEERING
+      case '/set':
+        addMessage(`Social-Engineer Toolkit (SET) v8.0.3
+Select attack vector:
+1) Spear-Phishing Attack Vectors
+2) Website Attack Vectors  
+3) Infectious Media Generator
+4) Create Payload and Listener
+Generating convincing phishing email for ${arg || 'target organization'}
+Template: CEO urgent financial request
+Success rate prediction: 73% click-through rate`, 'hack');
+        break;
+
+      case '/gophish':
+        addMessage(`Gophish v0.12.1 - Phishing Campaign Management
+Creating campaign: ${arg || 'Executive Phishing'}
+Target list: 500 employees loaded
+Email template: Microsoft security alert
+Landing page: Fake Office 365 login
+Campaign launched successfully
+Real-time stats: 
+• Emails sent: 500
+• Opened: 342 (68.4%)
+• Clicked: 156 (31.2%)
+• Credentials captured: 89 (17.8%)`, 'hack');
+        break;
+
+      // CRYPTO & STEGANOGRAPHY
+      case '/hashcat':
+        addMessage(`Hashcat v6.2.6 - Advanced password recovery
+Loading hash: ${arg || 'captured_hash.txt'}
+Hash type: NTLM
+Dictionary: rockyou.txt (14M passwords)
+GPU acceleration: NVIDIA RTX 4090 x4
+Speed: 45.2 GH/s
+Progress: [████████████████] 100%
+Password recovered: P@ssw0rd123!
+Time elapsed: 2 minutes 47 seconds`, 'hack');
+        break;
+
+      case '/john':
+        addMessage(`John the Ripper 1.9.0 - Password cracker
+Loading password file: ${arg || 'shadow.txt'}
+Detected hash types: md5crypt, sha512crypt
+Using incremental mode with custom charset
+Cracking progress:
+user1:password123
+user2:admin2023
+user3:letmein
+admin:P@ssw0rd!
+Passwords cracked: 4/8 (50% success rate)`, 'hack');
+        break;
+
+      // CLOUD SECURITY
+      case '/scout':
+        addMessage(`ScoutSuite - Multi-Cloud Security Auditing
+Target: ${arg || 'AWS Account'}
+Gathering cloud configuration data...
+Services analyzed: EC2, S3, IAM, RDS, Lambda
+Security findings:
+• HIGH: S3 bucket publicly readable (3 buckets)
+• MEDIUM: EC2 instances with weak security groups (12)
+• LOW: IAM users without MFA (45 users)
+Risk score: 7.5/10 (High risk)
+Remediation report generated`, 'hack');
+        break;
+
+      case '/cloudsploit':
+        addMessage(`CloudSploit Security Scanner
+Cloud provider: ${arg || 'AWS'}
+Scanning 15 categories across 8 regions...
+Compliance checks: SOC2, PCI-DSS, HIPAA
+Results summary:
+✓ PASS: 156 checks
+⚠ WARN: 23 checks  
+✗ FAIL: 12 checks
+Critical issues requiring immediate attention:
+• Root access keys in use
+• Unencrypted RDS instances
+• Overly permissive IAM policies`, 'hack');
+        break;
+
+      // LEGACY COMMANDS WITH NEW FUNCTIONALITY
       case '/hack':
         if (arg) {
-          simulateHacking(arg);
+          simulateAdvancedSecurity('metasploit', arg, argArray);
         } else {
-          addMessage('Usage: /hack [target]. Available targets: corporate-server, government-db, satellite-network', 'system');
+          addMessage('Usage: /hack [target]. Try specific tools: /nmap, /metasploit, /burp', 'system');
         }
         break;
 
@@ -134,32 +601,28 @@ const AdvancedNeoChat: React.FC = () => {
         break;
 
       case '/trace':
-        addMessage('Initiating trace route...', 'system');
-        setTimeout(() => {
-          addMessage('Route: You -> VPN(Romania) -> Tor(Germany) -> Proxy(Japan) -> Target\nTrace complete. You are untraceable.', 'hack');
-        }, 2000);
+        addMessage(`Advanced trace route analysis...
+Hop  RTT     Address                    ASN     Country
+1    1.2ms   192.168.1.1               -       Local
+2    15.3ms  10.0.0.1                  AS1234  Romania (VPN)
+3    45.7ms  tor-relay-de.onion        -       Germany (Tor)
+4    78.9ms  proxy-jp-001.net          AS5678  Japan (Proxy)
+5    95.2ms  target-destination        AS9999  Unknown
+Route analysis: 7 proxy layers, fully anonymized`, 'hack');
         break;
 
       case '/encrypt':
         if (arg) {
           const encrypted = btoa(arg).split('').reverse().join('');
-          addMessage(`Encrypted: ${encrypted}`, 'hack');
+          addMessage(`Military-grade encryption applied:
+Algorithm: AES-256-GCM with RSA-4096 key exchange
+Original: ${arg}
+Encrypted: ${encrypted}
+Key fingerprint: SHA256:${Math.random().toString(36).substring(2, 15)}
+Quantum-resistant: Yes`, 'hack');
           addMemory(`Encrypted message: ${arg}`, 1, ['encryption', 'security']);
         } else {
           addMessage('Usage: /encrypt [message]', 'system');
-        }
-        break;
-
-      case '/decrypt':
-        if (arg) {
-          try {
-            const decrypted = atob(arg.split('').reverse().join(''));
-            addMessage(`Decrypted: ${decrypted}`, 'hack');
-          } catch {
-            addMessage('Decryption failed. Invalid cipher.', 'system');
-          }
-        } else {
-          addMessage('Usage: /decrypt [cipher]', 'system');
         }
         break;
 
@@ -170,38 +633,52 @@ const AdvancedNeoChat: React.FC = () => {
         } else if (arg === 'search') {
           setActiveTab('memory');
         } else {
-          addMessage(`Memory banks contain ${memories.length} entries. Use /memory search to browse or /memory clear to wipe.`, 'memory');
+          addMessage(`Advanced Memory Core Status:
+Total entries: ${memories.length}
+Storage utilization: ${Math.min(memories.length * 2, 100)}%
+Encryption status: AES-256 encrypted
+Backup status: Distributed across 7 nodes
+Integrity: SHA-256 verified
+Use /memory search to browse or /memory clear to wipe.`, 'memory');
         }
         break;
 
       case '/network':
         setActiveTab('network');
-        addMessage('Network analysis mode activated.', 'system');
+        addMessage('Advanced network analysis mode activated.', 'system');
         break;
 
       case '/satellite':
-        addMessage('Accessing satellite network...', 'system');
-        setTimeout(() => {
-          addMessage('Connected to KH-11 reconnaissance satellite.\nGlobal surveillance network online.\nReal-time imagery available.', 'hack');
-        }, 2000);
+        addMessage(`Military Satellite Network Access
+Connecting to classified orbital assets...
+✓ KH-11 reconnaissance satellite array
+✓ SIGINT collection platforms  
+✓ Global positioning systems
+✓ Encrypted military communications
+Real-time global surveillance: ONLINE
+ECHELON integration: ACTIVE
+NSA PRISM backdoor: ESTABLISHED`, 'hack');
         break;
 
       case '/darkweb':
-        addMessage('Accessing dark web marketplaces...', 'system');
-        setTimeout(() => {
-          addMessage('Connected to hidden services.\nAvailable: Exploits, Data, Intelligence, Tools\nUse with extreme caution.', 'hack');
-        }, 1500);
+        addMessage(`Dark Web Intelligence Platform
+Accessing hidden services via Tor network...
+Connected marketplaces: 47 active
+Available resources:
+• 0-day exploits and weaponized code
+• Compromised credentials (500M+ records)
+• Corporate intelligence and insider data  
+• Advanced persistent threat tools
+• Nation-state malware samples
+• Encrypted communication channels
+OPSEC status: Maximum anonymity maintained`, 'hack');
         break;
 
       case '/ai':
-        addMessage('Deploying advanced AI reconnaissance...', 'system');
-        setTimeout(() => {
-          addMessage('AI scan complete. 47 vulnerabilities found in target network.\nAutonomous exploitation protocols ready.', 'hack');
-        }, 2500);
+        simulateAdvancedSecurity('aipowered', arg || 'target network', ['full-spectrum']);
         break;
 
       default:
-        // Check if it's a basic command from the original chat
         return false;
     }
     return true;
@@ -219,7 +696,7 @@ const AdvancedNeoChat: React.FC = () => {
     // Original commands
     switch (cmd) {
       case '/help':
-        addMessage(`ADVANCED COMMAND SUITE v3.0:
+        addMessage(`ULTIMATE CYBER WARFARE ARSENAL v5.0:
 
 SYSTEM CONTROL:
 /speed [0.1-5.0] - Adjust matrix speed
@@ -233,21 +710,74 @@ SYSTEM CONTROL:
 /hide - Hide all UI
 /reset - Reset to defaults
 
-HACKING TOOLS:
-/hack [target] - Penetrate target system
-/trace - Run untraceable route
-/encrypt [msg] - Encrypt message
-/decrypt [cipher] - Decrypt message
-/satellite - Access satellite network
-/darkweb - Connect to hidden services
-/ai - Deploy AI reconnaissance
+RECONNAISSANCE:
+/nmap [target] - Advanced port scanner
+/masscan [target] - High-speed port scanner
+/recon-ng [domain] - Web reconnaissance framework
+
+VULNERABILITY ASSESSMENT:
+/nessus [target] - Professional vulnerability scanner
+/openvas [target] - Open source vuln scanner
+
+WEB APPLICATION TESTING:
+/burp [target] - Professional web app scanner
+/sqlmap [target] - SQL injection exploitation
+/nikto [target] - Web server scanner
+
+EXPLOITATION FRAMEWORKS:
+/metasploit [target] - Penetration testing framework
+/cobalt [target] - Advanced threat emulation
+/empire [target] - PowerShell post-exploitation
+
+ACTIVE DIRECTORY:
+/bloodhound [domain] - AD attack path analysis
+/mimikatz - Windows credential extraction
+/responder [interface] - LLMNR/NBT-NS poisoning
+
+NETWORK ANALYSIS:
+/wireshark [interface] - Network protocol analyzer
+/volatility [dump] - Memory forensics analysis
+
+AI-POWERED TOOLS:
+/ai-recon [target] - AI reconnaissance engine
+/ai-exploit [target] - AI exploitation framework
+/ai-defense [network] - AI defensive security
+
+ADVANCED PERSISTENT THREATS:
+/apt-sim [apt-group] - APT simulation framework
+
+MALWARE ANALYSIS:
+/cuckoo [sample] - Dynamic malware analysis
+/yara [target] - Pattern matching engine
+
+SOCIAL ENGINEERING:
+/set [target] - Social engineering toolkit
+/gophish [campaign] - Phishing framework
+
+CRYPTOGRAPHY:
+/hashcat [hash] - Advanced password recovery
+/john [file] - Password cracking suite
+
+CLOUD SECURITY:
+/scout [provider] - Multi-cloud security audit
+/cloudsploit [provider] - Cloud configuration scanner
+
+LEGACY SYSTEMS:
+/hack [target] - Multi-vector attack platform
+/trace - Advanced anonymization routing
+/encrypt [msg] - Military-grade encryption
+/decrypt [cipher] - Decryption engine
+/satellite - Military satellite network
+/darkweb - Hidden services access
+/ai [target] - AI-powered reconnaissance
 
 INTELLIGENCE:
-/news [query] - Access global news
-/memory [search|clear] - Memory operations
-/network - Network analysis mode
+/news [query] - Global intelligence feeds
+/memory [search|clear] - Quantum memory core
+/network - Network analysis console
 
-The Matrix has no limits, Neo.`, 'system');
+REALITY IS WHAT YOU MAKE IT, NEO.
+THE MATRIX BENDS TO YOUR WILL.`, 'system');
         break;
       
       case '/speed':
