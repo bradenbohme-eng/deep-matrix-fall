@@ -41,7 +41,7 @@ export interface MatrixSettings {
 
 const defaultSettings: MatrixSettings = {
   // Global Controls
-  globalSpeed: 1.0,
+  globalSpeed: 0.3,
   isPaused: false,
   showUI: true,
   
