@@ -2,6 +2,9 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useMatrixSettings } from '@/contexts/MatrixSettingsContext';
 import { Card } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
+import TeamSuite from '@/components/matrix/TeamSuite';
+import LiveFeeds, { FeedItem as FeedItemType } from '@/components/matrix/LiveFeeds';
+import IntelGraph from '@/components/matrix/IntelGraph';
 
 interface ChatMessage {
   id: string;
@@ -39,9 +42,9 @@ const AdvancedNeoChat: React.FC = () => {
   const [input, setInput] = useState('');
   const [isVisible, setIsVisible] = useState(true);
   const [isMinimized, setIsMinimized] = useState(false);
-  const [activeTab, setActiveTab] = useState<'chat' | 'memory' | 'network'>('chat');
+  const [activeTab, setActiveTab] = useState<'chat' | 'memory' | 'network' | 'team' | 'feeds' | 'map'>('chat');
+  const [feedItems, setFeedItems] = useState<FeedItemType[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
