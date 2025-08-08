@@ -932,33 +932,57 @@ Network: ONLINE`, 'system');
               <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse delay-200"></div>
             </div>
           </div>
-          <div className="flex items-center space-x-2">
-            <div className="flex space-x-1">
-              <button
-                onClick={() => setActiveTab('chat')}
-                className={`px-3 py-1 text-xs font-mono rounded transition-colors ${
-                  activeTab === 'chat' ? 'bg-primary/20 text-primary' : 'text-muted-foreground hover:text-primary'
-                }`}
-              >
-                CHAT
-              </button>
-              <button
-                onClick={() => setActiveTab('memory')}
-                className={`px-3 py-1 text-xs font-mono rounded transition-colors ${
-                  activeTab === 'memory' ? 'bg-primary/20 text-primary' : 'text-muted-foreground hover:text-primary'
-                }`}
-              >
-                MEMORY
-              </button>
-              <button
-                onClick={() => setActiveTab('network')}
-                className={`px-3 py-1 text-xs font-mono rounded transition-colors ${
-                  activeTab === 'network' ? 'bg-primary/20 text-primary' : 'text-muted-foreground hover:text-primary'
-                }`}
-              >
-                NETWORK
-              </button>
-            </div>
+            <div className="flex items-center space-x-2">
+              <div className="flex space-x-1">
+                <button
+                  onClick={() => setActiveTab('chat')}
+                  className={`px-3 py-1 text-xs font-mono rounded transition-colors ${
+                    activeTab === 'chat' ? 'bg-primary/20 text-primary' : 'text-muted-foreground hover:text-primary'
+                  }`}
+                >
+                  CHAT
+                </button>
+                <button
+                  onClick={() => setActiveTab('memory')}
+                  className={`px-3 py-1 text-xs font-mono rounded transition-colors ${
+                    activeTab === 'memory' ? 'bg-primary/20 text-primary' : 'text-muted-foreground hover:text-primary'
+                  }`}
+                >
+                  MEMORY
+                </button>
+                <button
+                  onClick={() => setActiveTab('network')}
+                  className={`px-3 py-1 text-xs font-mono rounded transition-colors ${
+                    activeTab === 'network' ? 'bg-primary/20 text-primary' : 'text-muted-foreground hover:text-primary'
+                  }`}
+                >
+                  NETWORK
+                </button>
+                <button
+                  onClick={() => setActiveTab('team')}
+                  className={`px-3 py-1 text-xs font-mono rounded transition-colors ${
+                    activeTab === 'team' ? 'bg-primary/20 text-primary' : 'text-muted-foreground hover:text-primary'
+                  }`}
+                >
+                  TEAM
+                </button>
+                <button
+                  onClick={() => setActiveTab('feeds')}
+                  className={`px-3 py-1 text-xs font-mono rounded transition-colors ${
+                    activeTab === 'feeds' ? 'bg-primary/20 text-primary' : 'text-muted-foreground hover:text-primary'
+                  }`}
+                >
+                  FEEDS
+                </button>
+                <button
+                  onClick={() => setActiveTab('map')}
+                  className={`px-3 py-1 text-xs font-mono rounded transition-colors ${
+                    activeTab === 'map' ? 'bg-primary/20 text-primary' : 'text-muted-foreground hover:text-primary'
+                  }`}
+                >
+                  INTEL
+                </button>
+              </div>
             <button
               onClick={() => setIsMinimized(!isMinimized)}
               className="w-5 h-5 bg-muted hover:bg-primary/20 rounded-sm transition-colors"
@@ -1087,6 +1111,28 @@ Network: ONLINE`, 'system');
                       </div>
                     </div>
                   </div>
+                </div>
+              )}
+
+              {activeTab === 'team' && (
+                <div className="h-full">
+                  <TeamSuite onRun={(command) => {
+                    addMessage(command, 'user');
+                    setActiveTab('chat');
+                    executeCommand(command);
+                  }} />
+                </div>
+              )}
+
+              {activeTab === 'feeds' && (
+                <div className="h-full">
+                  <LiveFeeds onData={(items) => setFeedItems(items)} />
+                </div>
+              )}
+
+              {activeTab === 'map' && (
+                <div className="h-full p-4">
+                  <IntelGraph items={feedItems} />
                 </div>
               )}
             </div>
