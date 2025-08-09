@@ -769,6 +769,105 @@ export type Database = {
           },
         ]
       }
+      knowledge_graph_edges: {
+        Row: {
+          created_at: string
+          id: string
+          metadata: Json
+          relation_type: string
+          source_node_id: string
+          strength: number
+          target_node_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          metadata?: Json
+          relation_type?: string
+          source_node_id: string
+          strength?: number
+          target_node_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          metadata?: Json
+          relation_type?: string
+          source_node_id?: string
+          strength?: number
+          target_node_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "knowledge_graph_edges_source_node_id_fkey"
+            columns: ["source_node_id"]
+            isOneToOne: false
+            referencedRelation: "knowledge_graph_nodes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "knowledge_graph_edges_target_node_id_fkey"
+            columns: ["target_node_id"]
+            isOneToOne: false
+            referencedRelation: "knowledge_graph_nodes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      knowledge_graph_nodes: {
+        Row: {
+          activity_score: number
+          created_at: string
+          embedding: string | null
+          external_ref_id: string | null
+          external_ref_type: string | null
+          id: string
+          importance: number
+          metadata: Json
+          summary: string | null
+          title: string
+          type: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          activity_score?: number
+          created_at?: string
+          embedding?: string | null
+          external_ref_id?: string | null
+          external_ref_type?: string | null
+          id?: string
+          importance?: number
+          metadata?: Json
+          summary?: string | null
+          title: string
+          type?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          activity_score?: number
+          created_at?: string
+          embedding?: string | null
+          external_ref_id?: string | null
+          external_ref_type?: string | null
+          id?: string
+          importance?: number
+          metadata?: Json
+          summary?: string | null
+          title?: string
+          type?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       likes: {
         Row: {
           comment_id: string | null
