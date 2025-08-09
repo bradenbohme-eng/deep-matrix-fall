@@ -10,6 +10,7 @@ import AgentsPanel from '@/components/matrix/AgentsPanel';
 import ApiRegistryPanel from '@/components/matrix/ApiRegistryPanel';
 import CloudOrchestratorPanel from '@/components/matrix/CloudOrchestratorPanel';
 import BuilderABPPanel from '@/components/matrix/BuilderABPPanel';
+import DiagramOrganizer from '@/components/matrix/DiagramOrganizer';
 
 interface ChatMessage {
   id: string;
@@ -47,7 +48,7 @@ const AdvancedNeoChat: React.FC = () => {
   const [input, setInput] = useState('');
   const [isVisible, setIsVisible] = useState(true);
   const [isMinimized, setIsMinimized] = useState(false);
-  const [activeTab, setActiveTab] = useState<'chat' | 'memory' | 'network' | 'team' | 'feeds' | 'map' | 'ide' | 'agents' | 'apis' | 'cloud' | 'builder'>('chat');
+  const [activeTab, setActiveTab] = useState<'chat' | 'memory' | 'network' | 'team' | 'feeds' | 'map' | 'diagram' | 'ide' | 'agents' | 'apis' | 'cloud' | 'builder'>('chat');
   const [feedItems, setFeedItems] = useState<FeedItemType[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollToBottom = () => {
@@ -986,6 +987,7 @@ Network: ONLINE`, 'system');
                 <button onClick={() => setActiveTab('team')} className={`px-3 py-1 text-xs font-mono rounded transition-colors ${activeTab === 'team' ? 'bg-primary/20 text-primary' : 'text-muted-foreground hover:text-primary'}`}>TEAM</button>
                 <button onClick={() => setActiveTab('feeds')} className={`px-3 py-1 text-xs font-mono rounded transition-colors ${activeTab === 'feeds' ? 'bg-primary/20 text-primary' : 'text-muted-foreground hover:text-primary'}`}>FEEDS</button>
                 <button onClick={() => setActiveTab('map')} className={`px-3 py-1 text-xs font-mono rounded transition-colors ${activeTab === 'map' ? 'bg-primary/20 text-primary' : 'text-muted-foreground hover:text-primary'}`}>INTEL</button>
+                <button onClick={() => setActiveTab('diagram')} className={`px-3 py-1 text-xs font-mono rounded transition-colors ${activeTab === 'diagram' ? 'bg-primary/20 text-primary' : 'text-muted-foreground hover:text-primary'}`}>DIAGRAM</button>
                 <button onClick={() => setActiveTab('ide')} className={`px-3 py-1 text-xs font-mono rounded transition-colors ${activeTab === 'ide' ? 'bg-primary/20 text-primary' : 'text-muted-foreground hover:text-primary'}`}>IDE</button>
                 <button onClick={() => setActiveTab('agents')} className={`px-3 py-1 text-xs font-mono rounded transition-colors ${activeTab === 'agents' ? 'bg-primary/20 text-primary' : 'text-muted-foreground hover:text-primary'}`}>AGENTS</button>
                 <button onClick={() => setActiveTab('apis')} className={`px-3 py-1 text-xs font-mono rounded transition-colors ${activeTab === 'apis' ? 'bg-primary/20 text-primary' : 'text-muted-foreground hover:text-primary'}`}>APIs</button>
@@ -1136,6 +1138,12 @@ Network: ONLINE`, 'system');
               {activeTab === 'map' && (
                 <div className="h-full p-4">
                   <IntelGraph items={feedItems} />
+                </div>
+              )}
+
+              {activeTab === 'diagram' && (
+                <div className="h-full p-4">
+                  <DiagramOrganizer />
                 </div>
               )}
 
