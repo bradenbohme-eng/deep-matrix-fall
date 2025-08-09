@@ -5,6 +5,11 @@ import { Textarea } from '@/components/ui/textarea';
 import TeamSuite from '@/components/matrix/TeamSuite';
 import LiveFeeds, { FeedItem as FeedItemType } from '@/components/matrix/LiveFeeds';
 import IntelGraph from '@/components/matrix/IntelGraph';
+import IDEPanel from '@/components/matrix/IDEPanel';
+import AgentsPanel from '@/components/matrix/AgentsPanel';
+import ApiRegistryPanel from '@/components/matrix/ApiRegistryPanel';
+import CloudOrchestratorPanel from '@/components/matrix/CloudOrchestratorPanel';
+import BuilderABPPanel from '@/components/matrix/BuilderABPPanel';
 
 interface ChatMessage {
   id: string;
@@ -42,7 +47,7 @@ const AdvancedNeoChat: React.FC = () => {
   const [input, setInput] = useState('');
   const [isVisible, setIsVisible] = useState(true);
   const [isMinimized, setIsMinimized] = useState(false);
-  const [activeTab, setActiveTab] = useState<'chat' | 'memory' | 'network' | 'team' | 'feeds' | 'map'>('chat');
+  const [activeTab, setActiveTab] = useState<'chat' | 'memory' | 'network' | 'team' | 'feeds' | 'map' | 'ide' | 'agents' | 'apis' | 'cloud' | 'builder'>('chat');
   const [feedItems, setFeedItems] = useState<FeedItemType[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollToBottom = () => {
@@ -867,6 +872,47 @@ Memory: ${memories.length} entries
 Network: ONLINE`, 'system');
         break;
 
+      case '/suite':
+        setActiveTab('team');
+        addMessage('TEAM SUITE opened.', 'system');
+        break;
+
+      case '/feeds':
+        setActiveTab('feeds');
+        addMessage('LIVE FEEDS opened.', 'system');
+        break;
+
+      case '/map':
+      case '/intel':
+        setActiveTab('map');
+        addMessage('INTEL MAP opened.', 'system');
+        break;
+
+      case '/ide':
+        setActiveTab('ide');
+        addMessage('IDE panel opened.', 'system');
+        break;
+
+      case '/agents':
+        setActiveTab('agents');
+        addMessage('Agents & Providers opened.', 'system');
+        break;
+
+      case '/apis':
+        setActiveTab('apis');
+        addMessage('API Registry opened.', 'system');
+        break;
+
+      case '/cloud':
+        setActiveTab('cloud');
+        addMessage('Cloud Orchestrator opened.', 'system');
+        break;
+
+      case '/builder':
+        setActiveTab('builder');
+        addMessage('Builder (ABP) opened.', 'system');
+        break;
+
       case '/hide':
         updateSetting('showUI', false);
         addMessage('UI hidden. Press "H" to show again.', 'neo');
@@ -934,64 +980,21 @@ Network: ONLINE`, 'system');
           </div>
             <div className="flex items-center space-x-2">
               <div className="flex space-x-1">
-                <button
-                  onClick={() => setActiveTab('chat')}
-                  className={`px-3 py-1 text-xs font-mono rounded transition-colors ${
-                    activeTab === 'chat' ? 'bg-primary/20 text-primary' : 'text-muted-foreground hover:text-primary'
-                  }`}
-                >
-                  CHAT
-                </button>
-                <button
-                  onClick={() => setActiveTab('memory')}
-                  className={`px-3 py-1 text-xs font-mono rounded transition-colors ${
-                    activeTab === 'memory' ? 'bg-primary/20 text-primary' : 'text-muted-foreground hover:text-primary'
-                  }`}
-                >
-                  MEMORY
-                </button>
-                <button
-                  onClick={() => setActiveTab('network')}
-                  className={`px-3 py-1 text-xs font-mono rounded transition-colors ${
-                    activeTab === 'network' ? 'bg-primary/20 text-primary' : 'text-muted-foreground hover:text-primary'
-                  }`}
-                >
-                  NETWORK
-                </button>
-                <button
-                  onClick={() => setActiveTab('team')}
-                  className={`px-3 py-1 text-xs font-mono rounded transition-colors ${
-                    activeTab === 'team' ? 'bg-primary/20 text-primary' : 'text-muted-foreground hover:text-primary'
-                  }`}
-                >
-                  TEAM
-                </button>
-                <button
-                  onClick={() => setActiveTab('feeds')}
-                  className={`px-3 py-1 text-xs font-mono rounded transition-colors ${
-                    activeTab === 'feeds' ? 'bg-primary/20 text-primary' : 'text-muted-foreground hover:text-primary'
-                  }`}
-                >
-                  FEEDS
-                </button>
-                <button
-                  onClick={() => setActiveTab('map')}
-                  className={`px-3 py-1 text-xs font-mono rounded transition-colors ${
-                    activeTab === 'map' ? 'bg-primary/20 text-primary' : 'text-muted-foreground hover:text-primary'
-                  }`}
-                >
-                  INTEL
-                </button>
+                <button onClick={() => setActiveTab('chat')} className={`px-3 py-1 text-xs font-mono rounded transition-colors ${activeTab === 'chat' ? 'bg-primary/20 text-primary' : 'text-muted-foreground hover:text-primary'}`}>CHAT</button>
+                <button onClick={() => setActiveTab('memory')} className={`px-3 py-1 text-xs font-mono rounded transition-colors ${activeTab === 'memory' ? 'bg-primary/20 text-primary' : 'text-muted-foreground hover:text-primary'}`}>MEMORY</button>
+                <button onClick={() => setActiveTab('network')} className={`px-3 py-1 text-xs font-mono rounded transition-colors ${activeTab === 'network' ? 'bg-primary/20 text-primary' : 'text-muted-foreground hover:text-primary'}`}>NETWORK</button>
+                <button onClick={() => setActiveTab('team')} className={`px-3 py-1 text-xs font-mono rounded transition-colors ${activeTab === 'team' ? 'bg-primary/20 text-primary' : 'text-muted-foreground hover:text-primary'}`}>TEAM</button>
+                <button onClick={() => setActiveTab('feeds')} className={`px-3 py-1 text-xs font-mono rounded transition-colors ${activeTab === 'feeds' ? 'bg-primary/20 text-primary' : 'text-muted-foreground hover:text-primary'}`}>FEEDS</button>
+                <button onClick={() => setActiveTab('map')} className={`px-3 py-1 text-xs font-mono rounded transition-colors ${activeTab === 'map' ? 'bg-primary/20 text-primary' : 'text-muted-foreground hover:text-primary'}`}>INTEL</button>
+                <button onClick={() => setActiveTab('ide')} className={`px-3 py-1 text-xs font-mono rounded transition-colors ${activeTab === 'ide' ? 'bg-primary/20 text-primary' : 'text-muted-foreground hover:text-primary'}`}>IDE</button>
+                <button onClick={() => setActiveTab('agents')} className={`px-3 py-1 text-xs font-mono rounded transition-colors ${activeTab === 'agents' ? 'bg-primary/20 text-primary' : 'text-muted-foreground hover:text-primary'}`}>AGENTS</button>
+                <button onClick={() => setActiveTab('apis')} className={`px-3 py-1 text-xs font-mono rounded transition-colors ${activeTab === 'apis' ? 'bg-primary/20 text-primary' : 'text-muted-foreground hover:text-primary'}`}>APIs</button>
+                <button onClick={() => setActiveTab('cloud')} className={`px-3 py-1 text-xs font-mono rounded transition-colors ${activeTab === 'cloud' ? 'bg-primary/20 text-primary' : 'text-muted-foreground hover:text-primary'}`}>CLOUD</button>
+                <button onClick={() => setActiveTab('builder')} className={`px-3 py-1 text-xs font-mono rounded transition-colors ${activeTab === 'builder' ? 'bg-primary/20 text-primary' : 'text-muted-foreground hover:text-primary'}`}>BUILDER</button>
               </div>
-            <button
-              onClick={() => setIsMinimized(!isMinimized)}
-              className="w-5 h-5 bg-muted hover:bg-primary/20 rounded-sm transition-colors"
-            />
-            <button
-              onClick={() => setIsVisible(false)}
-              className="w-5 h-5 bg-destructive hover:bg-destructive/80 rounded-sm transition-colors"
-            />
-          </div>
+              <button onClick={() => setIsMinimized(!isMinimized)} className="w-5 h-5 bg-muted hover:bg-primary/20 rounded-sm transition-colors" />
+              <button onClick={() => setIsVisible(false)} className="w-5 h-5 bg-destructive hover:bg-destructive/80 rounded-sm transition-colors" />
+            </div>
         </div>
 
         {!isMinimized && (
@@ -1133,6 +1136,36 @@ Network: ONLINE`, 'system');
               {activeTab === 'map' && (
                 <div className="h-full p-4">
                   <IntelGraph items={feedItems} />
+                </div>
+              )}
+
+              {activeTab === 'ide' && (
+                <div className="h-full">
+                  <IDEPanel />
+                </div>
+              )}
+
+              {activeTab === 'agents' && (
+                <div className="h-full p-4">
+                  <AgentsPanel />
+                </div>
+              )}
+
+              {activeTab === 'apis' && (
+                <div className="h-full p-4">
+                  <ApiRegistryPanel />
+                </div>
+              )}
+
+              {activeTab === 'cloud' && (
+                <div className="h-full p-4">
+                  <CloudOrchestratorPanel />
+                </div>
+              )}
+
+              {activeTab === 'builder' && (
+                <div className="h-full p-4 overflow-y-auto">
+                  <BuilderABPPanel />
                 </div>
               )}
             </div>
