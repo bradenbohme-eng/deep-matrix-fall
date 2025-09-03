@@ -1133,6 +1133,45 @@ export type Database = {
         }
         Relationships: []
       }
+      factions: {
+        Row: {
+          ai_personality: Json
+          created_at: string
+          description: string | null
+          diplomatic_status: Json
+          id: string
+          ideology: Json
+          name: string
+          resources: Json
+          territory_control: Json
+          updated_at: string
+        }
+        Insert: {
+          ai_personality?: Json
+          created_at?: string
+          description?: string | null
+          diplomatic_status?: Json
+          id?: string
+          ideology?: Json
+          name: string
+          resources?: Json
+          territory_control?: Json
+          updated_at?: string
+        }
+        Update: {
+          ai_personality?: Json
+          created_at?: string
+          description?: string | null
+          diplomatic_status?: Json
+          id?: string
+          ideology?: Json
+          name?: string
+          resources?: Json
+          territory_control?: Json
+          updated_at?: string
+        }
+        Relationships: []
+      }
       feedback_records: {
         Row: {
           action_id: string | null
@@ -1253,6 +1292,48 @@ export type Database = {
         }
         Relationships: []
       }
+      global_events: {
+        Row: {
+          active: boolean
+          affected_factions: Json
+          consequences: Json
+          created_at: string
+          description: string
+          event_type: string
+          id: string
+          preconditions: Json
+          probability: number
+          resolved_at: string | null
+          title: string
+        }
+        Insert: {
+          active?: boolean
+          affected_factions?: Json
+          consequences?: Json
+          created_at?: string
+          description: string
+          event_type: string
+          id?: string
+          preconditions?: Json
+          probability?: number
+          resolved_at?: string | null
+          title: string
+        }
+        Update: {
+          active?: boolean
+          affected_factions?: Json
+          consequences?: Json
+          created_at?: string
+          description?: string
+          event_type?: string
+          id?: string
+          preconditions?: Json
+          probability?: number
+          resolved_at?: string | null
+          title?: string
+        }
+        Relationships: []
+      }
       harmonic_knowledge: {
         Row: {
           consonance_rating: number
@@ -1323,6 +1404,56 @@ export type Database = {
             columns: ["ghost_entity_id"]
             isOneToOne: false
             referencedRelation: "ghost_entities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      intel_assets: {
+        Row: {
+          classification_level: number
+          content: string
+          created_at: string
+          expiry_date: string | null
+          id: string
+          intel_type: string
+          metadata: Json
+          owner_id: string | null
+          title: string
+          tradeable: boolean
+          value_isk: number
+        }
+        Insert: {
+          classification_level?: number
+          content: string
+          created_at?: string
+          expiry_date?: string | null
+          id?: string
+          intel_type: string
+          metadata?: Json
+          owner_id?: string | null
+          title: string
+          tradeable?: boolean
+          value_isk?: number
+        }
+        Update: {
+          classification_level?: number
+          content?: string
+          created_at?: string
+          expiry_date?: string | null
+          id?: string
+          intel_type?: string
+          metadata?: Json
+          owner_id?: string | null
+          title?: string
+          tradeable?: boolean
+          value_isk?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "intel_assets_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "warfare_players"
             referencedColumns: ["id"]
           },
         ]
@@ -1539,6 +1670,92 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      missions: {
+        Row: {
+          completed_at: string | null
+          context_data: Json
+          created_at: string
+          deadline: string | null
+          description: string
+          id: string
+          mission_type: string
+          objectives: Json
+          player_id: string | null
+          rewards: Json
+          status: string
+          title: string
+        }
+        Insert: {
+          completed_at?: string | null
+          context_data?: Json
+          created_at?: string
+          deadline?: string | null
+          description: string
+          id?: string
+          mission_type: string
+          objectives?: Json
+          player_id?: string | null
+          rewards?: Json
+          status?: string
+          title: string
+        }
+        Update: {
+          completed_at?: string | null
+          context_data?: Json
+          created_at?: string
+          deadline?: string | null
+          description?: string
+          id?: string
+          mission_type?: string
+          objectives?: Json
+          player_id?: string | null
+          rewards?: Json
+          status?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "missions_player_id_fkey"
+            columns: ["player_id"]
+            isOneToOne: false
+            referencedRelation: "warfare_players"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      narrative_state: {
+        Row: {
+          active_plotlines: Json
+          character_relationships: Json
+          context_id: string
+          context_type: string
+          id: string
+          narrative_threads: Json
+          tension_levels: Json
+          updated_at: string
+        }
+        Insert: {
+          active_plotlines?: Json
+          character_relationships?: Json
+          context_id: string
+          context_type: string
+          id?: string
+          narrative_threads?: Json
+          tension_levels?: Json
+          updated_at?: string
+        }
+        Update: {
+          active_plotlines?: Json
+          character_relationships?: Json
+          context_id?: string
+          context_type?: string
+          id?: string
+          narrative_threads?: Json
+          tension_levels?: Json
+          updated_at?: string
+        }
+        Relationships: []
       }
       neural_connections: {
         Row: {
@@ -3413,6 +3630,98 @@ export type Database = {
           },
         ]
       }
+      warfare_events: {
+        Row: {
+          action_data: Json
+          actor_id: string
+          actor_type: string
+          event_type: string
+          global_effect: Json
+          id: string
+          impact_score: number
+          target_id: string | null
+          target_type: string | null
+          timestamp: string
+        }
+        Insert: {
+          action_data?: Json
+          actor_id: string
+          actor_type: string
+          event_type: string
+          global_effect?: Json
+          id?: string
+          impact_score?: number
+          target_id?: string | null
+          target_type?: string | null
+          timestamp?: string
+        }
+        Update: {
+          action_data?: Json
+          actor_id?: string
+          actor_type?: string
+          event_type?: string
+          global_effect?: Json
+          id?: string
+          impact_score?: number
+          target_id?: string | null
+          target_type?: string | null
+          timestamp?: string
+        }
+        Relationships: []
+      }
+      warfare_players: {
+        Row: {
+          active_missions: Json
+          clearance_level: number
+          created_at: string
+          faction_id: string | null
+          id: string
+          neural_profile: Json
+          personal_history: Json
+          rank: string
+          resources: Json
+          skills: Json
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          active_missions?: Json
+          clearance_level?: number
+          created_at?: string
+          faction_id?: string | null
+          id?: string
+          neural_profile?: Json
+          personal_history?: Json
+          rank?: string
+          resources?: Json
+          skills?: Json
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          active_missions?: Json
+          clearance_level?: number
+          created_at?: string
+          faction_id?: string | null
+          id?: string
+          neural_profile?: Json
+          personal_history?: Json
+          rank?: string
+          resources?: Json
+          skills?: Json
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "warfare_players_faction_id_fkey"
+            columns: ["faction_id"]
+            isOneToOne: false
+            referencedRelation: "factions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       wave_states: {
         Row: {
           amplitude: number
@@ -3456,6 +3765,33 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      world_war_clock: {
+        Row: {
+          escalation_probability: number
+          id: string
+          minutes_to_midnight: number
+          recent_events: Json
+          tension_factors: Json
+          updated_at: string
+        }
+        Insert: {
+          escalation_probability?: number
+          id?: string
+          minutes_to_midnight?: number
+          recent_events?: Json
+          tension_factors?: Json
+          updated_at?: string
+        }
+        Update: {
+          escalation_probability?: number
+          id?: string
+          minutes_to_midnight?: number
+          recent_events?: Json
+          tension_factors?: Json
+          updated_at?: string
+        }
+        Relationships: []
       }
     }
     Views: {
