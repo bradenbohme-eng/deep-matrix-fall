@@ -7,7 +7,7 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instanciate createClient with right options
+  // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "12.2.12 (cd3cf9e)"
@@ -54,6 +54,117 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      ai_issue_detection: {
+        Row: {
+          affected_services: Json | null
+          confidence_score: number | null
+          detection_timestamp: string | null
+          id: number
+          issue_description: string | null
+          pattern_type: string
+          priority: string | null
+          project_id: string
+          recommended_actions: Json | null
+          status: string | null
+        }
+        Insert: {
+          affected_services?: Json | null
+          confidence_score?: number | null
+          detection_timestamp?: string | null
+          id?: number
+          issue_description?: string | null
+          pattern_type: string
+          priority?: string | null
+          project_id: string
+          recommended_actions?: Json | null
+          status?: string | null
+        }
+        Update: {
+          affected_services?: Json | null
+          confidence_score?: number | null
+          detection_timestamp?: string | null
+          id?: number
+          issue_description?: string | null
+          pattern_type?: string
+          priority?: string | null
+          project_id?: string
+          recommended_actions?: Json | null
+          status?: string | null
+        }
+        Relationships: []
+      }
+      ai_recommendations: {
+        Row: {
+          confidence_score: number | null
+          context: Json | null
+          created_at: string | null
+          effect_id: string | null
+          id: number
+          is_clicked: boolean | null
+          reason: string | null
+          recommendation_type: string | null
+          user_id: string | null
+        }
+        Insert: {
+          confidence_score?: number | null
+          context?: Json | null
+          created_at?: string | null
+          effect_id?: string | null
+          id?: number
+          is_clicked?: boolean | null
+          reason?: string | null
+          recommendation_type?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          confidence_score?: number | null
+          context?: Json | null
+          created_at?: string | null
+          effect_id?: string | null
+          id?: number
+          is_clicked?: boolean | null
+          reason?: string | null
+          recommendation_type?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      ai_sessions: {
+        Row: {
+          cost: number | null
+          created_at: string | null
+          id: string
+          input_data: Json | null
+          model: string
+          output_data: Json | null
+          processing_time: number | null
+          provider: string
+          user_id: string
+        }
+        Insert: {
+          cost?: number | null
+          created_at?: string | null
+          id?: string
+          input_data?: Json | null
+          model: string
+          output_data?: Json | null
+          processing_time?: number | null
+          provider: string
+          user_id: string
+        }
+        Update: {
+          cost?: number | null
+          created_at?: string | null
+          id?: string
+          input_data?: Json | null
+          model?: string
+          output_data?: Json | null
+          processing_time?: number | null
+          provider?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       assets: {
         Row: {
@@ -108,6 +219,81 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      audit_trail: {
+        Row: {
+          action_type: string
+          details: Json | null
+          id: number
+          ip_address: unknown | null
+          performance_impact: Json | null
+          project_id: string
+          session_id: string | null
+          timestamp: string | null
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          action_type: string
+          details?: Json | null
+          id?: number
+          ip_address?: unknown | null
+          performance_impact?: Json | null
+          project_id: string
+          session_id?: string | null
+          timestamp?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          action_type?: string
+          details?: Json | null
+          id?: number
+          ip_address?: unknown | null
+          performance_impact?: Json | null
+          project_id?: string
+          session_id?: string | null
+          timestamp?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      challenges: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          end_date: string | null
+          id: string
+          name: string
+          prize_pool: number | null
+          rules: Json | null
+          start_date: string | null
+          status: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          end_date?: string | null
+          id?: string
+          name: string
+          prize_pool?: number | null
+          rules?: Json | null
+          start_date?: string | null
+          status?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          end_date?: string | null
+          id?: string
+          name?: string
+          prize_pool?: number | null
+          rules?: Json | null
+          start_date?: string | null
+          status?: string | null
+        }
+        Relationships: []
       }
       chapters: {
         Row: {
@@ -228,6 +414,33 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      collaborations: {
+        Row: {
+          collaborator_id: string
+          created_at: string | null
+          effect_id: string
+          id: string
+          permissions: string | null
+          status: string | null
+        }
+        Insert: {
+          collaborator_id: string
+          created_at?: string | null
+          effect_id: string
+          id?: string
+          permissions?: string | null
+          status?: string | null
+        }
+        Update: {
+          collaborator_id?: string
+          created_at?: string | null
+          effect_id?: string
+          id?: string
+          permissions?: string | null
+          status?: string | null
+        }
+        Relationships: []
       }
       commands: {
         Row: {
@@ -539,6 +752,54 @@ export type Database = {
         }
         Relationships: []
       }
+      document_processing: {
+        Row: {
+          analysis_results: Json | null
+          analysis_status: string | null
+          created_at: string | null
+          error_message: string | null
+          file_name: string
+          file_path: string | null
+          file_size: number
+          file_type: string
+          id: number
+          processed_at: string | null
+          project_id: string
+          upload_status: string | null
+          uploaded_by: string | null
+        }
+        Insert: {
+          analysis_results?: Json | null
+          analysis_status?: string | null
+          created_at?: string | null
+          error_message?: string | null
+          file_name: string
+          file_path?: string | null
+          file_size: number
+          file_type: string
+          id?: number
+          processed_at?: string | null
+          project_id: string
+          upload_status?: string | null
+          uploaded_by?: string | null
+        }
+        Update: {
+          analysis_results?: Json | null
+          analysis_status?: string | null
+          created_at?: string | null
+          error_message?: string | null
+          file_name?: string
+          file_path?: string | null
+          file_size?: number
+          file_type?: string
+          id?: number
+          processed_at?: string | null
+          project_id?: string
+          upload_status?: string | null
+          uploaded_by?: string | null
+        }
+        Relationships: []
+      }
       documents: {
         Row: {
           author_id: string | null
@@ -572,6 +833,303 @@ export type Database = {
           settings?: Json | null
           title?: string
           word_count?: number | null
+        }
+        Relationships: []
+      }
+      effect_analytics: {
+        Row: {
+          average_rating: number | null
+          effect_id: string
+          id: number
+          last_updated: string | null
+          likes_count: number | null
+          performance_data: Json | null
+          shares_count: number | null
+          trending_score: number | null
+          views_count: number | null
+        }
+        Insert: {
+          average_rating?: number | null
+          effect_id: string
+          id?: number
+          last_updated?: string | null
+          likes_count?: number | null
+          performance_data?: Json | null
+          shares_count?: number | null
+          trending_score?: number | null
+          views_count?: number | null
+        }
+        Update: {
+          average_rating?: number | null
+          effect_id?: string
+          id?: number
+          last_updated?: string | null
+          likes_count?: number | null
+          performance_data?: Json | null
+          shares_count?: number | null
+          trending_score?: number | null
+          views_count?: number | null
+        }
+        Relationships: []
+      }
+      effect_categories: {
+        Row: {
+          color_code: string | null
+          created_at: string | null
+          description: string | null
+          icon: string | null
+          id: number
+          is_active: boolean | null
+          name: string
+          parent_id: number | null
+          sort_order: number | null
+        }
+        Insert: {
+          color_code?: string | null
+          created_at?: string | null
+          description?: string | null
+          icon?: string | null
+          id?: number
+          is_active?: boolean | null
+          name: string
+          parent_id?: number | null
+          sort_order?: number | null
+        }
+        Update: {
+          color_code?: string | null
+          created_at?: string | null
+          description?: string | null
+          icon?: string | null
+          id?: number
+          is_active?: boolean | null
+          name?: string
+          parent_id?: number | null
+          sort_order?: number | null
+        }
+        Relationships: []
+      }
+      effect_collections: {
+        Row: {
+          collection_name: string
+          created_at: string | null
+          description: string | null
+          effect_ids: string[] | null
+          id: number
+          is_public: boolean | null
+          tags: string[] | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          collection_name: string
+          created_at?: string | null
+          description?: string | null
+          effect_ids?: string[] | null
+          id?: number
+          is_public?: boolean | null
+          tags?: string[] | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          collection_name?: string
+          created_at?: string | null
+          description?: string | null
+          effect_ids?: string[] | null
+          id?: number
+          is_public?: boolean | null
+          tags?: string[] | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      effect_errors: {
+        Row: {
+          device_info: Json | null
+          effect_id: string
+          error_message: string | null
+          error_type: string | null
+          frequency: number | null
+          id: number
+          is_resolved: boolean | null
+          last_occurred: string | null
+          user_id: string | null
+        }
+        Insert: {
+          device_info?: Json | null
+          effect_id: string
+          error_message?: string | null
+          error_type?: string | null
+          frequency?: number | null
+          id?: number
+          is_resolved?: boolean | null
+          last_occurred?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          device_info?: Json | null
+          effect_id?: string
+          error_message?: string | null
+          error_type?: string | null
+          frequency?: number | null
+          id?: number
+          is_resolved?: boolean | null
+          last_occurred?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      effect_metadata: {
+        Row: {
+          category_id: number | null
+          complexity_level: number | null
+          created_at: string | null
+          effect_id: string
+          gpu_requirements: Json | null
+          id: number
+          performance_score: number | null
+          tags: string[] | null
+          technical_specs: Json | null
+        }
+        Insert: {
+          category_id?: number | null
+          complexity_level?: number | null
+          created_at?: string | null
+          effect_id: string
+          gpu_requirements?: Json | null
+          id?: number
+          performance_score?: number | null
+          tags?: string[] | null
+          technical_specs?: Json | null
+        }
+        Update: {
+          category_id?: number | null
+          complexity_level?: number | null
+          created_at?: string | null
+          effect_id?: string
+          gpu_requirements?: Json | null
+          id?: number
+          performance_score?: number | null
+          tags?: string[] | null
+          technical_specs?: Json | null
+        }
+        Relationships: []
+      }
+      effect_reviews: {
+        Row: {
+          comment: string | null
+          created_at: string | null
+          effect_id: string
+          id: string
+          rating: number | null
+          user_id: string | null
+        }
+        Insert: {
+          comment?: string | null
+          created_at?: string | null
+          effect_id: string
+          id?: string
+          rating?: number | null
+          user_id?: string | null
+        }
+        Update: {
+          comment?: string | null
+          created_at?: string | null
+          effect_id?: string
+          id?: string
+          rating?: number | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      effect_tags: {
+        Row: {
+          created_at: string | null
+          effect_id: string
+          id: string
+          tag_name: string
+        }
+        Insert: {
+          created_at?: string | null
+          effect_id: string
+          id?: string
+          tag_name: string
+        }
+        Update: {
+          created_at?: string | null
+          effect_id?: string
+          id?: string
+          tag_name?: string
+        }
+        Relationships: []
+      }
+      effect_versions: {
+        Row: {
+          changelog: string | null
+          created_at: string | null
+          effect_id: string
+          id: string
+          parameters: Json | null
+          shader_code: string
+          version_number: number
+        }
+        Insert: {
+          changelog?: string | null
+          created_at?: string | null
+          effect_id: string
+          id?: string
+          parameters?: Json | null
+          shader_code: string
+          version_number: number
+        }
+        Update: {
+          changelog?: string | null
+          created_at?: string | null
+          effect_id?: string
+          id?: string
+          parameters?: Json | null
+          shader_code?: string
+          version_number?: number
+        }
+        Relationships: []
+      }
+      effects: {
+        Row: {
+          created_at: string | null
+          creator_id: string
+          description: string | null
+          id: string
+          is_public: boolean | null
+          name: string
+          parameters: Json | null
+          preview_url: string | null
+          shader_code: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          creator_id: string
+          description?: string | null
+          id?: string
+          is_public?: boolean | null
+          name: string
+          parameters?: Json | null
+          preview_url?: string | null
+          shader_code?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          creator_id?: string
+          description?: string | null
+          id?: string
+          is_public?: boolean | null
+          name?: string
+          parameters?: Json | null
+          preview_url?: string | null
+          shader_code?: string | null
+          updated_at?: string | null
         }
         Relationships: []
       }
@@ -1027,6 +1585,75 @@ export type Database = {
           },
         ]
       }
+      nft_collections: {
+        Row: {
+          blockchain: string
+          contract_address: string | null
+          created_at: string | null
+          creator_id: string
+          description: string | null
+          id: string
+          name: string
+        }
+        Insert: {
+          blockchain: string
+          contract_address?: string | null
+          created_at?: string | null
+          creator_id: string
+          description?: string | null
+          id?: string
+          name: string
+        }
+        Update: {
+          blockchain?: string
+          contract_address?: string | null
+          created_at?: string | null
+          creator_id?: string
+          description?: string | null
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
+      nft_listings: {
+        Row: {
+          blockchain: string
+          contract_address: string | null
+          created_at: string | null
+          currency: string | null
+          effect_id: string
+          id: string
+          price: number
+          seller_id: string
+          status: string | null
+          token_id: string | null
+        }
+        Insert: {
+          blockchain: string
+          contract_address?: string | null
+          created_at?: string | null
+          currency?: string | null
+          effect_id: string
+          id?: string
+          price: number
+          seller_id: string
+          status?: string | null
+          token_id?: string | null
+        }
+        Update: {
+          blockchain?: string
+          contract_address?: string | null
+          created_at?: string | null
+          currency?: string | null
+          effect_id?: string
+          id?: string
+          price?: number
+          seller_id?: string
+          status?: string | null
+          token_id?: string | null
+        }
+        Relationships: []
+      }
       particle_fields: {
         Row: {
           behavior: string
@@ -1117,6 +1744,84 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      performance_alerts: {
+        Row: {
+          alert_type: string
+          created_at: string | null
+          current_value: number | null
+          description: string | null
+          id: number
+          project_id: string
+          resolved: boolean | null
+          resolved_at: string | null
+          service_name: string | null
+          severity: string
+          threshold_value: number | null
+          title: string
+        }
+        Insert: {
+          alert_type: string
+          created_at?: string | null
+          current_value?: number | null
+          description?: string | null
+          id?: number
+          project_id: string
+          resolved?: boolean | null
+          resolved_at?: string | null
+          service_name?: string | null
+          severity: string
+          threshold_value?: number | null
+          title: string
+        }
+        Update: {
+          alert_type?: string
+          created_at?: string | null
+          current_value?: number | null
+          description?: string | null
+          id?: number
+          project_id?: string
+          resolved?: boolean | null
+          resolved_at?: string | null
+          service_name?: string | null
+          severity?: string
+          threshold_value?: number | null
+          title?: string
+        }
+        Relationships: []
+      }
+      performance_metrics: {
+        Row: {
+          browser_info: Json | null
+          created_at: string | null
+          device_info: Json | null
+          effect_id: string
+          frame_rate: number | null
+          id: string
+          render_time: number | null
+          user_id: string | null
+        }
+        Insert: {
+          browser_info?: Json | null
+          created_at?: string | null
+          device_info?: Json | null
+          effect_id: string
+          frame_rate?: number | null
+          id?: string
+          render_time?: number | null
+          user_id?: string | null
+        }
+        Update: {
+          browser_info?: Json | null
+          created_at?: string | null
+          device_info?: Json | null
+          effect_id?: string
+          frame_rate?: number | null
+          id?: string
+          render_time?: number | null
+          user_id?: string | null
+        }
+        Relationships: []
       }
       posts: {
         Row: {
@@ -1514,6 +2219,39 @@ export type Database = {
         }
         Relationships: []
       }
+      realtime_connections: {
+        Row: {
+          active_streams: number | null
+          connection_errors: number | null
+          created_at: string | null
+          data_throughput: number | null
+          id: number
+          last_heartbeat: string | null
+          project_id: string
+          websocket_connections: number | null
+        }
+        Insert: {
+          active_streams?: number | null
+          connection_errors?: number | null
+          created_at?: string | null
+          data_throughput?: number | null
+          id?: number
+          last_heartbeat?: string | null
+          project_id: string
+          websocket_connections?: number | null
+        }
+        Update: {
+          active_streams?: number | null
+          connection_errors?: number | null
+          created_at?: string | null
+          data_throughput?: number | null
+          id?: number
+          last_heartbeat?: string | null
+          project_id?: string
+          websocket_connections?: number | null
+        }
+        Relationships: []
+      }
       recursive_memories: {
         Row: {
           content: Json
@@ -1561,6 +2299,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      render_jobs: {
+        Row: {
+          cloud_gpu_used: boolean | null
+          created_at: string | null
+          effect_id: string
+          id: string
+          processing_time: number | null
+          result_url: string | null
+          status: string | null
+          user_id: string
+        }
+        Insert: {
+          cloud_gpu_used?: boolean | null
+          created_at?: string | null
+          effect_id: string
+          id?: string
+          processing_time?: number | null
+          result_url?: string | null
+          status?: string | null
+          user_id: string
+        }
+        Update: {
+          cloud_gpu_used?: boolean | null
+          created_at?: string | null
+          effect_id?: string
+          id?: string
+          processing_time?: number | null
+          result_url?: string | null
+          status?: string | null
+          user_id?: string
+        }
+        Relationships: []
       }
       research_insights: {
         Row: {
@@ -1666,6 +2437,39 @@ export type Database = {
         }
         Relationships: []
       }
+      sales_history: {
+        Row: {
+          blockchain: string
+          buyer_id: string
+          created_at: string | null
+          id: string
+          listing_id: string
+          price: number
+          seller_id: string
+          transaction_hash: string | null
+        }
+        Insert: {
+          blockchain: string
+          buyer_id: string
+          created_at?: string | null
+          id?: string
+          listing_id: string
+          price: number
+          seller_id: string
+          transaction_hash?: string | null
+        }
+        Update: {
+          blockchain?: string
+          buyer_id?: string
+          created_at?: string | null
+          id?: string
+          listing_id?: string
+          price?: number
+          seller_id?: string
+          transaction_hash?: string | null
+        }
+        Relationships: []
+      }
       scene_objects: {
         Row: {
           created_at: string | null
@@ -1687,6 +2491,42 @@ export type Database = {
           id?: string
           scene_id?: string
           updated_at?: string | null
+        }
+        Relationships: []
+      }
+      search_analytics: {
+        Row: {
+          category_filter: number[] | null
+          complexity_filter: number[] | null
+          created_at: string | null
+          id: number
+          performance_filter: Json | null
+          query: string
+          response_time: number | null
+          results_count: number | null
+          user_id: string | null
+        }
+        Insert: {
+          category_filter?: number[] | null
+          complexity_filter?: number[] | null
+          created_at?: string | null
+          id?: number
+          performance_filter?: Json | null
+          query: string
+          response_time?: number | null
+          results_count?: number | null
+          user_id?: string | null
+        }
+        Update: {
+          category_filter?: number[] | null
+          complexity_filter?: number[] | null
+          created_at?: string | null
+          id?: number
+          performance_filter?: Json | null
+          query?: string
+          response_time?: number | null
+          results_count?: number | null
+          user_id?: string | null
         }
         Relationships: []
       }
@@ -1862,6 +2702,48 @@ export type Database = {
           },
         ]
       }
+      service_monitoring: {
+        Row: {
+          created_at: string | null
+          debug_info: Json | null
+          error_count: number | null
+          health_score: number | null
+          id: number
+          last_check: string | null
+          project_id: string
+          response_time_avg: number | null
+          service_name: string
+          status: string
+          uptime_percentage: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          debug_info?: Json | null
+          error_count?: number | null
+          health_score?: number | null
+          id?: number
+          last_check?: string | null
+          project_id: string
+          response_time_avg?: number | null
+          service_name: string
+          status: string
+          uptime_percentage?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          debug_info?: Json | null
+          error_count?: number | null
+          health_score?: number | null
+          id?: number
+          last_check?: string | null
+          project_id?: string
+          response_time_avg?: number | null
+          service_name?: string
+          status?: string
+          uptime_percentage?: number | null
+        }
+        Relationships: []
+      }
       session_records: {
         Row: {
           consciousness_growth: number
@@ -1995,6 +2877,36 @@ export type Database = {
         }
         Relationships: []
       }
+      submissions: {
+        Row: {
+          challenge_id: string
+          created_at: string | null
+          effect_id: string
+          id: string
+          participant_id: string
+          score: number | null
+          votes_count: number | null
+        }
+        Insert: {
+          challenge_id: string
+          created_at?: string | null
+          effect_id: string
+          id?: string
+          participant_id: string
+          score?: number | null
+          votes_count?: number | null
+        }
+        Update: {
+          challenge_id?: string
+          created_at?: string | null
+          effect_id?: string
+          id?: string
+          participant_id?: string
+          score?: number | null
+          votes_count?: number | null
+        }
+        Relationships: []
+      }
       subscriptions: {
         Row: {
           cancel_at_period_end: boolean | null
@@ -2096,6 +3008,48 @@ export type Database = {
           importance_score?: number | null
           occurrences?: string[] | null
           symbol?: string
+        }
+        Relationships: []
+      }
+      testing_sessions: {
+        Row: {
+          completed_at: string | null
+          environment_config: Json | null
+          id: number
+          performance_metrics: Json | null
+          project_id: string
+          screenshots: Json | null
+          started_at: string | null
+          test_results: Json | null
+          test_session_id: string
+          test_status: string | null
+          test_type: string
+        }
+        Insert: {
+          completed_at?: string | null
+          environment_config?: Json | null
+          id?: number
+          performance_metrics?: Json | null
+          project_id: string
+          screenshots?: Json | null
+          started_at?: string | null
+          test_results?: Json | null
+          test_session_id: string
+          test_status?: string | null
+          test_type: string
+        }
+        Update: {
+          completed_at?: string | null
+          environment_config?: Json | null
+          id?: number
+          performance_metrics?: Json | null
+          project_id?: string
+          screenshots?: Json | null
+          started_at?: string | null
+          test_results?: Json | null
+          test_session_id?: string
+          test_status?: string | null
+          test_type?: string
         }
         Relationships: []
       }
@@ -2236,6 +3190,108 @@ export type Database = {
           id?: string
           task_type?: string | null
           tokens_used?: number | null
+        }
+        Relationships: []
+      }
+      user_achievements: {
+        Row: {
+          achievement_data: Json | null
+          achievement_type: string
+          badge_icon: string | null
+          earned_at: string | null
+          id: string
+          user_id: string
+        }
+        Insert: {
+          achievement_data?: Json | null
+          achievement_type: string
+          badge_icon?: string | null
+          earned_at?: string | null
+          id?: string
+          user_id: string
+        }
+        Update: {
+          achievement_data?: Json | null
+          achievement_type?: string
+          badge_icon?: string | null
+          earned_at?: string | null
+          id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_interactions: {
+        Row: {
+          created_at: string | null
+          device_info: Json | null
+          duration: number | null
+          effect_id: string | null
+          id: number
+          interaction_type: string | null
+          performance_metrics: Json | null
+          rating: number | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          device_info?: Json | null
+          duration?: number | null
+          effect_id?: string | null
+          id?: number
+          interaction_type?: string | null
+          performance_metrics?: Json | null
+          rating?: number | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          device_info?: Json | null
+          duration?: number | null
+          effect_id?: string | null
+          id?: number
+          interaction_type?: string | null
+          performance_metrics?: Json | null
+          rating?: number | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      user_preferences: {
+        Row: {
+          created_at: string | null
+          favorite_effects: string[] | null
+          id: number
+          performance_settings: Json | null
+          preferred_categories: number[] | null
+          recent_effects: string[] | null
+          search_history: string[] | null
+          ui_preferences: Json | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          favorite_effects?: string[] | null
+          id?: number
+          performance_settings?: Json | null
+          preferred_categories?: number[] | null
+          recent_effects?: string[] | null
+          search_history?: string[] | null
+          ui_preferences?: Json | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          favorite_effects?: string[] | null
+          id?: number
+          performance_settings?: Json | null
+          preferred_categories?: number[] | null
+          recent_effects?: string[] | null
+          search_history?: string[] | null
+          ui_preferences?: Json | null
+          updated_at?: string | null
+          user_id?: string
         }
         Relationships: []
       }
@@ -2468,32 +3524,62 @@ export type Database = {
       }
       match_chunks: {
         Args: {
-          query_embedding: string
-          match_threshold?: number
           match_count?: number
+          match_threshold?: number
+          query_embedding: string
         }
         Returns: {
-          id: string
-          content: string
-          summary: string
-          motifs: string[]
-          token_count: number
-          file_id: string
           cluster_id: string
+          content: string
+          file_id: string
+          id: string
+          motifs: string[]
           similarity: number
+          summary: string
+          token_count: number
+        }[]
+      }
+      search_effects: {
+        Args: {
+          category_filter?: string[]
+          complexity_filter?: number[]
+          keywords?: string[]
+          search_limit?: number
+          search_query?: string
+        }
+        Returns: {
+          average_rating: number
+          category_color: string
+          category_name: string
+          complexity_level: number
+          created_at: string
+          creator_id: string
+          description: string
+          id: string
+          is_public: boolean
+          likes_count: number
+          name: string
+          performance_score: number
+          preview_url: string
+          shader_code: string
+          tags: string[]
+          technical_specs: Json
+          trending_score: number
+          updated_at: string
+          views_count: number
         }[]
       }
       search_semantic_knowledge: {
         Args: {
+          match_count?: number
+          match_threshold?: number
           query_embedding: string
           search_user_id?: string
-          match_threshold?: number
-          match_count?: number
         }
         Returns: {
-          id: string
           content: string
           content_type: string
+          id: string
           metadata: Json
           similarity: number
         }[]
