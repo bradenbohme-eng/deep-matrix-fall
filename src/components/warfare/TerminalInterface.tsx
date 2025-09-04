@@ -387,7 +387,7 @@ ${eventList}
   };
 
   return (
-    <Card className="h-[600px] bg-black/90 backdrop-blur border border-primary/30 font-mono text-green-400 text-sm">
+    <Card className="h-full bg-black/90 backdrop-blur border border-primary/30 font-mono text-green-400 text-sm">
       {/* Terminal Header */}
       <div className="flex items-center justify-between p-2 border-b border-primary/30 bg-primary/5">
         <div className="flex items-center gap-2">

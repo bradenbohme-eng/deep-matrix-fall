@@ -9,6 +9,9 @@ import MatrixRain2D_V4 from '@/components/matrix/MatrixRain2D_V4';
 import MatrixRain2D_Enhanced from '@/components/matrix/MatrixRain2D_Enhanced';
 import AdvancedNeoChat from '@/components/matrix/AdvancedNeoChat';
 import MatrixSettingsPanel from '@/components/matrix/MatrixSettingsPanel';
+import { TerminalInterface } from '@/components/warfare/TerminalInterface';
+import { HackerMap } from '@/components/warfare/HackerMap';
+import { MatrixControlButton } from '@/components/matrix/MatrixControlButton';
 
 const Index = () => {
   const { settings, updateSetting } = useMatrixSettings();
@@ -40,23 +43,46 @@ const Index = () => {
   };
 
   return (
-    <div className="min-h-screen w-full relative overflow-hidden">
+    <div className="min-h-screen w-full relative overflow-hidden flex">
       
-      {settings.show3D ? (
-        <>
-          {/* 3D Matrix Background */}
-          <Matrix3DCanvas />
-          {/* Matrix HUD Overlay */}
-          <MatrixHUD />
-        </>
-      ) : (
-        <>
-          {/* 2D Matrix Rain Versions */}
-          {renderMatrixVersion()}
-          {/* Matrix HUD Overlay */}
-          <MatrixHUD />
-        </>
-      )}
+      {/* Matrix Background - Left Side */}
+      <div className="w-1/3 relative">
+        {settings.show3D ? (
+          <>
+            {/* 3D Matrix Background */}
+            <Matrix3DCanvas />
+            {/* Matrix HUD Overlay */}
+            <MatrixHUD />
+          </>
+        ) : (
+          <>
+            {/* 2D Matrix Rain Versions */}
+            {renderMatrixVersion()}
+            {/* Matrix HUD Overlay */}
+            <MatrixHUD />
+          </>
+        )}
+
+        {/* Matrix Control Button - Small Icon */}
+        <div className="absolute top-4 left-4 z-50">
+          <MatrixControlButton />
+        </div>
+      </div>
+
+      {/* Main Interface - Right Side */}
+      <div className="flex-1 flex flex-col bg-background/5 backdrop-blur">
+        
+        {/* Top Section - Hacker Map */}
+        <div className="h-1/2 p-4">
+          <HackerMap />
+        </div>
+
+        {/* Bottom Section - Large Terminal Interface */}
+        <div className="h-1/2 p-4">
+          <TerminalInterface />
+        </div>
+
+      </div>
 
       {/* Neo Chat Interface */}
       <AdvancedNeoChat />
