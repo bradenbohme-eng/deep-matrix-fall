@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useMatrixSettings } from '@/contexts/MatrixSettingsContext';
 import Matrix3DCanvas from '@/components/matrix/Matrix3DCanvas';
 import MatrixHUD from '@/components/matrix/MatrixHUD';
@@ -9,12 +9,11 @@ import MatrixRain2D_V4 from '@/components/matrix/MatrixRain2D_V4';
 import MatrixRain2D_Enhanced from '@/components/matrix/MatrixRain2D_Enhanced';
 import AdvancedNeoChat from '@/components/matrix/AdvancedNeoChat';
 import MatrixSettingsPanel from '@/components/matrix/MatrixSettingsPanel';
-import { TerminalInterface } from '@/components/warfare/TerminalInterface';
-import { HackerMap } from '@/components/warfare/HackerMap';
 import { MatrixControlButton } from '@/components/matrix/MatrixControlButton';
 
 const Index = () => {
   const { settings, updateSetting } = useMatrixSettings();
+  const [showMatrixControls, setShowMatrixControls] = useState(false);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -43,10 +42,10 @@ const Index = () => {
   };
 
   return (
-    <div className="min-h-screen w-full relative overflow-hidden flex">
+    <div className="min-h-screen w-full relative overflow-hidden">
       
-      {/* Matrix Background - Left Side */}
-      <div className="w-1/3 relative">
+      {/* Full Screen Matrix Background */}
+      <div className="absolute inset-0">
         {settings.show3D ? (
           <>
             {/* 3D Matrix Background */}
@@ -63,28 +62,27 @@ const Index = () => {
           </>
         )}
 
-        {/* Matrix Control Button - Small Icon */}
-        <div className="absolute top-4 left-4 z-50">
-          <MatrixControlButton />
+        {/* Matrix Simulation Panel - Click to show controls */}
+        <div 
+          className="absolute top-4 left-4 z-50 cursor-pointer"
+          onMouseEnter={() => setShowMatrixControls(true)}
+          onMouseLeave={() => setShowMatrixControls(false)}
+        >
+          <div className="bg-primary/10 hover:bg-primary/20 border border-primary/30 rounded-lg p-3 transition-all duration-300">
+            <div className="text-primary font-mono text-sm font-bold">MATRIX SIM</div>
+            <div className="text-primary/60 font-mono text-xs">v{settings.currentVersion}.0</div>
+          </div>
+          
+          {/* Matrix Controls - Show on hover */}
+          {showMatrixControls && (
+            <div className="absolute top-full left-0 mt-2 z-50">
+              <MatrixControlButton />
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Main Interface - Right Side */}
-      <div className="flex-1 flex flex-col bg-background/5 backdrop-blur">
-        
-        {/* Top Section - Hacker Map */}
-        <div className="h-1/2 p-4">
-          <HackerMap />
-        </div>
-
-        {/* Bottom Section - Large Terminal Interface */}
-        <div className="h-1/2 p-4">
-          <TerminalInterface />
-        </div>
-
-      </div>
-
-      {/* Neo Chat Interface */}
+      {/* Neo Chat Interface - Now larger and positioned bottom right */}
       <AdvancedNeoChat />
 
       {/* Settings Panel */}
