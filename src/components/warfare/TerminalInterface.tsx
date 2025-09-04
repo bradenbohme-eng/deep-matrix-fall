@@ -256,6 +256,7 @@ Use 'execute [id]' to begin mission execution
           if (clock) {
             const minutes = Math.floor(clock.minutes_to_midnight);
             const seconds = Math.floor((clock.minutes_to_midnight % 1) * 60);
+            const tensionFactors = clock.tension_factors as any || {};
             
             addToHistory('', `
 World War Clock Status:
@@ -264,10 +265,10 @@ Time to Midnight:    ${Math.floor(minutes / 60)}:${(minutes % 60).toString().pad
 Escalation Prob:     ${(clock.escalation_probability * 100).toFixed(1)}%
 
 Tension Factors:
-Nuclear:            ${(clock.tension_factors.nuclear_tension * 100).toFixed(1)}%
-Cyber Warfare:      ${(clock.tension_factors.cyber_warfare * 100).toFixed(1)}%
-Economic:           ${(clock.tension_factors.economic_instability * 100).toFixed(1)}%
-AI Anomalies:       ${(clock.tension_factors.ai_anomalies * 100).toFixed(1)}%
+Nuclear:            ${((tensionFactors.nuclear_tension || 0) * 100).toFixed(1)}%
+Cyber Warfare:      ${((tensionFactors.cyber_warfare || 0) * 100).toFixed(1)}%
+Economic:           ${((tensionFactors.economic_instability || 0) * 100).toFixed(1)}%
+AI Anomalies:       ${((tensionFactors.ai_anomalies || 0) * 100).toFixed(1)}%
 ═══════════════════════════════════════════════════════════════
             `);
           }
@@ -283,9 +284,11 @@ AI Anomalies:       ${(clock.tension_factors.ai_anomalies * 100).toFixed(1)}%
             .select('*');
           
           if (factions) {
-            const factionList = factions.map(faction => 
-              `${faction.name}\n  Resources: ${faction.resources.isk.toLocaleString()} ISK | Rep: ${faction.resources.reputation} | Intel: ${faction.resources.intel}\n  Focus: ${faction.ideology?.focus || 'Unknown'}`
-            ).join('\n\n');
+            const factionList = factions.map(faction => {
+              const resources = faction.resources as any || {};
+              const ideology = faction.ideology as any || {};
+              return `${faction.name}\n  Resources: ${(resources.isk || 0).toLocaleString()} ISK | Rep: ${resources.reputation || 0} | Intel: ${resources.intel || 0}\n  Focus: ${ideology.focus || 'Unknown'}`;
+            }).join('\n\n');
             
             addToHistory('', `
 Known Factions:

@@ -97,11 +97,11 @@ export const WarfareEngine: React.FC = () => {
       if (error) {
         console.error('Error creating player:', error);
       } else {
-        setPlayer(newPlayer);
+        setPlayer(newPlayer as unknown as WarfarePlayer);
         await generateInitialMissions(newPlayer.id);
       }
     } else {
-      setPlayer(existing);
+      setPlayer(existing as unknown as WarfarePlayer);
     }
   }, []);
 
