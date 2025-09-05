@@ -26,8 +26,12 @@ import {
   Building, 
   Workflow,
   X,
-  Minus
+  Minus,
+  Settings,
+  Database,
+  Terminal
 } from 'lucide-react';
+import MatrixSettingsPanel from '@/components/matrix/MatrixSettingsPanel';
 
 interface ChatMessage {
   id: string;
@@ -65,7 +69,7 @@ const AdvancedNeoChat: React.FC = () => {
   const [input, setInput] = useState('');
   const [isVisible, setIsVisible] = useState(true);
   const [isMinimized, setIsMinimized] = useState(false);
-  const [activeTab, setActiveTab] = useState<'chat' | 'memory' | 'network' | 'team' | 'feeds' | 'map' | 'diagram' | 'ide' | 'agents' | 'apis' | 'cloud' | 'builder'>('chat');
+  const [activeTab, setActiveTab] = useState<'chat' | 'memory' | 'network' | 'team' | 'feeds' | 'map' | 'diagram' | 'ide' | 'agents' | 'apis' | 'cloud' | 'builder' | 'matrix' | 'database'>('chat');
   const [feedItems, setFeedItems] = useState<FeedItemType[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   
@@ -269,15 +273,17 @@ REALITY IS WHAT YOU MAKE IT, NEO.`, 'system');
     { id: 'agents', icon: Bot, label: 'Agents' },
     { id: 'cloud', icon: Cloud, label: 'Cloud' },
     { id: 'builder', icon: Building, label: 'Builder' },
-    { id: 'diagram', icon: Workflow, label: 'Diagram' }
+    { id: 'diagram', icon: Workflow, label: 'Diagram' },
+    { id: 'matrix', icon: Settings, label: 'Matrix' },
+    { id: 'database', icon: Database, label: 'Database' }
   ];
 
   if (!settings.showUI) return null;
 
   return (
-    <div className="fixed bottom-4 right-4 pointer-events-none z-40">
+    <div className="fixed inset-4 flex items-center justify-center pointer-events-none z-40">
       <Card className={`bg-card/95 backdrop-blur-md border-primary/40 flex pointer-events-auto transition-all duration-500 ${
-        isMinimized ? 'w-16 h-16' : 'w-[1000px] h-[700px]'
+        isMinimized ? 'w-16 h-16' : 'w-[1200px] h-[800px]'
       } ${isVisible ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
         
         {isMinimized ? (
@@ -406,42 +412,87 @@ REALITY IS WHAT YOU MAKE IT, NEO.`, 'system');
 
                 {activeTab === 'memory' && (
                   <div className="h-full p-4 overflow-y-auto">
-                    <h3 className="text-primary font-mono text-lg mb-4">MEMORY CORE</h3>
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-primary font-mono text-lg">QUANTUM MEMORY CORE</h3>
+                      <div className="flex space-x-2">
+                        <Button variant="secondary" size="sm" onClick={() => setMemories([])}>
+                          Clear All
+                        </Button>
+                        <Button variant="outline" size="sm" onClick={() => {
+                          const backup = JSON.stringify(memories);
+                          navigator.clipboard.writeText(backup);
+                          addMessage('Memory backup copied to clipboard', 'system');
+                        }}>
+                          Export
+                        </Button>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-3 gap-4 mb-4">
+                      <div className="p-3 bg-primary/10 border border-primary/30 rounded">
+                        <div className="text-primary text-sm">TOTAL MEMORIES</div>
+                        <div className="text-primary text-lg font-bold">{memories.length}</div>
+                      </div>
+                      <div className="p-3 bg-green-500/10 border border-green-500/30 rounded">
+                        <div className="text-green-400 text-sm">HIGH PRIORITY</div>
+                        <div className="text-green-300 text-lg font-bold">{memories.filter(m => m.importance >= 3).length}</div>
+                      </div>
+                      <div className="p-3 bg-blue-500/10 border border-blue-500/30 rounded">
+                        <div className="text-blue-400 text-sm">RECENT (24H)</div>
+                        <div className="text-blue-300 text-lg font-bold">{memories.filter(m => 
+                          Date.now() - m.timestamp.getTime() < 24 * 60 * 60 * 1000).length}</div>
+                      </div>
+                    </div>
                     <div className="space-y-2">
-                      {memories.map((memory) => (
-                        <div key={memory.id} className="p-3 bg-muted/10 border border-muted/20 rounded">
-                          <div className="text-sm text-foreground mb-2">{memory.content}</div>
-                          <div className="flex items-center justify-between text-xs text-muted-foreground">
-                            <span>{memory.timestamp.toLocaleString()}</span>
-                            <div className="flex items-center space-x-2">
-                              <span>Priority: {memory.importance}</span>
-                              <div className="flex space-x-1">
-                                {memory.tags.map((tag) => (
-                                  <span key={tag} className="px-1 py-0.5 bg-primary/20 text-primary rounded text-xs">
-                                    {tag}
-                                  </span>
-                                ))}
+                      {memories.length === 0 ? (
+                        <div className="text-center text-muted-foreground font-mono p-8">
+                          No memories stored. Start interacting to build memory core.
+                        </div>
+                      ) : (
+                        memories.map((memory) => (
+                          <div key={memory.id} className={`p-3 border rounded transition-colors hover:bg-muted/5 ${
+                            memory.importance >= 3 ? 'border-red-500/30 bg-red-500/5' :
+                            memory.importance >= 2 ? 'border-yellow-500/30 bg-yellow-500/5' :
+                            'border-muted/20 bg-muted/5'
+                          }`}>
+                            <div className="text-sm text-foreground mb-2 leading-relaxed">{memory.content}</div>
+                            <div className="flex items-center justify-between text-xs text-muted-foreground">
+                              <span className="font-mono">{memory.timestamp.toLocaleString()}</span>
+                              <div className="flex items-center space-x-2">
+                                <span className={`font-mono ${
+                                  memory.importance >= 3 ? 'text-red-400' :
+                                  memory.importance >= 2 ? 'text-yellow-400' :
+                                  'text-green-400'
+                                }`}>
+                                  Priority: {memory.importance}
+                                </span>
+                                <div className="flex space-x-1">
+                                  {memory.tags.map((tag) => (
+                                    <span key={tag} className="px-1.5 py-0.5 bg-primary/20 text-primary rounded text-xs font-mono">
+                                      #{tag}
+                                    </span>
+                                  ))}
+                                </div>
                               </div>
                             </div>
                           </div>
-                        </div>
-                      ))}
+                        ))
+                      )}
                     </div>
                   </div>
                 )}
 
                 {activeTab === 'network' && (
                   <div className="h-full p-4 overflow-y-auto font-mono">
-                    <h3 className="text-primary text-lg mb-4">NETWORK STATUS</h3>
+                    <h3 className="text-primary text-lg mb-4">NETWORK OPERATIONS</h3>
                     <div className="space-y-4">
                       <div className="grid grid-cols-2 gap-4">
                         <div className="p-3 bg-green-500/10 border border-green-500/30 rounded">
                           <div className="text-green-400 text-sm">CONNECTION STATUS</div>
-                          <div className="text-green-300 text-lg">ONLINE</div>
+                          <div className="text-green-300 text-lg">SECURE</div>
                         </div>
                         <div className="p-3 bg-blue-500/10 border border-blue-500/30 rounded">
                           <div className="text-blue-400 text-sm">ENCRYPTION LEVEL</div>
-                          <div className="text-blue-300 text-lg">MAXIMUM</div>
+                          <div className="text-blue-300 text-lg">AES-256</div>
                         </div>
                         <div className="p-3 bg-purple-500/10 border border-purple-500/30 rounded">
                           <div className="text-purple-400 text-sm">PROXY CHAINS</div>
@@ -450,6 +501,42 @@ REALITY IS WHAT YOU MAKE IT, NEO.`, 'system');
                         <div className="p-3 bg-yellow-500/10 border border-yellow-500/30 rounded">
                           <div className="text-yellow-400 text-sm">TRACE DETECTION</div>
                           <div className="text-yellow-300 text-lg">BLOCKED</div>
+                        </div>
+                      </div>
+                      
+                      <div className="border border-primary/20 rounded p-4">
+                        <h4 className="text-primary mb-3">Active Connections</h4>
+                        <div className="space-y-2 text-xs">
+                          <div className="flex justify-between items-center p-2 bg-green-500/5 border border-green-500/20 rounded">
+                            <span className="text-green-400">TOR Exit Node: 192.168.1.1</span>
+                            <span className="text-green-300">ESTABLISHED</span>
+                          </div>
+                          <div className="flex justify-between items-center p-2 bg-blue-500/5 border border-blue-500/20 rounded">
+                            <span className="text-blue-400">VPN Gateway: 10.0.0.1</span>
+                            <span className="text-blue-300">CONNECTED</span>
+                          </div>
+                          <div className="flex justify-between items-center p-2 bg-purple-500/5 border border-purple-500/20 rounded">
+                            <span className="text-purple-400">Proxy Chain: 172.16.0.1</span>
+                            <span className="text-purple-300">ACTIVE</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="border border-primary/20 rounded p-4">
+                        <h4 className="text-primary mb-3">Traffic Analysis</h4>
+                        <div className="grid grid-cols-3 gap-4 text-xs">
+                          <div className="text-center">
+                            <div className="text-green-400 text-lg">24.7 MB</div>
+                            <div className="text-muted-foreground">Encrypted TX</div>
+                          </div>
+                          <div className="text-center">
+                            <div className="text-blue-400 text-lg">18.3 MB</div>
+                            <div className="text-muted-foreground">Encrypted RX</div>
+                          </div>
+                          <div className="text-center">
+                            <div className="text-red-400 text-lg">0</div>
+                            <div className="text-muted-foreground">Blocked</div>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -513,23 +600,66 @@ REALITY IS WHAT YOU MAKE IT, NEO.`, 'system');
                     <BuilderABPPanel />
                   </div>
                 )}
+
+                {activeTab === 'matrix' && (
+                  <div className="h-full p-4 overflow-y-auto">
+                    <MatrixSettingsPanel />
+                  </div>
+                )}
+
+                {activeTab === 'database' && (
+                  <div className="h-full p-4 overflow-y-auto font-mono">
+                    <h3 className="text-primary text-lg mb-4">DATABASE STATUS</h3>
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="p-3 bg-green-500/10 border border-green-500/30 rounded">
+                          <div className="text-green-400 text-sm">CONNECTION</div>
+                          <div className="text-green-300 text-lg">ACTIVE</div>
+                        </div>
+                        <div className="p-3 bg-blue-500/10 border border-blue-500/30 rounded">
+                          <div className="text-blue-400 text-sm">TABLES</div>
+                          <div className="text-blue-300 text-lg">47 ACTIVE</div>
+                        </div>
+                        <div className="p-3 bg-purple-500/10 border border-purple-500/30 rounded">
+                          <div className="text-purple-400 text-sm">QUERIES/SEC</div>
+                          <div className="text-purple-300 text-lg">1,247</div>
+                        </div>
+                        <div className="p-3 bg-yellow-500/10 border border-yellow-500/30 rounded">
+                          <div className="text-yellow-400 text-sm">STORAGE</div>
+                          <div className="text-yellow-300 text-lg">2.3 TB</div>
+                        </div>
+                      </div>
+                      <div className="border border-primary/20 rounded p-4">
+                        <h4 className="text-primary mb-2">Recent Queries</h4>
+                        <div className="space-y-1 text-xs">
+                          <div className="text-green-400">SELECT * FROM classified_ops WHERE status='active'</div>
+                          <div className="text-blue-400">UPDATE agent_locations SET last_seen=NOW()</div>
+                          <div className="text-purple-400">INSERT INTO intel_reports VALUES (...)</div>
+                          <div className="text-yellow-400">DELETE FROM temp_logs WHERE created &lt; NOW()-7</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>
         )}
       </Card>
 
-      {/* Toggle button when hidden */}
+      {/* Toggle button when hidden - Fixed position */}
       {!isVisible && (
-        <button
-          onClick={() => setIsVisible(true)}
-          className="w-16 h-16 bg-primary/20 hover:bg-primary/30 border border-primary/40 rounded-full flex items-center justify-center transition-all duration-300 pointer-events-auto group"
-        >
-          <div className="text-center">
-            <div className="text-primary font-mono text-xs font-bold">NEO</div>
-            <div className="text-primary/60 font-mono text-xs">v3.0</div>
-          </div>
-        </button>
+        <div className="fixed bottom-4 right-4 pointer-events-auto">
+          <button
+            onClick={() => setIsVisible(true)}
+            className="w-16 h-16 bg-primary/20 hover:bg-primary/30 border border-primary/40 rounded-full flex items-center justify-center transition-all duration-300 group"
+          >
+            <div className="text-center">
+              <Terminal className="w-6 h-6 text-primary mb-1" />
+              <div className="text-primary/60 font-mono text-xs">NEO</div>
+            </div>
+          </button>
+        </div>
       )}
     </div>
   );

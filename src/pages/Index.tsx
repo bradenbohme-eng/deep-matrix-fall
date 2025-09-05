@@ -62,31 +62,13 @@ const Index = () => {
           </>
         )}
 
-        {/* Matrix Simulation Panel - Click to show controls */}
-        <div 
-          className="absolute top-4 left-4 z-50 cursor-pointer"
-          onMouseEnter={() => setShowMatrixControls(true)}
-          onMouseLeave={() => setShowMatrixControls(false)}
-        >
-          <div className="bg-primary/10 hover:bg-primary/20 border border-primary/30 rounded-lg p-3 transition-all duration-300">
-            <div className="text-primary font-mono text-sm font-bold">MATRIX SIM</div>
-            <div className="text-primary/60 font-mono text-xs">v{settings.currentVersion}.0</div>
-          </div>
-          
-          {/* Matrix Controls - Show on hover */}
-          {showMatrixControls && (
-            <div className="absolute top-full left-0 mt-2 z-50">
-              <MatrixControlButton />
-            </div>
-          )}
-        </div>
+      {/* Removed Matrix Simulation Panel - Now integrated into Neo Terminal */}
       </div>
 
-      {/* Neo Chat Interface - Now larger and positioned bottom right */}
+      {/* Neo Terminal Interface - Centered */}
       <AdvancedNeoChat />
 
-      {/* Settings Panel */}
-      <MatrixSettingsPanel />
+      {/* Settings Panel - Removed from main UI, now in Neo Terminal */}
 
       {/* Show UI Toggle (when UI is hidden) */}
       {!settings.showUI && (
