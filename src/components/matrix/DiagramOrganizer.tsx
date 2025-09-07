@@ -52,21 +52,235 @@ interface DiagramOrganizerProps {
   mode?: DiagramMode; // knowledge graph by default; architecture filters code/services
 }
 
-const DemoData = {
-  nodes: [
-    { id: 'core', data: { label: 'Core Node' }, position: { x: 0, y: 0 } },
-    { id: 'n1', data: { label: 'Concept: Vision' }, position: { x: -150, y: 120 } },
-    { id: 'n2', data: { label: 'Doc: Roadmap' }, position: { x: 160, y: 120 } },
-    { id: 'n3', data: { label: 'Code: AdvancedNeoChat' }, position: { x: -220, y: 260 } },
-    { id: 'n4', data: { label: 'API: Supabase' }, position: { x: 220, y: 260 } },
-  ] as Node[],
-  edges: [
-    { id: 'e1', source: 'core', target: 'n1', data: { strength: 0.9 } },
-    { id: 'e2', source: 'core', target: 'n2', data: { strength: 0.8 } },
-    { id: 'e3', source: 'n1', target: 'n3', data: { strength: 0.7 } },
-    { id: 'e4', source: 'n2', target: 'n4', data: { strength: 0.6 } },
-  ] as Edge[],
+// Generate massive global network orchestration data
+const generateGlobalNetwork = () => {
+  const nodes: Node[] = [];
+  const edges: Edge[] = [];
+  
+  // Core quantum control hubs
+  const coreHubs = [
+    { id: 'quantum-core-alpha', label: 'QUANTUM CORE ALPHA', pos: { x: 0, y: 0 }, type: 'quantum' },
+    { id: 'quantum-core-beta', label: 'QUANTUM CORE BETA', pos: { x: 400, y: 0 }, type: 'quantum' },
+    { id: 'quantum-core-gamma', label: 'QUANTUM CORE GAMMA', pos: { x: -400, y: 0 }, type: 'quantum' },
+  ];
+
+  // Regional orchestration centers
+  const regions = [
+    { id: 'na-orchestrator', label: 'North America Orchestrator', pos: { x: -600, y: 200 }, region: 'NA' },
+    { id: 'eu-orchestrator', label: 'Europe Orchestrator', pos: { x: 0, y: 200 }, region: 'EU' },
+    { id: 'asia-orchestrator', label: 'Asia-Pacific Orchestrator', pos: { x: 600, y: 200 }, region: 'ASIA' },
+    { id: 'sa-orchestrator', label: 'South America Orchestrator', pos: { x: -300, y: 400 }, region: 'SA' },
+    { id: 'africa-orchestrator', label: 'Africa Orchestrator', pos: { x: 300, y: 400 }, region: 'AF' },
+  ];
+
+  // Thousands of edge nodes globally
+  const edgeTypes = ['datacenter', 'cdn', 'relay', 'satellite', 'submarine', 'cellular', 'fiber', 'mesh'];
+  let nodeCounter = 0;
+
+  // Generate edge network infrastructure
+  for (let region = 0; region < regions.length; region++) {
+    const baseX = regions[region].pos.x;
+    const baseY = regions[region].pos.y;
+    
+    // Major data centers per region (50-100 per region)
+    for (let dc = 0; dc < 75; dc++) {
+      const angle = (dc / 75) * 2 * Math.PI;
+      const radius = 150 + Math.random() * 200;
+      const x = baseX + Math.cos(angle) * radius;
+      const y = baseY + Math.sin(angle) * radius;
+      
+      nodes.push({
+        id: `dc-${region}-${dc}`,
+        data: { 
+          label: `DataCenter-${regions[region].region}-${dc.toString().padStart(3, '0')}`,
+          type: 'datacenter',
+          capacity: Math.floor(Math.random() * 10000) + 1000,
+          status: Math.random() > 0.1 ? 'online' : 'maintenance'
+        },
+        position: { x, y },
+        style: {
+          border: '2px solid hsl(220, 100%, 50%)',
+          background: 'hsl(220, 100%, 10%)',
+          color: 'hsl(220, 100%, 80%)',
+          width: 120,
+          height: 60,
+        }
+      });
+      
+      // Connect to regional orchestrator
+      edges.push({
+        id: `edge-${nodeCounter++}`,
+        source: regions[region].id,
+        target: `dc-${region}-${dc}`,
+        animated: Math.random() > 0.7,
+        style: { stroke: 'hsl(220, 100%, 60%)', strokeWidth: 2 }
+      });
+    }
+
+    // Edge computing nodes (200-300 per region)
+    for (let edge = 0; edge < 250; edge++) {
+      const parentDC = Math.floor(Math.random() * 75);
+      const angle = Math.random() * 2 * Math.PI;
+      const radius = 50 + Math.random() * 100;
+      const parentX = baseX + Math.cos((parentDC / 75) * 2 * Math.PI) * (150 + Math.random() * 200);
+      const parentY = baseY + Math.sin((parentDC / 75) * 2 * Math.PI) * (150 + Math.random() * 200);
+      const x = parentX + Math.cos(angle) * radius;
+      const y = parentY + Math.sin(angle) * radius;
+      
+      const edgeType = edgeTypes[Math.floor(Math.random() * edgeTypes.length)];
+      
+      nodes.push({
+        id: `edge-${region}-${edge}`,
+        data: { 
+          label: `${edgeType.toUpperCase()}-${edge.toString().padStart(3, '0')}`,
+          type: edgeType,
+          throughput: Math.floor(Math.random() * 1000) + 100,
+          latency: Math.floor(Math.random() * 50) + 1
+        },
+        position: { x, y },
+        style: {
+          border: '1px solid hsl(150, 80%, 50%)',
+          background: 'hsl(150, 80%, 5%)',
+          color: 'hsl(150, 80%, 70%)',
+          width: 80,
+          height: 40,
+        }
+      });
+      
+      // Connect to parent datacenter
+      edges.push({
+        id: `edge-${nodeCounter++}`,
+        source: `dc-${region}-${parentDC}`,
+        target: `edge-${region}-${edge}`,
+        animated: Math.random() > 0.8,
+        style: { stroke: 'hsl(150, 80%, 60%)', strokeWidth: 1 }
+      });
+    }
+
+    // Satellite uplinks (10-20 per region)
+    for (let sat = 0; sat < 15; sat++) {
+      const angle = (sat / 15) * 2 * Math.PI;
+      const radius = 400 + Math.random() * 100;
+      const x = baseX + Math.cos(angle) * radius;
+      const y = baseY + Math.sin(angle) * radius - 200;
+      
+      nodes.push({
+        id: `sat-${region}-${sat}`,
+        data: { 
+          label: `SAT-UPLINK-${sat}`,
+          type: 'satellite',
+          orbital: true,
+          frequency: `${Math.floor(Math.random() * 40) + 10}GHz`
+        },
+        position: { x, y },
+        style: {
+          border: '2px solid hsl(60, 100%, 50%)',
+          background: 'hsl(60, 100%, 8%)',
+          color: 'hsl(60, 100%, 80%)',
+          width: 100,
+          height: 50,
+          borderRadius: '25px'
+        }
+      });
+      
+      // Connect satellites to multiple datacenters
+      for (let connection = 0; connection < 3; connection++) {
+        const targetDC = Math.floor(Math.random() * 75);
+        edges.push({
+          id: `edge-${nodeCounter++}`,
+          source: `sat-${region}-${sat}`,
+          target: `dc-${region}-${targetDC}`,
+          animated: true,
+          style: { 
+            stroke: 'hsl(60, 100%, 60%)', 
+            strokeWidth: 2,
+            strokeDasharray: '5,5'
+          }
+        });
+      }
+    }
+  }
+
+  // Add core quantum hubs
+  coreHubs.forEach(hub => {
+    nodes.push({
+      id: hub.id,
+      data: { 
+        label: hub.label,
+        type: 'quantum-core',
+        qubits: Math.floor(Math.random() * 1000) + 500,
+        entanglement: 'active'
+      },
+      position: hub.pos,
+      style: {
+        border: '3px solid hsl(300, 100%, 50%)',
+        background: 'hsl(300, 100%, 5%)',
+        color: 'hsl(300, 100%, 90%)',
+        width: 180,
+        height: 80,
+        borderRadius: '40px'
+      }
+    });
+  });
+
+  // Add regional orchestrators
+  regions.forEach(region => {
+    nodes.push({
+      id: region.id,
+      data: { 
+        label: region.label,
+        type: 'orchestrator',
+        region: region.region,
+        nodes_managed: Math.floor(Math.random() * 500) + 300
+      },
+      position: region.pos,
+      style: {
+        border: '3px solid hsl(30, 100%, 50%)',
+        background: 'hsl(30, 100%, 5%)',
+        color: 'hsl(30, 100%, 90%)',
+        width: 160,
+        height: 70,
+      }
+    });
+  });
+
+  // Connect quantum cores to orchestrators
+  coreHubs.forEach(hub => {
+    regions.forEach(region => {
+      edges.push({
+        id: `edge-${nodeCounter++}`,
+        source: hub.id,
+        target: region.id,
+        animated: true,
+        style: { 
+          stroke: 'hsl(300, 100%, 60%)', 
+          strokeWidth: 4
+        }
+      });
+    });
+  });
+
+  // Cross-region backbone connections
+  for (let i = 0; i < regions.length; i++) {
+    for (let j = i + 1; j < regions.length; j++) {
+      edges.push({
+        id: `backbone-${i}-${j}`,
+        source: regions[i].id,
+        target: regions[j].id,
+        animated: true,
+        style: { 
+          stroke: 'hsl(0, 100%, 60%)', 
+          strokeWidth: 3,
+          strokeDasharray: '10,5'
+        }
+      });
+    }
+  }
+
+  return { nodes, edges };
 };
+
+const DemoData = generateGlobalNetwork();
 
 const DiagramOrganizer: React.FC<DiagramOrganizerProps> = ({ mode = 'knowledge' }) => {
   // Controls
