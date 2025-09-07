@@ -8,8 +8,6 @@ import MatrixRain2D_V3 from '@/components/matrix/MatrixRain2D_V3';
 import MatrixRain2D_V4 from '@/components/matrix/MatrixRain2D_V4';
 import MatrixRain2D_Enhanced from '@/components/matrix/MatrixRain2D_Enhanced';
 import AdvancedNeoChat from '@/components/matrix/AdvancedNeoChat';
-import MatrixSettingsPanel from '@/components/matrix/MatrixSettingsPanel';
-import { MatrixControlButton } from '@/components/matrix/MatrixControlButton';
 
 const Index = () => {
   const { settings, updateSetting } = useMatrixSettings();
