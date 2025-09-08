@@ -57,20 +57,20 @@ const generateGlobalNetwork = () => {
   const nodes: Node[] = [];
   const edges: Edge[] = [];
   
-  // Core quantum control hubs
+  // Core quantum control hubs - spread out more
   const coreHubs = [
     { id: 'quantum-core-alpha', label: 'QUANTUM CORE ALPHA', pos: { x: 0, y: 0 }, type: 'quantum' },
-    { id: 'quantum-core-beta', label: 'QUANTUM CORE BETA', pos: { x: 400, y: 0 }, type: 'quantum' },
-    { id: 'quantum-core-gamma', label: 'QUANTUM CORE GAMMA', pos: { x: -400, y: 0 }, type: 'quantum' },
+    { id: 'quantum-core-beta', label: 'QUANTUM CORE BETA', pos: { x: 800, y: 0 }, type: 'quantum' },
+    { id: 'quantum-core-gamma', label: 'QUANTUM CORE GAMMA', pos: { x: -800, y: 0 }, type: 'quantum' },
   ];
 
-  // Regional orchestration centers
+  // Regional orchestration centers - spread out more
   const regions = [
-    { id: 'na-orchestrator', label: 'North America Orchestrator', pos: { x: -600, y: 200 }, region: 'NA' },
-    { id: 'eu-orchestrator', label: 'Europe Orchestrator', pos: { x: 0, y: 200 }, region: 'EU' },
-    { id: 'asia-orchestrator', label: 'Asia-Pacific Orchestrator', pos: { x: 600, y: 200 }, region: 'ASIA' },
-    { id: 'sa-orchestrator', label: 'South America Orchestrator', pos: { x: -300, y: 400 }, region: 'SA' },
-    { id: 'africa-orchestrator', label: 'Africa Orchestrator', pos: { x: 300, y: 400 }, region: 'AF' },
+    { id: 'na-orchestrator', label: 'North America Orchestrator', pos: { x: -1200, y: 400 }, region: 'NA' },
+    { id: 'eu-orchestrator', label: 'Europe Orchestrator', pos: { x: 0, y: 400 }, region: 'EU' },
+    { id: 'asia-orchestrator', label: 'Asia-Pacific Orchestrator', pos: { x: 1200, y: 400 }, region: 'ASIA' },
+    { id: 'sa-orchestrator', label: 'South America Orchestrator', pos: { x: -600, y: 800 }, region: 'SA' },
+    { id: 'africa-orchestrator', label: 'Africa Orchestrator', pos: { x: 600, y: 800 }, region: 'AF' },
   ];
 
   // Thousands of edge nodes globally
@@ -82,10 +82,10 @@ const generateGlobalNetwork = () => {
     const baseX = regions[region].pos.x;
     const baseY = regions[region].pos.y;
     
-    // Major data centers per region (50-100 per region)
+    // Major data centers per region (50-100 per region) - improved spacing
     for (let dc = 0; dc < 75; dc++) {
       const angle = (dc / 75) * 2 * Math.PI;
-      const radius = 150 + Math.random() * 200;
+      const radius = 300 + Math.random() * 400; // Increased minimum radius and spread
       const x = baseX + Math.cos(angle) * radius;
       const y = baseY + Math.sin(angle) * radius;
       
@@ -117,13 +117,13 @@ const generateGlobalNetwork = () => {
       });
     }
 
-    // Edge computing nodes (200-300 per region)
+    // Edge computing nodes (200-300 per region) - improved spacing
     for (let edge = 0; edge < 250; edge++) {
       const parentDC = Math.floor(Math.random() * 75);
       const angle = Math.random() * 2 * Math.PI;
-      const radius = 50 + Math.random() * 100;
-      const parentX = baseX + Math.cos((parentDC / 75) * 2 * Math.PI) * (150 + Math.random() * 200);
-      const parentY = baseY + Math.sin((parentDC / 75) * 2 * Math.PI) * (150 + Math.random() * 200);
+      const radius = 120 + Math.random() * 180; // Increased minimum distance from parent
+      const parentX = baseX + Math.cos((parentDC / 75) * 2 * Math.PI) * (300 + Math.random() * 400);
+      const parentY = baseY + Math.sin((parentDC / 75) * 2 * Math.PI) * (300 + Math.random() * 400);
       const x = parentX + Math.cos(angle) * radius;
       const y = parentY + Math.sin(angle) * radius;
       
@@ -157,12 +157,12 @@ const generateGlobalNetwork = () => {
       });
     }
 
-    // Satellite uplinks (10-20 per region)
+    // Satellite uplinks (10-20 per region) - improved spacing
     for (let sat = 0; sat < 15; sat++) {
       const angle = (sat / 15) * 2 * Math.PI;
-      const radius = 400 + Math.random() * 100;
+      const radius = 600 + Math.random() * 200; // Increased radius for better separation
       const x = baseX + Math.cos(angle) * radius;
-      const y = baseY + Math.sin(angle) * radius - 200;
+      const y = baseY + Math.sin(angle) * radius - 300; // Moved further up
       
       nodes.push({
         id: `sat-${region}-${sat}`,
@@ -412,12 +412,12 @@ const DiagramOrganizer: React.FC<DiagramOrganizerProps> = ({ mode = 'knowledge' 
       });
     }
 
-    // Position nodes per layer (radial-ish layout)
+    // Position nodes per layer with improved spacing
     const rfNodes: Node[] = [];
     const rfEdges: Edge[] = [];
 
-    const layerGapY = 180;
-    const baseXGap = 200;
+    const layerGapY = 300; // Increased vertical spacing between layers
+    const baseXGap = 350; // Increased horizontal spacing between nodes
 
     layers.forEach((layer, li) => {
       const y = li * layerGapY;
