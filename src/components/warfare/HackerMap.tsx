@@ -1,8 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import mapboxgl from 'mapbox-gl';
+import 'mapbox-gl/dist/mapbox-gl.css';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Shield, Zap, Eye, Skull, Satellite, Lock, AlertTriangle, Radio, Database, Wifi, Terminal, Search, Activity, Crosshair } from 'lucide-react';
+import { Shield, Zap, Eye, Skull, Satellite, Lock, AlertTriangle, Radio, Database, Wifi, Terminal, Search, Activity, Crosshair, ChevronLeft, ChevronRight, Settings } from 'lucide-react';
 
 interface ClassifiedNode {
   id: string;
@@ -196,14 +198,19 @@ const PENTEST_TOOLS: PenTestTool[] = [
 ];
 
 export const HackerMap: React.FC = () => {
+  const mapContainer = useRef<HTMLDivElement>(null);
+  const map = useRef<mapboxgl.Map | null>(null);
   const [selectedNode, setSelectedNode] = useState<ClassifiedNode | null>(null);
   const [scanMode, setScanMode] = useState<boolean>(false);
-  const [filteredNodes, setFilteredNodes] = useState<ClassifiedNode[]>(CLASSIFIED_NODES.slice(0, 100)); // Start with limited nodes for performance
+  const [filteredNodes, setFilteredNodes] = useState<ClassifiedNode[]>(CLASSIFIED_NODES.slice(0, 100));
   const [filterType, setFilterType] = useState<string>('all');
   const [threatFilter, setThreatFilter] = useState<number>(0);
   const [showAllNodes, setShowAllNodes] = useState<boolean>(false);
   const [activeTool, setActiveTool] = useState<PenTestTool | null>(null);
   const [scanResults, setScanResults] = useState<string[]>([]);
+  const [showControlPanel, setShowControlPanel] = useState<boolean>(true);
+  const [mapboxToken, setMapboxToken] = useState<string>('');
+  const [showTokenInput, setShowTokenInput] = useState<boolean>(true);
   const [metasploitableVMs, setMetasploitableVMs] = useState([
     { id: 'vm1', ip: '192.168.1.100', status: 'online', services: ['SSH', 'HTTP', 'FTP', 'Telnet'] },
     { id: 'vm2', ip: '192.168.1.101', status: 'online', services: ['HTTP', 'MySQL', 'Samba'] },
@@ -305,147 +312,195 @@ export const HackerMap: React.FC = () => {
     filterNodes(filterType, threatFilter, newShowAll);
   };
 
+  const initializeMap = (token: string) => {
+    if (!mapContainer.current) return;
+
+    mapboxgl.accessToken = token;
+    
+    // Initialize map with dark OpenStreetMap style
+    map.current = new mapboxgl.Map({
+      container: mapContainer.current,
+      style: {
+        version: 8,
+        sources: {
+          'osm': {
+            type: 'raster',
+            tiles: [
+              'https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{r}.png'
+            ],
+            tileSize: 256,
+            attribution: '&copy; <a href="https://stadiamaps.com/">Stadia Maps</a> &copy; <a href="https://openmaptiles.org/">OpenMapTiles</a> &copy; <a href="http://openstreetmap.org">OpenStreetMap</a> contributors'
+          }
+        },
+        layers: [
+          {
+            id: 'osm',
+            type: 'raster',
+            source: 'osm'
+          }
+        ]
+      },
+      center: [0, 20],
+      zoom: 2,
+      pitch: 0,
+      bearing: 0
+    });
+
+    // Add navigation controls
+    map.current.addControl(
+      new mapboxgl.NavigationControl({
+        visualizePitch: true,
+      }),
+      'top-right'
+    );
+
+    // Add nodes as markers when map loads
+    map.current.on('load', () => {
+      addNodesToMap();
+    });
+
+    // Disable scroll zoom for better UX
+    map.current.scrollZoom.disable();
+  };
+
+  const addNodesToMap = () => {
+    if (!map.current) return;
+
+    // Remove existing markers
+    const existingMarkers = document.querySelectorAll('.hacker-node-marker');
+    existingMarkers.forEach(marker => marker.remove());
+
+    // Add filtered nodes as markers
+    filteredNodes.forEach((node) => {
+      const color = getThreatColor(node.threatLevel);
+      
+      // Create custom marker element
+      const markerElement = document.createElement('div');
+      markerElement.className = 'hacker-node-marker';
+      markerElement.style.cssText = `
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: ${color};
+        border: 2px solid white;
+        box-shadow: 0 0 10px ${color};
+        cursor: pointer;
+        position: relative;
+      `;
+
+      // Add pulsing animation for active nodes
+      if (node.status === 'active') {
+        markerElement.style.animation = 'pulse 2s infinite';
+      }
+
+      // Create marker and add click event
+      const marker = new mapboxgl.Marker(markerElement)
+        .setLngLat([node.coordinates[1], node.coordinates[0]])
+        .addTo(map.current!);
+
+      markerElement.addEventListener('click', () => {
+        setSelectedNode(node);
+      });
+
+      // Add popup for high-threat nodes
+      if (node.threatLevel >= 4) {
+        const popup = new mapboxgl.Popup({ offset: 15, closeButton: false })
+          .setLngLat([node.coordinates[1], node.coordinates[0]])
+          .setHTML(`
+            <div style="color: white; background: rgba(0,0,0,0.8); padding: 8px; border-radius: 4px; font-size: 10px; font-family: monospace;">
+              <strong>${node.name}</strong><br/>
+              <span style="color: ${color};">Threat Level: ${node.threatLevel}/5</span><br/>
+              <span style="color: ${getStatusColor(node.status)};">${node.status.toUpperCase()}</span>
+            </div>
+          `);
+
+        markerElement.addEventListener('mouseenter', () => popup.addTo(map.current!));
+        markerElement.addEventListener('mouseleave', () => popup.remove());
+      }
+    });
+  };
+
+  useEffect(() => {
+    if (mapboxToken && !map.current) {
+      initializeMap(mapboxToken);
+    }
+  }, [mapboxToken]);
+
+  useEffect(() => {
+    if (map.current) {
+      addNodesToMap();
+    }
+  }, [filteredNodes]);
+
+  const handleTokenSubmit = () => {
+    if (mapboxToken.trim()) {
+      setShowTokenInput(false);
+      initializeMap(mapboxToken);
+    }
+  };
+
   return (
     <div className="h-full relative">
-      {/* Custom SVG World Map */}
-      <div className="w-full h-full relative bg-card rounded-lg border border-primary/20 overflow-hidden">
-        <svg 
-          width="100%" 
-          height="100%" 
-          viewBox="0 0 1000 500" 
-          className="absolute inset-0"
-        >
-          {/* World map outline - simplified continents */}
-          <g fill="none" stroke="hsl(var(--primary) / 0.3)" strokeWidth="1">
-            {/* North America */}
-            <path d="M150,120 L200,100 L250,90 L300,110 L280,180 L200,200 L150,180 Z" fill="hsl(var(--muted) / 0.1)" />
-            {/* South America */}
-            <path d="M220,250 L280,240 L300,320 L280,380 L240,390 L210,350 Z" fill="hsl(var(--muted) / 0.1)" />
-            {/* Europe */}
-            <path d="M450,80 L520,70 L540,120 L500,140 L470,130 Z" fill="hsl(var(--muted) / 0.1)" />
-            {/* Africa */}
-            <path d="M470,180 L520,170 L540,280 L520,350 L480,340 L460,250 Z" fill="hsl(var(--muted) / 0.1)" />
-            {/* Asia */}
-            <path d="M580,60 L750,50 L800,120 L780,200 L700,220 L600,180 Z" fill="hsl(var(--muted) / 0.1)" />
-            {/* Australia */}
-            <path d="M750,300 L820,290 L830,330 L800,350 L770,340 Z" fill="hsl(var(--muted) / 0.1)" />
-          </g>
-          
-          {/* Grid lines for coordinate reference */}
-          <g stroke="hsl(var(--primary) / 0.1)" strokeWidth="0.5">
-            {Array.from({ length: 21 }, (_, i) => (
-              <line key={`v-${i}`} x1={i * 50} y1="0" x2={i * 50} y2="500" />
-            ))}
-            {Array.from({ length: 11 }, (_, i) => (
-              <line key={`h-${i}`} x1="0" y1={i * 50} x2="1000" y2={i * 50} />
-            ))}
-          </g>
-          
-          {/* Network connections between nodes */}
-          <g stroke="hsl(var(--primary) / 0.2)" strokeWidth="1" strokeDasharray="2,2">
-            {filteredNodes.slice(0, 20).map((node, index) => {
-              const pos = projectToSVG(node.coordinates[0], node.coordinates[1]);
-              const nextNode = filteredNodes[(index + 1) % Math.min(filteredNodes.length, 20)];
-              const nextPos = projectToSVG(nextNode.coordinates[0], nextNode.coordinates[1]);
-              return (
-                <line 
-                  key={`connection-${node.id}`} 
-                  x1={pos.x} 
-                  y1={pos.y} 
-                  x2={nextPos.x} 
-                  y2={nextPos.y}
-                  opacity="0.3"
-                />
-              );
-            })}
-          </g>
-          
-          {/* Render nodes as circles */}
-          {filteredNodes.map((node) => {
-            const pos = projectToSVG(node.coordinates[0], node.coordinates[1]);
-            const color = getThreatColor(node.threatLevel);
-            
-            return (
-              <g key={node.id}>
-                {/* Pulsing ring for active nodes */}
-                {node.status === 'active' && (
-                  <circle 
-                    cx={pos.x} 
-                    cy={pos.y} 
-                    r="8" 
-                    fill="none" 
-                    stroke={color} 
-                    strokeWidth="2" 
-                    opacity="0.6"
-                  >
-                    <animate 
-                      attributeName="r" 
-                      values="8;12;8" 
-                      dur="2s" 
-                      repeatCount="indefinite" 
-                    />
-                    <animate 
-                      attributeName="opacity" 
-                      values="0.6;0.2;0.6" 
-                      dur="2s" 
-                      repeatCount="indefinite" 
-                    />
-                  </circle>
-                )}
-                
-                {/* Main node circle */}
-                <circle 
-                  cx={pos.x} 
-                  cy={pos.y} 
-                  r="4" 
-                  fill={color} 
-                  stroke="white" 
-                  strokeWidth="1" 
-                  style={{ cursor: 'pointer' }}
-                  onClick={() => setSelectedNode(node)}
+      {/* Mapbox Token Input Modal */}
+      {showTokenInput && (
+        <div className="absolute inset-0 bg-black/80 flex items-center justify-center z-50">
+          <Card className="p-6 max-w-md mx-4">
+            <div className="space-y-4">
+              <div className="text-center">
+                <h3 className="text-lg font-bold text-primary">Mapbox Access Required</h3>
+                <p className="text-sm text-muted-foreground mt-2">
+                  Enter your Mapbox public token to load the real world map with classified node locations.
+                </p>
+                <p className="text-xs text-yellow-400 mt-2">
+                  Get your free token at: <strong>mapbox.com → Account → Tokens</strong>
+                </p>
+              </div>
+              
+              <div className="space-y-2">
+                <input
+                  type="text"
+                  placeholder="pk.eyJ1IjoieW91ci11c2VybmFtZSI..."
+                  value={mapboxToken}
+                  onChange={(e) => setMapboxToken(e.target.value)}
+                  className="w-full px-3 py-2 bg-card border border-primary/30 rounded text-sm"
                 />
                 
-                {/* Node label for high-threat targets */}
-                {node.threatLevel >= 4 && (
-                  <text 
-                    x={pos.x} 
-                    y={pos.y - 10} 
-                    textAnchor="middle" 
-                    fontSize="8" 
-                    fill="hsl(var(--primary))" 
-                    className="font-mono"
+                <div className="flex gap-2">
+                  <Button 
+                    onClick={handleTokenSubmit}
+                    className="flex-1"
+                    disabled={!mapboxToken.trim()}
                   >
-                    {node.name.slice(0, 15)}
-                  </text>
-                )}
-              </g>
-            );
-          })}
-          
-          {/* Scan mode overlay */}
-          {scanMode && (
-            <circle 
-              cx="500" 
-              cy="250" 
-              r="150" 
-              fill="hsl(var(--primary) / 0.1)" 
-              stroke="hsl(var(--primary))" 
-              strokeWidth="2"
-              strokeDasharray="5,5"
-            >
-              <animate 
-                attributeName="r" 
-                values="150;300;150" 
-                dur="3s" 
-                repeatCount="indefinite" 
-              />
-            </circle>
-          )}
-        </svg>
-      </div>
+                    Load Map
+                  </Button>
+                  <Button 
+                    variant="outline"
+                    onClick={() => setShowTokenInput(false)}
+                  >
+                    Skip (Demo Mode)
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </Card>
+        </div>
+      )}
+
+      {/* Mapbox Container */}
+      <div ref={mapContainer} className="w-full h-full" style={{ background: '#1a1a1a' }} />
+      
+      {/* Panel Toggle Button */}
+      <Button
+        onClick={() => setShowControlPanel(!showControlPanel)}
+        className="absolute top-4 left-4 z-40 w-10 h-10 p-0"
+        variant="outline"
+      >
+        {showControlPanel ? <ChevronLeft className="w-4 h-4" /> : <Settings className="w-4 h-4" />}
+      </Button>
 
       {/* Enhanced Control Panel */}
-      <div className="absolute top-4 left-4 space-y-2 z-[1000] max-h-[80vh] overflow-y-auto">
+      {showControlPanel && (
+        <div className="absolute top-4 left-16 space-y-2 z-30 max-h-[80vh] overflow-y-auto w-80">
         <Card className="p-3 bg-background/90 backdrop-blur border-primary/30">
           <div className="space-y-2">
             <div className="text-xs text-primary font-mono font-bold">GLOBAL SURVEILLANCE NETWORK</div>
@@ -574,11 +629,12 @@ export const HackerMap: React.FC = () => {
             ))}
           </div>
         </Card>
-      </div>
+        </div>
+      )}
 
       {/* Node Details Popup */}
       {selectedNode && (
-        <div className="absolute top-4 right-4 z-[1000] max-w-sm">
+        <div className="absolute top-4 right-4 z-40 max-w-sm">
           <Card className="p-4 bg-background/90 backdrop-blur border-primary/30">
             <div className="space-y-2">
               <div className="flex items-center justify-between">
