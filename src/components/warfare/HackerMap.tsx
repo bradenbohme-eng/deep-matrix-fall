@@ -1,11 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, Circle } from 'react-leaflet';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Shield, Zap, Eye, Skull, Satellite, Lock, AlertTriangle, Radio, Database, Wifi, Terminal, Search, Activity, Crosshair } from 'lucide-react';
-import L from 'leaflet';
-import 'leaflet/dist/leaflet.css';
 
 interface ClassifiedNode {
   id: string;
@@ -156,36 +153,12 @@ const getStatusColor = (status: string) => {
   }
 };
 
-// Custom marker icons for different node types
-const createCustomIcon = (type: string, threatLevel: number) => {
-  const color = getThreatColor(threatLevel);
-  return new L.DivIcon({
-    className: 'custom-marker',
-    html: `
-      <div style="
-        width: 20px; 
-        height: 20px; 
-        border-radius: 50%; 
-        background: ${color}; 
-        border: 2px solid white;
-        box-shadow: 0 0 10px ${color};
-        position: relative;
-      ">
-        <div style="
-          position: absolute;
-          top: -2px;
-          left: -2px;
-          width: 24px;
-          height: 24px;
-          border-radius: 50%;
-          border: 2px solid ${color};
-          animation: pulse 2s infinite;
-        "></div>
-      </div>
-    `,
-    iconSize: [20, 20],
-    iconAnchor: [10, 10],
-  });
+// Projection functions for converting lat/lon to SVG coordinates
+const projectToSVG = (lat: number, lon: number, width: number = 1000, height: number = 500) => {
+  // Simple equirectangular projection
+  const x = ((lon + 180) / 360) * width;
+  const y = ((90 - lat) / 180) * height;
+  return { x, y };
 };
 
 // Enhanced penetration testing tools
@@ -334,76 +307,141 @@ export const HackerMap: React.FC = () => {
 
   return (
     <div className="h-full relative">
-      {/* Leaflet Map Container */}
-      <div className="w-full h-full">
-        <MapContainer
-          center={[40.0, -20.0]}
-          zoom={3}
-          style={{ height: '100%', width: '100%' }}
-          className="border border-primary/20 rounded-lg"
+      {/* Custom SVG World Map */}
+      <div className="w-full h-full relative bg-card rounded-lg border border-primary/20 overflow-hidden">
+        <svg 
+          width="100%" 
+          height="100%" 
+          viewBox="0 0 1000 500" 
+          className="absolute inset-0"
         >
-          <TileLayer
-            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-          />
+          {/* World map outline - simplified continents */}
+          <g fill="none" stroke="hsl(var(--primary) / 0.3)" strokeWidth="1">
+            {/* North America */}
+            <path d="M150,120 L200,100 L250,90 L300,110 L280,180 L200,200 L150,180 Z" fill="hsl(var(--muted) / 0.1)" />
+            {/* South America */}
+            <path d="M220,250 L280,240 L300,320 L280,380 L240,390 L210,350 Z" fill="hsl(var(--muted) / 0.1)" />
+            {/* Europe */}
+            <path d="M450,80 L520,70 L540,120 L500,140 L470,130 Z" fill="hsl(var(--muted) / 0.1)" />
+            {/* Africa */}
+            <path d="M470,180 L520,170 L540,280 L520,350 L480,340 L460,250 Z" fill="hsl(var(--muted) / 0.1)" />
+            {/* Asia */}
+            <path d="M580,60 L750,50 L800,120 L780,200 L700,220 L600,180 Z" fill="hsl(var(--muted) / 0.1)" />
+            {/* Australia */}
+            <path d="M750,300 L820,290 L830,330 L800,350 L770,340 Z" fill="hsl(var(--muted) / 0.1)" />
+          </g>
           
-          {/* Render classified nodes as markers */}
-          {filteredNodes.map((node) => (
-            <Marker
-              key={node.id}
-              position={node.coordinates}
-              icon={createCustomIcon(node.type, node.threatLevel)}
+          {/* Grid lines for coordinate reference */}
+          <g stroke="hsl(var(--primary) / 0.1)" strokeWidth="0.5">
+            {Array.from({ length: 21 }, (_, i) => (
+              <line key={`v-${i}`} x1={i * 50} y1="0" x2={i * 50} y2="500" />
+            ))}
+            {Array.from({ length: 11 }, (_, i) => (
+              <line key={`h-${i}`} x1="0" y1={i * 50} x2="1000" y2={i * 50} />
+            ))}
+          </g>
+          
+          {/* Network connections between nodes */}
+          <g stroke="hsl(var(--primary) / 0.2)" strokeWidth="1" strokeDasharray="2,2">
+            {filteredNodes.slice(0, 20).map((node, index) => {
+              const pos = projectToSVG(node.coordinates[0], node.coordinates[1]);
+              const nextNode = filteredNodes[(index + 1) % Math.min(filteredNodes.length, 20)];
+              const nextPos = projectToSVG(nextNode.coordinates[0], nextNode.coordinates[1]);
+              return (
+                <line 
+                  key={`connection-${node.id}`} 
+                  x1={pos.x} 
+                  y1={pos.y} 
+                  x2={nextPos.x} 
+                  y2={nextPos.y}
+                  opacity="0.3"
+                />
+              );
+            })}
+          </g>
+          
+          {/* Render nodes as circles */}
+          {filteredNodes.map((node) => {
+            const pos = projectToSVG(node.coordinates[0], node.coordinates[1]);
+            const color = getThreatColor(node.threatLevel);
+            
+            return (
+              <g key={node.id}>
+                {/* Pulsing ring for active nodes */}
+                {node.status === 'active' && (
+                  <circle 
+                    cx={pos.x} 
+                    cy={pos.y} 
+                    r="8" 
+                    fill="none" 
+                    stroke={color} 
+                    strokeWidth="2" 
+                    opacity="0.6"
+                  >
+                    <animate 
+                      attributeName="r" 
+                      values="8;12;8" 
+                      dur="2s" 
+                      repeatCount="indefinite" 
+                    />
+                    <animate 
+                      attributeName="opacity" 
+                      values="0.6;0.2;0.6" 
+                      dur="2s" 
+                      repeatCount="indefinite" 
+                    />
+                  </circle>
+                )}
+                
+                {/* Main node circle */}
+                <circle 
+                  cx={pos.x} 
+                  cy={pos.y} 
+                  r="4" 
+                  fill={color} 
+                  stroke="white" 
+                  strokeWidth="1" 
+                  style={{ cursor: 'pointer' }}
+                  onClick={() => setSelectedNode(node)}
+                />
+                
+                {/* Node label for high-threat targets */}
+                {node.threatLevel >= 4 && (
+                  <text 
+                    x={pos.x} 
+                    y={pos.y - 10} 
+                    textAnchor="middle" 
+                    fontSize="8" 
+                    fill="hsl(var(--primary))" 
+                    className="font-mono"
+                  >
+                    {node.name.slice(0, 15)}
+                  </text>
+                )}
+              </g>
+            );
+          })}
+          
+          {/* Scan mode overlay */}
+          {scanMode && (
+            <circle 
+              cx="500" 
+              cy="250" 
+              r="150" 
+              fill="hsl(var(--primary) / 0.1)" 
+              stroke="hsl(var(--primary))" 
+              strokeWidth="2"
+              strokeDasharray="5,5"
             >
-              <Popup className="custom-popup">
-                <div className="p-2 min-w-64">
-                  <div className="flex items-center justify-between mb-2">
-                    <h3 className="font-mono text-sm font-bold text-primary">{node.name}</h3>
-                    <Badge variant="destructive" className="text-xs">
-                      {node.classification}
-                    </Badge>
-                  </div>
-                  <div className="space-y-1 text-xs">
-                    <div className="flex justify-between">
-                      <span>Type:</span>
-                      <span className="text-primary capitalize">{node.type}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Threat Level:</span>
-                      <span style={{ color: getThreatColor(node.threatLevel) }}>
-                        {node.threatLevel}/5
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Status:</span>
-                      <span style={{ color: getStatusColor(node.status) }}>
-                        {node.status.toUpperCase()}
-                      </span>
-                    </div>
-                    <p className="text-muted-foreground mt-2">{node.description}</p>
-                    <div className="text-xs text-muted-foreground mt-2">
-                      Last Activity: {new Date(node.lastActivity).toLocaleString()}
-                    </div>
-                    {node.coverName && (
-                      <div className="text-xs text-yellow-400 mt-1">
-                        {node.coverName}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </Popup>
-              
-              {/* Threat level circles */}
-              <Circle
-                center={node.coordinates}
-                radius={node.threatLevel * 50000}
-                fillColor={getThreatColor(node.threatLevel)}
-                fillOpacity={0.1}
-                color={getThreatColor(node.threatLevel)}
-                weight={1}
+              <animate 
+                attributeName="r" 
+                values="150;300;150" 
+                dur="3s" 
+                repeatCount="indefinite" 
               />
-            </Marker>
-          ))}
-        </MapContainer>
+            </circle>
+          )}
+        </svg>
       </div>
 
       {/* Enhanced Control Panel */}
@@ -521,14 +559,6 @@ export const HackerMap: React.FC = () => {
       </div>
 
       <style>{`
-        .custom-popup .leaflet-popup-content-wrapper {
-          background: hsl(var(--card));
-          border: 1px solid hsl(var(--primary) / 0.3);
-        }
-        .custom-popup .leaflet-popup-tip {
-          background: hsl(var(--card));
-          border: 1px solid hsl(var(--primary) / 0.3);
-        }
         @keyframes pulse {
           0% { transform: scale(1); opacity: 1; }
           50% { transform: scale(1.2); opacity: 0.7; }
