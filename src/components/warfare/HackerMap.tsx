@@ -209,8 +209,8 @@ export const HackerMap: React.FC = () => {
   const [activeTool, setActiveTool] = useState<PenTestTool | null>(null);
   const [scanResults, setScanResults] = useState<string[]>([]);
   const [showControlPanel, setShowControlPanel] = useState<boolean>(true);
-  const [mapboxToken, setMapboxToken] = useState<string>('');
-  const [showTokenInput, setShowTokenInput] = useState<boolean>(true);
+  const [mapboxToken, setMapboxToken] = useState<string>('pk.eyJ1IjoiY3JpbmtEZGFydCIsImEiOiJjbWZhbXJkeTgxZDloMmxvZjB1ZjQxczBzIn0.XanOxg-xA88pNFAvy5K5kA');
+  const [showTokenInput, setShowTokenInput] = useState<boolean>(false);
   const [metasploitableVMs, setMetasploitableVMs] = useState([
     { id: 'vm1', ip: '192.168.1.100', status: 'online', services: ['SSH', 'HTTP', 'FTP', 'Telnet'] },
     { id: 'vm2', ip: '192.168.1.101', status: 'online', services: ['HTTP', 'MySQL', 'Samba'] },
@@ -317,50 +317,54 @@ export const HackerMap: React.FC = () => {
 
     mapboxgl.accessToken = token;
     
-    // Initialize map with dark OpenStreetMap style
+    // Initialize map with Mapbox dark style
     map.current = new mapboxgl.Map({
       container: mapContainer.current,
-      style: {
-        version: 8,
-        sources: {
-          'osm': {
-            type: 'raster',
-            tiles: [
-              'https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{r}.png'
-            ],
-            tileSize: 256,
-            attribution: '&copy; <a href="https://stadiamaps.com/">Stadia Maps</a> &copy; <a href="https://openmaptiles.org/">OpenMapTiles</a> &copy; <a href="http://openstreetmap.org">OpenStreetMap</a> contributors'
-          }
-        },
-        layers: [
-          {
-            id: 'osm',
-            type: 'raster',
-            source: 'osm'
-          }
-        ]
-      },
+      style: 'mapbox://styles/mapbox/dark-v11',
       center: [0, 20],
       zoom: 2,
+      projection: 'globe' as any,
       pitch: 0,
-      bearing: 0
+      bearing: 0,
+      antialias: true,
+      renderWorldCopies: false
     });
 
     // Add navigation controls
     map.current.addControl(
       new mapboxgl.NavigationControl({
         visualizePitch: true,
+        showCompass: true,
+        showZoom: true
       }),
       'top-right'
     );
+
+    // Enable all map interactions
+    map.current.dragPan.enable();
+    map.current.scrollZoom.enable();
+    map.current.boxZoom.enable();
+    map.current.dragRotate.enable();
+    map.current.keyboard.enable();
+    map.current.doubleClickZoom.enable();
+    map.current.touchZoomRotate.enable();
+
+    // Add fog effect when style loads
+    map.current.on('style.load', () => {
+      if (!map.current) return;
+      
+      map.current.setFog({
+        'range': [-1, 2],
+        'color': '#1a1a1a',
+        'horizon-blend': 0.3,
+        'high-color': '#333333',
+      });
+    });
 
     // Add nodes as markers when map loads
     map.current.on('load', () => {
       addNodesToMap();
     });
-
-    // Disable scroll zoom for better UX
-    map.current.scrollZoom.disable();
   };
 
   const addNodesToMap = () => {
@@ -421,6 +425,7 @@ export const HackerMap: React.FC = () => {
   };
 
   useEffect(() => {
+    // Auto-initialize map with provided token
     if (mapboxToken && !map.current) {
       initializeMap(mapboxToken);
     }
@@ -433,58 +438,13 @@ export const HackerMap: React.FC = () => {
   }, [filteredNodes]);
 
   const handleTokenSubmit = () => {
-    if (mapboxToken.trim()) {
-      setShowTokenInput(false);
-      initializeMap(mapboxToken);
-    }
+    // Not needed since token is hardcoded
+    setShowTokenInput(false);
   };
 
   return (
     <div className="h-full relative">
-      {/* Mapbox Token Input Modal */}
-      {showTokenInput && (
-        <div className="absolute inset-0 bg-black/80 flex items-center justify-center z-50">
-          <Card className="p-6 max-w-md mx-4">
-            <div className="space-y-4">
-              <div className="text-center">
-                <h3 className="text-lg font-bold text-primary">Mapbox Access Required</h3>
-                <p className="text-sm text-muted-foreground mt-2">
-                  Enter your Mapbox public token to load the real world map with classified node locations.
-                </p>
-                <p className="text-xs text-yellow-400 mt-2">
-                  Get your free token at: <strong>mapbox.com → Account → Tokens</strong>
-                </p>
-              </div>
-              
-              <div className="space-y-2">
-                <input
-                  type="text"
-                  placeholder="pk.eyJ1IjoieW91ci11c2VybmFtZSI..."
-                  value={mapboxToken}
-                  onChange={(e) => setMapboxToken(e.target.value)}
-                  className="w-full px-3 py-2 bg-card border border-primary/30 rounded text-sm"
-                />
-                
-                <div className="flex gap-2">
-                  <Button 
-                    onClick={handleTokenSubmit}
-                    className="flex-1"
-                    disabled={!mapboxToken.trim()}
-                  >
-                    Load Map
-                  </Button>
-                  <Button 
-                    variant="outline"
-                    onClick={() => setShowTokenInput(false)}
-                  >
-                    Skip (Demo Mode)
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </Card>
-        </div>
-      )}
+      {/* Map loads automatically with hardcoded token */}
 
       {/* Mapbox Container */}
       <div ref={mapContainer} className="w-full h-full" style={{ background: '#1a1a1a' }} />
