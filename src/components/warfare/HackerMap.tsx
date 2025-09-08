@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -508,7 +508,7 @@ export const HackerMap: React.FC = () => {
               PENTEST ARSENAL
             </div>
             <div className="text-xs text-yellow-400 font-mono">
-              ⚠️ METASPLOITABLE VMs ACTIVE
+              ⚠️ METASPLOITABLE VMS ACTIVE
             </div>
             
             <div className="space-y-1 max-h-32 overflow-y-auto">
@@ -517,39 +517,57 @@ export const HackerMap: React.FC = () => {
                   key={idx}
                   variant="outline"
                   size="sm"
-                  className={`text-xs w-full justify-start h-8 ${tool.dangerous ? 'border-red-500/50 text-red-400' : 'border-green-500/50 text-green-400'}`}
+                  className={`w-full text-xs justify-start h-8 ${tool.dangerous ? 'border-red-500/30 text-red-400' : 'border-green-500/30 text-green-400'}`}
                   onClick={() => executePenTest(tool)}
                   disabled={!!activeTool}
                 >
-                  <Crosshair className="w-3 h-3 mr-2" />
+                  <Terminal className="w-3 h-3 mr-1" />
                   {tool.name}
                 </Button>
               ))}
             </div>
-            
-            {activeTool && (
-              <div className="mt-2 p-2 bg-black/50 rounded text-xs font-mono">
-                <div className="text-green-400 mb-1">[EXECUTING] {activeTool.name}</div>
-                <div className="max-h-24 overflow-y-auto space-y-0.5">
-                  {scanResults.map((result, idx) => (
-                    <div key={idx} className="text-green-300 text-xs">
-                      {result}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
           </div>
         </Card>
+
+        {/* Tool Execution Output */}
+        {(activeTool || scanResults.length > 0) && (
+          <Card className="p-3 bg-background/90 backdrop-blur border-primary/30">
+            <div className="space-y-2">
+              <div className="text-xs text-primary font-mono">
+                {activeTool ? `EXECUTING: ${activeTool.name}` : 'LAST SCAN RESULTS'}
+              </div>
+              <div className="bg-black/80 p-2 rounded text-xs font-mono max-h-32 overflow-y-auto">
+                {scanResults.map((result, idx) => (
+                  <div 
+                    key={idx} 
+                    className={`${
+                      result.includes('[!]') ? 'text-yellow-400' :
+                      result.includes('[CRITICAL]') ? 'text-red-400' :
+                      result.includes('[+]') ? 'text-green-400' :
+                      'text-gray-300'
+                    }`}
+                  >
+                    {result}
+                  </div>
+                ))}
+                {activeTool && (
+                  <div className="text-green-400 animate-pulse">
+                    {'> '}█
+                  </div>
+                )}
+              </div>
+            </div>
+          </Card>
+        )}
 
         {/* Metasploitable VMs Status */}
         <Card className="p-3 bg-background/90 backdrop-blur border-primary/30">
           <div className="space-y-2">
-            <div className="text-xs text-primary font-mono">PRACTICE TARGETS</div>
+            <div className="text-xs text-primary font-mono">SAFE TESTING ENVIRONMENT</div>
             {metasploitableVMs.map(vm => (
               <div key={vm.id} className="flex items-center justify-between text-xs">
                 <span className="font-mono">{vm.ip}</span>
-                <Badge variant={vm.status === 'online' ? 'default' : 'destructive'} className="text-xs">
+                <Badge variant="outline" className="text-green-400 border-green-500">
                   {vm.status.toUpperCase()}
                 </Badge>
               </div>
@@ -557,6 +575,82 @@ export const HackerMap: React.FC = () => {
           </div>
         </Card>
       </div>
+
+      {/* Node Details Popup */}
+      {selectedNode && (
+        <div className="absolute top-4 right-4 z-[1000] max-w-sm">
+          <Card className="p-4 bg-background/90 backdrop-blur border-primary/30">
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <h3 className="font-mono text-sm font-bold text-primary">{selectedNode.name}</h3>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setSelectedNode(null)}
+                  className="w-6 h-6 p-0"
+                >
+                  ×
+                </Button>
+              </div>
+              
+              <Badge 
+                variant="destructive" 
+                className={`text-xs ${
+                  selectedNode.classification === 'TOP SECRET' ? 'bg-red-900/50 border-red-500' :
+                  selectedNode.classification === 'SECRET' ? 'bg-orange-900/50 border-orange-500' :
+                  selectedNode.classification === 'CONFIDENTIAL' ? 'bg-yellow-900/50 border-yellow-500' :
+                  'bg-gray-900/50 border-gray-500'
+                }`}
+              >
+                {selectedNode.classification}
+              </Badge>
+              
+              <div className="space-y-1 text-xs">
+                <div className="flex justify-between">
+                  <span>Type:</span>
+                  <span className="text-primary capitalize">{selectedNode.type}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Threat Level:</span>
+                  <span style={{ color: getThreatColor(selectedNode.threatLevel) }}>
+                    {selectedNode.threatLevel}/5
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Status:</span>
+                  <span style={{ color: getStatusColor(selectedNode.status) }}>
+                    {selectedNode.status.toUpperCase()}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Coordinates:</span>
+                  <span className="font-mono text-primary">
+                    {selectedNode.coordinates[0].toFixed(4)}, {selectedNode.coordinates[1].toFixed(4)}
+                  </span>
+                </div>
+              </div>
+              
+              <p className="text-xs text-muted-foreground mt-2">{selectedNode.description}</p>
+              
+              <div className="text-xs text-muted-foreground mt-2">
+                Last Activity: {new Date(selectedNode.lastActivity).toLocaleString()}
+              </div>
+              
+              {selectedNode.operationalSince && (
+                <div className="text-xs text-muted-foreground">
+                  Operational Since: {selectedNode.operationalSince}
+                </div>
+              )}
+              
+              {selectedNode.coverName && (
+                <div className="text-xs text-yellow-400 mt-1">
+                  {selectedNode.coverName}
+                </div>
+              )}
+            </div>
+          </Card>
+        </div>
+      )}
 
       <style>{`
         @keyframes pulse {
@@ -568,3 +662,5 @@ export const HackerMap: React.FC = () => {
     </div>
   );
 };
+
+export default HackerMap;
