@@ -4,7 +4,7 @@ import 'mapbox-gl/dist/mapbox-gl.css';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Shield, Zap, Eye, Skull, Satellite, Lock, AlertTriangle, Radio, Database, Wifi, Terminal, Search, Activity, Crosshair, ChevronLeft, ChevronRight, Settings } from 'lucide-react';
+import { Shield, Zap, Eye, Skull, Satellite, Lock, AlertTriangle, Radio, Database, Wifi, Terminal, Search, Activity, Crosshair, ChevronLeft, ChevronRight, Settings, Globe, Map } from 'lucide-react';
 
 interface ClassifiedNode {
   id: string;
@@ -27,7 +27,7 @@ interface ClassifiedNode {
   riskLevel?: 'MINIMAL' | 'LOW' | 'MODERATE' | 'HIGH' | 'EXTREME' | 'CATASTROPHIC';
 }
 
-// Thousands of classified nodes with comprehensive global coverage
+// Comprehensive classified nodes with global coverage
 const generateClassifiedNodes = (): ClassifiedNode[] => {
   const nodes: ClassifiedNode[] = [];
   
@@ -39,159 +39,153 @@ const generateClassifiedNodes = (): ClassifiedNode[] => {
     { id: 'us_003', name: 'Pentagon Network Core', type: 'military' as const, coordinates: [38.8719, -77.0562] as [number, number], threatLevel: 6 as const, status: 'active' as const, classification: 'COSMIC' as const, description: 'US Department of Defense - MILNET Operations', lastActivity: '2025-01-15T09:15:44Z' },
     { id: 'us_004', name: 'CIA Langley HQ', type: 'intelligence' as const, coordinates: [38.9516, -77.1461] as [number, number], threatLevel: 6 as const, status: 'active' as const, classification: 'COSMIC' as const, description: 'Central Intelligence Agency Headquarters - George Bush Center for Intelligence', lastActivity: '2025-01-15T08:33:12Z' },
     { id: 'us_005', name: 'NSA Fort Meade', type: 'cyber_warfare' as const, coordinates: [39.1080, -76.7713] as [number, number], threatLevel: 6 as const, status: 'active' as const, classification: 'COSMIC' as const, description: 'National Security Agency - SIGINT Operations Center', lastActivity: '2025-01-15T09:21:33Z' },
-    { id: 'us_006', name: 'Wright-Patterson AFB', type: 'military' as const, coordinates: [39.8031, -84.0488] as [number, number], threatLevel: 5 as const, status: 'active' as const, classification: 'TOP SECRET' as const, description: 'Air Force Research Laboratory - Advanced Aerospace Programs', lastActivity: '2025-01-15T07:45:18Z' },
-    { id: 'us_007', name: 'Area 51 Nevada Test Site', type: 'black_site' as const, coordinates: [37.2431, -115.8086] as [number, number], threatLevel: 6 as const, status: 'active' as const, classification: 'SHADOW' as const, description: 'Groom Lake - Classified Aircraft Testing Facility', lastActivity: '2025-01-14T23:12:44Z', coverName: 'Homey Airport', riskLevel: 'EXTREME' as const },
-    { id: 'us_008', name: 'Los Alamos National Lab', type: 'nuclear' as const, coordinates: [35.8881, -106.2978] as [number, number], threatLevel: 6 as const, status: 'active' as const, classification: 'COSMIC' as const, description: 'Nuclear Weapons Research and Development', lastActivity: '2025-01-15T06:22:15Z' },
-    { id: 'us_009', name: 'Dulce Underground Base', type: 'black_site' as const, coordinates: [36.9396, -106.9983] as [number, number], threatLevel: 6 as const, status: 'ghost' as const, classification: 'SHADOW' as const, description: 'Alleged Deep Underground Military Base - Bioweapons Research', lastActivity: '2025-01-10T03:22:15Z', coverName: 'Geological Survey Station' },
-    { id: 'us_010', name: 'Cyber Command Fort Gordon', type: 'cyber_warfare' as const, coordinates: [33.4734, -82.1374] as [number, number], threatLevel: 5 as const, status: 'active' as const, classification: 'TOP SECRET' as const, description: 'US Army Cyber Command - Offensive Cyber Operations', lastActivity: '2025-01-15T10:05:33Z' },
-    { id: 'us_011', name: 'Schriever Space Force Base', type: 'space_command' as const, coordinates: [38.8050, -104.5311] as [number, number], threatLevel: 5 as const, status: 'active' as const, classification: 'TOP SECRET' as const, description: 'Space Force - Satellite Control Network', lastActivity: '2025-01-15T09:44:12Z' },
-    { id: 'us_012', name: 'Pine Gap Australia', type: 'intelligence' as const, coordinates: [-23.7987, 133.7378] as [number, number], threatLevel: 6 as const, status: 'active' as const, classification: 'COSMIC' as const, description: 'Joint Defence Facility - ECHELON Ground Station', lastActivity: '2025-01-15T11:22:44Z' },
+    { id: 'us_006', name: 'Area 51 Nevada Test Site', type: 'black_site' as const, coordinates: [37.2431, -115.8086] as [number, number], threatLevel: 6 as const, status: 'active' as const, classification: 'SHADOW' as const, description: 'Groom Lake - Classified Aircraft Testing Facility', lastActivity: '2025-01-14T23:12:44Z', coverName: 'Homey Airport', riskLevel: 'EXTREME' as const },
+    { id: 'us_007', name: 'Los Alamos National Lab', type: 'nuclear' as const, coordinates: [35.8881, -106.2978] as [number, number], threatLevel: 6 as const, status: 'active' as const, classification: 'COSMIC' as const, description: 'Nuclear Weapons Research and Development', lastActivity: '2025-01-15T06:22:15Z' },
+    { id: 'us_008', name: 'Dulce Underground Base', type: 'black_site' as const, coordinates: [36.9396, -106.9983] as [number, number], threatLevel: 6 as const, status: 'ghost' as const, classification: 'SHADOW' as const, description: 'Alleged Deep Underground Military Base - Bioweapons Research', lastActivity: '2025-01-10T03:22:15Z', coverName: 'Geological Survey Station' },
+    { id: 'us_009', name: 'Cyber Command Fort Gordon', type: 'cyber_warfare' as const, coordinates: [33.4734, -82.1374] as [number, number], threatLevel: 5 as const, status: 'active' as const, classification: 'TOP SECRET' as const, description: 'US Army Cyber Command - Offensive Cyber Operations', lastActivity: '2025-01-15T10:05:33Z' },
+    { id: 'us_010', name: 'Schriever Space Force Base', type: 'space_command' as const, coordinates: [38.8050, -104.5311] as [number, number], threatLevel: 5 as const, status: 'active' as const, classification: 'TOP SECRET' as const, description: 'Space Force - Satellite Control Network', lastActivity: '2025-01-15T09:44:12Z' },
+    { id: 'us_011', name: 'Pine Gap Australia', type: 'intelligence' as const, coordinates: [-23.7987, 133.7378] as [number, number], threatLevel: 6 as const, status: 'active' as const, classification: 'COSMIC' as const, description: 'Joint Defence Facility - ECHELON Ground Station', lastActivity: '2025-01-15T11:22:44Z' },
 
     // Major International Airports - Air Traffic Control
     { id: 'air_001', name: 'Hartsfield-Jackson Atlanta', type: 'airport' as const, coordinates: [33.6407, -84.4277] as [number, number], threatLevel: 3 as const, status: 'active' as const, classification: 'CONFIDENTIAL' as const, description: 'Busiest Airport Worldwide - Critical Infrastructure', lastActivity: '2025-01-15T12:15:22Z' },
     { id: 'air_002', name: 'Beijing Capital International', type: 'airport' as const, coordinates: [40.0799, 116.6031] as [number, number], threatLevel: 4 as const, status: 'active' as const, classification: 'SECRET' as const, description: 'Major Hub - State Security Monitoring', lastActivity: '2025-01-15T10:33:15Z' },
     { id: 'air_003', name: 'London Heathrow', type: 'airport' as const, coordinates: [51.4700, -0.4543] as [number, number], threatLevel: 4 as const, status: 'active' as const, classification: 'SECRET' as const, description: 'European Hub - MI5 Operations Center', lastActivity: '2025-01-15T09:22:11Z' },
     { id: 'air_004', name: 'Dubai International', type: 'airport' as const, coordinates: [25.2532, 55.3657] as [number, number], threatLevel: 4 as const, status: 'active' as const, classification: 'SECRET' as const, description: 'Middle East Hub - Intelligence Gateway', lastActivity: '2025-01-15T08:44:33Z' },
-    { id: 'air_005', name: 'Los Angeles International', type: 'airport' as const, coordinates: [33.9425, -118.4081] as [number, number], threatLevel: 3 as const, status: 'active' as const, classification: 'CONFIDENTIAL' as const, description: 'West Coast Hub - DHS Operations', lastActivity: '2025-01-15T11:15:44Z' },
+    { id: 'air_005', name: 'Tokyo Haneda', type: 'airport' as const, coordinates: [35.5494, 139.7798] as [number, number], threatLevel: 3 as const, status: 'active' as const, classification: 'CONFIDENTIAL' as const, description: 'Major Asian Hub - Intelligence Operations', lastActivity: '2025-01-15T11:15:44Z' },
+    { id: 'air_006', name: 'Frankfurt Airport', type: 'airport' as const, coordinates: [50.0379, 8.5622] as [number, number], threatLevel: 3 as const, status: 'active' as const, classification: 'CONFIDENTIAL' as const, description: 'European Operations Hub', lastActivity: '2025-01-15T10:22:33Z' },
+    { id: 'air_007', name: 'Singapore Changi', type: 'airport' as const, coordinates: [1.3644, 103.9915] as [number, number], threatLevel: 4 as const, status: 'active' as const, classification: 'SECRET' as const, description: 'Southeast Asia Intelligence Hub', lastActivity: '2025-01-15T09:44:22Z' },
 
-    // Criminal Organizations & Cartels
+    // Criminal Organizations & Cartels - EXPANDED
     { id: 'crim_001', name: 'Sinaloa Cartel HQ', type: 'cartel' as const, coordinates: [25.7943, -108.9734] as [number, number], threatLevel: 5 as const, status: 'active' as const, classification: 'TOP SECRET' as const, description: 'Major Drug Trafficking Organization - Armed Resistance', lastActivity: '2025-01-14T22:33:15Z', riskLevel: 'HIGH' as const },
-    { id: 'crim_002', name: 'Yakuza Headquarters Tokyo', type: 'criminal' as const, coordinates: [35.6762, 139.6503] as [number, number], threatLevel: 4 as const, status: 'active' as const, classification: 'SECRET' as const, description: 'Organized Crime Syndicate - Financial Operations', lastActivity: '2025-01-15T07:22:44Z' },
-    { id: 'crim_003', name: 'Ndrangheta Calabria Base', type: 'criminal' as const, coordinates: [38.2500, 16.2000] as [number, number], threatLevel: 4 as const, status: 'active' as const, classification: 'SECRET' as const, description: 'Italian Mafia - European Drug Trade', lastActivity: '2025-01-15T06:15:33Z' },
-    { id: 'crim_004', name: 'Russian Bratva Moscow', type: 'criminal' as const, coordinates: [55.7558, 37.6176] as [number, number], threatLevel: 5 as const, status: 'active' as const, classification: 'TOP SECRET' as const, description: 'Russian Organized Crime - Cyber Operations', lastActivity: '2025-01-15T08:44:12Z' },
-    { id: 'crim_005', name: 'Triads Hong Kong', type: 'criminal' as const, coordinates: [22.3193, 114.1694] as [number, number], threatLevel: 4 as const, status: 'active' as const, classification: 'SECRET' as const, description: 'Chinese Organized Crime - Money Laundering', lastActivity: '2025-01-15T09:33:25Z' },
+    { id: 'crim_002', name: 'CJNG Jalisco Base', type: 'cartel' as const, coordinates: [20.6597, -103.3496] as [number, number], threatLevel: 5 as const, status: 'active' as const, classification: 'TOP SECRET' as const, description: 'Jalisco New Generation Cartel - Extreme Violence', lastActivity: '2025-01-15T03:22:44Z', riskLevel: 'EXTREME' as const },
+    { id: 'crim_003', name: 'Yakuza Headquarters Tokyo', type: 'criminal' as const, coordinates: [35.6762, 139.6503] as [number, number], threatLevel: 4 as const, status: 'active' as const, classification: 'SECRET' as const, description: 'Organized Crime Syndicate - Financial Operations', lastActivity: '2025-01-15T07:22:44Z' },
+    { id: 'crim_004', name: 'Ndrangheta Calabria Base', type: 'criminal' as const, coordinates: [38.2500, 16.2000] as [number, number], threatLevel: 4 as const, status: 'active' as const, classification: 'SECRET' as const, description: 'Italian Mafia - European Drug Trade', lastActivity: '2025-01-15T06:15:33Z' },
+    { id: 'crim_005', name: 'Russian Bratva Moscow', type: 'criminal' as const, coordinates: [55.7558, 37.6176] as [number, number], threatLevel: 5 as const, status: 'active' as const, classification: 'TOP SECRET' as const, description: 'Russian Organized Crime - Cyber Operations', lastActivity: '2025-01-15T08:44:12Z' },
+    { id: 'crim_006', name: 'MS-13 El Salvador', type: 'criminal' as const, coordinates: [13.7942, -88.8965] as [number, number], threatLevel: 4 as const, status: 'active' as const, classification: 'SECRET' as const, description: 'Mara Salvatrucha - International Gang Network', lastActivity: '2025-01-15T05:33:22Z' },
+    { id: 'crim_007', name: 'Triads Hong Kong', type: 'criminal' as const, coordinates: [22.3193, 114.1694] as [number, number], threatLevel: 4 as const, status: 'active' as const, classification: 'SECRET' as const, description: 'Chinese Organized Crime - Money Laundering', lastActivity: '2025-01-15T09:33:25Z' },
 
-    // Dark Web & Cyber Criminal Operations  
+    // Dark Web & Cyber Criminal Operations - EXPANDED
     { id: 'dark_001', name: 'Silk Road 4.0 Server Farm', type: 'dark_web' as const, coordinates: [52.3676, 4.9041] as [number, number], threatLevel: 5 as const, status: 'dark' as const, classification: 'TOP SECRET' as const, description: 'Major Dark Marketplace - Hosted in Amsterdam', lastActivity: '2025-01-15T04:22:15Z' },
     { id: 'dark_002', name: 'REvil Ransomware HQ', type: 'cyber_mercenary' as const, coordinates: [55.7558, 37.6173] as [number, number], threatLevel: 5 as const, status: 'active' as const, classification: 'TOP SECRET' as const, description: 'Ransomware-as-a-Service Operation', lastActivity: '2025-01-15T02:15:44Z' },
     { id: 'dark_003', name: 'Lazarus Group DPRK', type: 'hacker' as const, coordinates: [39.0392, 125.7625] as [number, number], threatLevel: 6 as const, status: 'active' as const, classification: 'COSMIC' as const, description: 'State-Sponsored Hacking Group - North Korea', lastActivity: '2025-01-15T01:33:22Z' },
+    { id: 'dark_004', name: 'APT1 Shanghai Unit', type: 'cyber_warfare' as const, coordinates: [31.2304, 121.4737] as [number, number], threatLevel: 6 as const, status: 'active' as const, classification: 'COSMIC' as const, description: 'PLA Unit 61398 - Advanced Persistent Threat', lastActivity: '2025-01-15T08:15:33Z' },
+    { id: 'dark_005', name: 'Conti Ransomware Gang', type: 'cyber_mercenary' as const, coordinates: [55.7558, 37.6173] as [number, number], threatLevel: 5 as const, status: 'active' as const, classification: 'TOP SECRET' as const, description: 'Professional Ransomware Organization', lastActivity: '2025-01-15T03:44:22Z' },
 
-    // International Intelligence Networks
+    // International Intelligence Networks - EXPANDED
     { id: 'int_001', name: 'GCHQ Cheltenham', type: 'intelligence' as const, coordinates: [51.8987, -2.1358] as [number, number], threatLevel: 6 as const, status: 'active' as const, classification: 'COSMIC' as const, description: 'Government Communications Headquarters - ELINT Operations', lastActivity: '2025-01-15T09:45:12Z' },
     { id: 'int_002', name: 'MI6 Vauxhall Cross', type: 'intelligence' as const, coordinates: [51.4872, -0.1247] as [number, number], threatLevel: 5 as const, status: 'active' as const, classification: 'TOP SECRET' as const, description: 'Secret Intelligence Service Headquarters', lastActivity: '2025-01-15T08:15:33Z' },
     { id: 'int_003', name: 'Mossad HQ Tel Aviv', type: 'intelligence' as const, coordinates: [32.0853, 34.7818] as [number, number], threatLevel: 6 as const, status: 'active' as const, classification: 'COSMIC' as const, description: 'Institute for Intelligence and Special Operations', lastActivity: '2025-01-15T10:22:44Z' },
     { id: 'int_004', name: 'FSB Lubyanka', type: 'intelligence' as const, coordinates: [55.7606, 37.6284] as [number, number], threatLevel: 6 as const, status: 'active' as const, classification: 'COSMIC' as const, description: 'Federal Security Service - Russian Intelligence', lastActivity: '2025-01-15T07:55:44Z' },
     { id: 'int_005', name: 'DGSE Paris', type: 'intelligence' as const, coordinates: [48.8566, 2.3522] as [number, number], threatLevel: 4 as const, status: 'active' as const, classification: 'SECRET' as const, description: 'Direction Générale de la Sécurité Extérieure - French Intelligence', lastActivity: '2025-01-15T09:11:25Z' },
     { id: 'int_006', name: 'BND Pullach', type: 'intelligence' as const, coordinates: [48.0596, 11.5355] as [number, number], threatLevel: 4 as const, status: 'active' as const, classification: 'SECRET' as const, description: 'Bundesnachrichtendienst - German Intelligence', lastActivity: '2025-01-15T08:33:17Z' },
+    { id: 'int_007', name: 'Unit 8200 Herzliya', type: 'cyber_warfare' as const, coordinates: [32.1624, 34.8442] as [number, number], threatLevel: 6 as const, status: 'active' as const, classification: 'COSMIC' as const, description: 'Israeli Intelligence Corps - SIGINT Unit', lastActivity: '2025-01-15T11:22:15Z' },
+    { id: 'int_008', name: 'MSS Beijing HQ', type: 'intelligence' as const, coordinates: [39.9042, 116.4074] as [number, number], threatLevel: 6 as const, status: 'active' as const, classification: 'COSMIC' as const, description: 'Ministry of State Security - Chinese Intelligence', lastActivity: '2025-01-15T09:33:44Z' },
 
-    // Black Sites & Shadow Operations
+    // Black Sites & Shadow Operations - EXPANDED
     { id: 'black_001', name: 'Guantanamo Bay Prison', type: 'prison' as const, coordinates: [19.9027, -75.0951] as [number, number], threatLevel: 4 as const, status: 'active' as const, classification: 'SECRET' as const, description: 'Detention Facility - Enhanced Interrogation', lastActivity: '2025-01-15T07:44:33Z' },
     { id: 'black_002', name: 'Salt Pit Afghanistan', type: 'black_site' as const, coordinates: [34.5553, 69.2075] as [number, number], threatLevel: 5 as const, status: 'burned' as const, classification: 'SHADOW' as const, description: 'Former CIA Black Site - Extraordinary Rendition', lastActivity: '2023-08-15T12:00:00Z' },
     { id: 'black_003', name: 'Stare Kiejkuty Poland', type: 'black_site' as const, coordinates: [53.8633, 21.4026] as [number, number], threatLevel: 4 as const, status: 'offline' as const, classification: 'SHADOW' as const, description: 'Former CIA Detention Site - Northern Poland', lastActivity: '2021-12-15T08:22:15Z' },
     { id: 'black_004', name: 'Camp Eagle Bosnia', type: 'black_site' as const, coordinates: [44.2619, 17.9073] as [number, number], threatLevel: 4 as const, status: 'ghost' as const, classification: 'SHADOW' as const, description: 'Alleged CIA Detention Facility - Tuzla Air Base', lastActivity: '2020-05-10T14:33:22Z' },
+    { id: 'black_005', name: 'Diego Garcia Black Site', type: 'black_site' as const, coordinates: [-7.3101, 72.4116] as [number, number], threatLevel: 5 as const, status: 'active' as const, classification: 'SHADOW' as const, description: 'Indian Ocean Detention Facility', lastActivity: '2025-01-15T04:22:11Z' },
 
-    // Cyber Warfare & Data Centers
+    // Cyber Warfare & Data Centers - EXPANDED
     { id: 'cyber_001', name: 'Amazon AWS US-East-1', type: 'data_center' as const, coordinates: [38.9517, -77.4481] as [number, number], threatLevel: 4 as const, status: 'active' as const, classification: 'CONFIDENTIAL' as const, description: 'Major Cloud Infrastructure - US Government Contracts', lastActivity: '2025-01-15T12:00:00Z' },
     { id: 'cyber_002', name: 'Google Data Center Iowa', type: 'data_center' as const, coordinates: [41.2619, -95.8608] as [number, number], threatLevel: 3 as const, status: 'active' as const, classification: 'CONFIDENTIAL' as const, description: 'Critical Internet Infrastructure', lastActivity: '2025-01-15T11:45:22Z' },
     { id: 'cyber_003', name: 'Microsoft Azure East US', type: 'data_center' as const, coordinates: [38.7846, -78.1849] as [number, number], threatLevel: 4 as const, status: 'active' as const, classification: 'CONFIDENTIAL' as const, description: 'Cloud Infrastructure - Government Services', lastActivity: '2025-01-15T11:55:44Z' },
     { id: 'cyber_004', name: 'Tencent Data Center Shenzhen', type: 'data_center' as const, coordinates: [22.5431, 114.0579] as [number, number], threatLevel: 4 as const, status: 'active' as const, classification: 'SECRET' as const, description: 'Chinese Tech Giant - State Surveillance Integration', lastActivity: '2025-01-15T10:22:15Z' },
+    { id: 'cyber_005', name: 'Yandex Data Center Moscow', type: 'data_center' as const, coordinates: [55.7558, 37.6173] as [number, number], threatLevel: 4 as const, status: 'active' as const, classification: 'SECRET' as const, description: 'Russian Tech Infrastructure - FSB Access', lastActivity: '2025-01-15T08:44:33Z' },
 
-    // Submarine & Naval Operations
+    // Submarine & Naval Operations - EXPANDED
     { id: 'sub_001', name: 'USS Connecticut SSN-22', type: 'submarine' as const, coordinates: [25.2048, 153.5789] as [number, number], threatLevel: 5 as const, status: 'active' as const, classification: 'TOP SECRET' as const, description: 'Seawolf-class Nuclear Attack Submarine - Pacific Patrol', lastActivity: '2025-01-15T06:22:44Z' },
     { id: 'sub_002', name: 'HMS Astute S119', type: 'submarine' as const, coordinates: [55.8642, -4.2518] as [number, number], threatLevel: 5 as const, status: 'active' as const, classification: 'TOP SECRET' as const, description: 'Royal Navy Nuclear Attack Submarine', lastActivity: '2025-01-15T08:15:33Z' },
     { id: 'sub_003', name: 'Russian Borei K-549', type: 'submarine' as const, coordinates: [69.0633, 33.4123] as [number, number], threatLevel: 6 as const, status: 'active' as const, classification: 'COSMIC' as const, description: 'Strategic Nuclear Ballistic Missile Submarine', lastActivity: '2025-01-15T04:44:22Z' },
+    { id: 'sub_004', name: 'Chinese Jin-class SSBN', type: 'submarine' as const, coordinates: [18.2208, 109.5122] as [number, number], threatLevel: 6 as const, status: 'active' as const, classification: 'COSMIC' as const, description: 'Type 094 Nuclear Ballistic Missile Submarine', lastActivity: '2025-01-15T07:33:15Z' },
 
-    // Weapon Storage & Arms Dealers
-    { id: 'arms_001', name: 'Anniston Army Depot', type: 'weapon_storage' as const, coordinates: [33.6587, -85.8316] as [number, number], threatLevel: 5 as const, status: 'active' as const, classification: 'TOP SECRET' as const, description: 'Chemical Weapons Storage & Disposal', lastActivity: '2025-01-15T09:33:15Z' },
-    { id: 'arms_002', name: 'Viktor Bout Network', type: 'arms_dealer' as const, coordinates: [55.7558, 37.6173] as [number, number], threatLevel: 4 as const, status: 'compromised' as const, classification: 'SECRET' as const, description: 'International Arms Trafficking - Merchant of Death Network', lastActivity: '2025-01-10T15:22:44Z' },
-    { id: 'arms_003', name: 'Khashoggi Arms Pipeline', type: 'arms_dealer' as const, coordinates: [24.7136, 46.6753] as [number, number], threatLevel: 4 as const, status: 'active' as const, classification: 'SECRET' as const, description: 'Middle East Weapons Distribution Network', lastActivity: '2025-01-15T06:44:33Z' },
-
-    // Cryptocurrency & Money Laundering
-    { id: 'crypto_001', name: 'Binance Malta HQ', type: 'crypto_exchange' as const, coordinates: [35.9375, 14.3754] as [number, number], threatLevel: 3 as const, status: 'active' as const, classification: 'CONFIDENTIAL' as const, description: 'Major Cryptocurrency Exchange - AML Concerns', lastActivity: '2025-01-15T11:22:15Z' },
-    { id: 'crypto_002', name: 'Tornado Cash Servers', type: 'money_laundering' as const, coordinates: [52.3676, 4.9041] as [number, number], threatLevel: 4 as const, status: 'compromised' as const, classification: 'SECRET' as const, description: 'Cryptocurrency Mixing Service - Sanctioned', lastActivity: '2025-01-12T08:15:22Z' },
-    { id: 'crypto_003', name: 'Hydra Marketplace', type: 'dark_web' as const, coordinates: [55.7558, 37.6173] as [number, number], threatLevel: 5 as const, status: 'offline' as const, classification: 'TOP SECRET' as const, description: 'Russian Dark Web Marketplace - Takedown', lastActivity: '2022-04-05T12:00:00Z' },
-
-    // Bioweapon & Research Facilities
+    // Bioweapon & Research Facilities - EXPANDED
     { id: 'bio_001', name: 'Wuhan Institute of Virology', type: 'bioweapon' as const, coordinates: [30.5394, 114.3614] as [number, number], threatLevel: 6 as const, status: 'active' as const, classification: 'COSMIC' as const, description: 'High-Security Biological Research - BSL-4 Laboratory', lastActivity: '2025-01-15T09:22:44Z', riskLevel: 'CATASTROPHIC' as const },
     { id: 'bio_002', name: 'USAMRIID Fort Detrick', type: 'bioweapon' as const, coordinates: [39.4355, -77.4528] as [number, number], threatLevel: 6 as const, status: 'active' as const, classification: 'COSMIC' as const, description: 'US Army Medical Research - Biological Defense', lastActivity: '2025-01-15T08:44:15Z', riskLevel: 'EXTREME' as const },
     { id: 'bio_003', name: 'Porton Down UK', type: 'bioweapon' as const, coordinates: [51.1325, -1.6356] as [number, number], threatLevel: 6 as const, status: 'active' as const, classification: 'COSMIC' as const, description: 'Defence Science & Technology Laboratory', lastActivity: '2025-01-15T10:15:33Z' },
+    { id: 'bio_004', name: 'VECTOR Institute Russia', type: 'bioweapon' as const, coordinates: [54.8431, 83.1056] as [number, number], threatLevel: 6 as const, status: 'active' as const, classification: 'COSMIC' as const, description: 'State Research Center of Virology and Biotechnology', lastActivity: '2025-01-15T06:44:22Z', riskLevel: 'CATASTROPHIC' as const },
+
+    // Space & Satellite Operations - NEW
+    { id: 'space_001', name: 'NRO Chantilly HQ', type: 'space_command' as const, coordinates: [38.9517, -77.4269] as [number, number], threatLevel: 6 as const, status: 'active' as const, classification: 'COSMIC' as const, description: 'National Reconnaissance Office - Spy Satellite Control', lastActivity: '2025-01-15T11:22:44Z' },
+    { id: 'space_002', name: 'Baikonur Cosmodrome', type: 'space_command' as const, coordinates: [45.9200, 63.3400] as [number, number], threatLevel: 5 as const, status: 'active' as const, classification: 'TOP SECRET' as const, description: 'Russian Space Launch Facility - Military Satellites', lastActivity: '2025-01-15T09:15:22Z' },
+    { id: 'space_003', name: 'Jiuquan Satellite Center', type: 'space_command' as const, coordinates: [40.9600, 100.2917] as [number, number], threatLevel: 5 as const, status: 'active' as const, classification: 'TOP SECRET' as const, description: 'Chinese Space Program - Military Satellites', lastActivity: '2025-01-15T08:33:44Z' },
+
+    // Quantum Computing Labs - NEW
+    { id: 'quantum_001', name: 'IBM Quantum Network', type: 'quantum_lab' as const, coordinates: [41.1220, -73.7176] as [number, number], threatLevel: 4 as const, status: 'active' as const, classification: 'SECRET' as const, description: 'Advanced Quantum Computing Research - Cryptography Threat', lastActivity: '2025-01-15T10:44:33Z' },
+    { id: 'quantum_002', name: 'Google Quantum AI', type: 'quantum_lab' as const, coordinates: [37.4220, -122.0841] as [number, number], threatLevel: 4 as const, status: 'active' as const, classification: 'SECRET' as const, description: 'Quantum Supremacy Research - Encryption Breaking', lastActivity: '2025-01-15T11:15:22Z' },
+    { id: 'quantum_003', name: 'Chinese Quantum Lab', type: 'quantum_lab' as const, coordinates: [31.8639, 117.2808] as [number, number], threatLevel: 5 as const, status: 'active' as const, classification: 'TOP SECRET' as const, description: 'University of Science and Technology - Quantum Communications', lastActivity: '2025-01-15T09:22:11Z' },
+
+    // Terror Networks - NEW
+    { id: 'terror_001', name: 'ISIS Cyber Command', type: 'terror_cell' as const, coordinates: [36.1906, 43.9930] as [number, number], threatLevel: 5 as const, status: 'active' as const, classification: 'TOP SECRET' as const, description: 'Islamic State Digital Operations - Propaganda & Recruitment', lastActivity: '2025-01-15T05:22:44Z' },
+    { id: 'terror_002', name: 'Al-Qaeda Tech Wing', type: 'terror_cell' as const, coordinates: [24.7136, 46.6753] as [number, number], threatLevel: 4 as const, status: 'active' as const, classification: 'SECRET' as const, description: 'Technical Operations Division - Cyber Jihad', lastActivity: '2025-01-15T04:15:33Z' },
+    { id: 'terror_003', name: 'Hezbollah Unit 133', type: 'terror_cell' as const, coordinates: [33.8547, 35.8623] as [number, number], threatLevel: 5 as const, status: 'active' as const, classification: 'TOP SECRET' as const, description: 'Electronic Warfare Unit - Iranian Backed', lastActivity: '2025-01-15T07:44:22Z' },
+
+    // Drug Manufacturing - NEW
+    { id: 'drug_001', name: 'Golden Triangle Labs', type: 'drug_lab' as const, coordinates: [20.2500, 100.2000] as [number, number], threatLevel: 4 as const, status: 'active' as const, classification: 'SECRET' as const, description: 'Methamphetamine Super Labs - Myanmar Border', lastActivity: '2025-01-15T06:33:15Z' },
+    { id: 'drug_002', name: 'Colombian Cocaine Labs', type: 'drug_lab' as const, coordinates: [4.0000, -72.0000] as [number, number], threatLevel: 4 as const, status: 'active' as const, classification: 'SECRET' as const, description: 'FARC Territory Manufacturing - High Purity Production', lastActivity: '2025-01-15T08:22:44Z' },
+    { id: 'drug_003', name: 'Afghan Opium Processing', type: 'drug_lab' as const, coordinates: [34.5553, 69.2075] as [number, number], threatLevel: 4 as const, status: 'active' as const, classification: 'SECRET' as const, description: 'Taliban Controlled Heroin Production', lastActivity: '2025-01-15T05:15:33Z' },
+
+    // Human Trafficking Networks - NEW
+    { id: 'traffic_001', name: 'Eastern European Network', type: 'human_trafficking' as const, coordinates: [50.4501, 30.5234] as [number, number], threatLevel: 4 as const, status: 'active' as const, classification: 'SECRET' as const, description: 'Ukraine Based Trafficking Operation - Western Routes', lastActivity: '2025-01-15T04:44:22Z' },
+    { id: 'traffic_002', name: 'Southeast Asian Ring', type: 'human_trafficking' as const, coordinates: [13.7563, 100.5018] as [number, number], threatLevel: 4 as const, status: 'active' as const, classification: 'SECRET' as const, description: 'Bangkok Hub - Child Trafficking Network', lastActivity: '2025-01-15T07:15:44Z' },
+    { id: 'traffic_003', name: 'West African Routes', type: 'human_trafficking' as const, coordinates: [6.5244, -3.3792] as [number, number], threatLevel: 4 as const, status: 'active' as const, classification: 'SECRET' as const, description: 'Ghana Transit Hub - European Destination', lastActivity: '2025-01-15T06:22:33Z' }
   ];
 
   nodes.push(...coreTargets);
 
   // Generate thousands of additional nodes globally
   const regions = [
-    { name: 'North America', bounds: [[25, -180], [75, -50]], density: 800 },
-    { name: 'Europe', bounds: [[35, -15], [70, 45]], density: 600 },
-    { name: 'Asia', bounds: [[10, 60], [55, 180]], density: 1200 },
-    { name: 'South America', bounds: [[-60, -85], [15, -35]], density: 400 },
-    { name: 'Africa', bounds: [[-35, -20], [40, 50]], density: 300 },
-    { name: 'Oceania', bounds: [[-50, 110], [0, 180]], density: 150 },
+    { name: 'North America', center: [45, -100], radius: 25 },
+    { name: 'South America', center: [-15, -60], radius: 20 },
+    { name: 'Europe', center: [50, 10], radius: 15 },
+    { name: 'Africa', center: [0, 20], radius: 25 },
+    { name: 'Asia', center: [30, 100], radius: 30 },
+    { name: 'Oceania', center: [-25, 140], radius: 15 },
+    { name: 'Middle East', center: [30, 45], radius: 10 },
+    { name: 'Central Asia', center: [45, 70], radius: 15 }
   ];
 
-  const nodeTypes: Array<ClassifiedNode['type']> = [
-    'military', 'intelligence', 'criminal', 'hacker', 'government', 'corporate', 'satellite', 'research', 'nuclear', 'surveillance',
-    'airport', 'black_site', 'cartel', 'cyber_warfare', 'data_center', 'submarine', 'space_command', 'bioweapon', 'quantum_lab',
-    'dark_web', 'arms_dealer', 'terror_cell', 'money_laundering', 'human_trafficking', 'drug_lab', 'cyber_mercenary', 'crypto_exchange',
-    'weapon_storage', 'communications', 'radar_site', 'missile_base', 'drone_base', 'prison', 'embassy', 'consulate', 'border_control'
+  const nodeTypes = [
+    'military', 'intelligence', 'criminal', 'hacker', 'government', 'corporate',
+    'satellite', 'research', 'nuclear', 'surveillance', 'airport', 'black_site',
+    'cartel', 'cyber_warfare', 'data_center', 'submarine', 'space_command',
+    'bioweapon', 'quantum_lab', 'dark_web', 'arms_dealer', 'terror_cell',
+    'money_laundering', 'human_trafficking', 'drug_lab', 'cyber_mercenary',
+    'crypto_exchange', 'weapon_storage', 'communications', 'radar_site',
+    'missile_base', 'drone_base', 'prison', 'embassy', 'consulate', 'border_control'
   ];
 
-  const statuses: Array<ClassifiedNode['status']> = ['active', 'dormant', 'compromised', 'offline', 'ghost', 'dark', 'burned'];
-  const classifications: Array<ClassifiedNode['classification']> = ['TOP SECRET', 'SECRET', 'CONFIDENTIAL', 'RESTRICTED', 'UNCLASSIFIED', 'COSMIC', 'SHADOW', 'BURN NOTICE'];
-
-  let nodeId = 1000;
-
-  regions.forEach(region => {
-    const [[minLat, minLon], [maxLat, maxLon]] = region.bounds;
+  // Generate additional nodes for each region
+  regions.forEach((region, regionIndex) => {
+    const nodesPerRegion = 150 + Math.floor(Math.random() * 100); // 150-250 nodes per region
     
-    for (let i = 0; i < region.density; i++) {
-      const lat = minLat + Math.random() * (maxLat - minLat);
-      const lon = minLon + Math.random() * (maxLon - minLon);
+    for (let i = 0; i < nodesPerRegion; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const distance = Math.random() * region.radius;
+      const lat = region.center[0] + (distance * Math.cos(angle));
+      const lon = region.center[1] + (distance * Math.sin(angle));
+      
+      // Ensure coordinates are valid
+      const validLat = Math.max(-85, Math.min(85, lat));
+      const validLon = ((lon + 180) % 360) - 180;
+      
       const type = nodeTypes[Math.floor(Math.random() * nodeTypes.length)];
+      const threatLevel = Math.floor(Math.random() * 6) + 1;
+      const statuses = ['active', 'dormant', 'compromised', 'offline', 'ghost', 'dark'];
       const status = statuses[Math.floor(Math.random() * statuses.length)];
+      const classifications = ['TOP SECRET', 'SECRET', 'CONFIDENTIAL', 'RESTRICTED', 'COSMIC', 'SHADOW'];
       const classification = classifications[Math.floor(Math.random() * classifications.length)];
-      const threatLevel = Math.ceil(Math.random() * 6) as 1 | 2 | 3 | 4 | 5 | 6;
-      
-      const prefixes = {
-        military: ['Fort', 'Base', 'Station', 'Camp', 'AFB', 'Barracks', 'Arsenal', 'Command'],
-        intelligence: ['Facility', 'Center', 'Station', 'Hub', 'Complex', 'Outpost', 'Safe House'],
-        criminal: ['Cell', 'Network', 'Group', 'Syndicate', 'Cartel', 'Gang', 'Crew', 'Family'],
-        hacker: ['Node', 'Collective', 'Team', 'Unit', 'Group', 'Cell', 'Cluster', 'Network'],
-        government: ['Ministry', 'Department', 'Bureau', 'Agency', 'Office', 'Division', 'Authority'],
-        corporate: ['Datacenter', 'Campus', 'HQ', 'Research', 'Labs', 'Office', 'Complex', 'Tower'],
-        satellite: ['Uplink', 'Station', 'Ground', 'Facility', 'Array', 'Dish', 'Antenna', 'Terminal'],
-        research: ['Laboratory', 'Institute', 'Center', 'Facility', 'Complex', 'Campus', 'Unit', 'Division'],
-        nuclear: ['Plant', 'Facility', 'Complex', 'Reactor', 'Storage', 'Bunker', 'Vault', 'Site'],
-        surveillance: ['Station', 'Array', 'Center', 'Post', 'Facility', 'Tower', 'Outpost', 'Watch'],
-        airport: ['Airport', 'Airfield', 'Terminal', 'Hub', 'Base', 'Strip', 'Port', 'Field'],
-        black_site: ['Site', 'Facility', 'Complex', 'Location', 'Station', 'Camp', 'Detention', 'Bunker'],
-        cartel: ['Cartel', 'Syndicate', 'Organization', 'Network', 'Operations', 'Territory', 'Compound'],
-        cyber_warfare: ['Command', 'Center', 'Unit', 'Division', 'Operations', 'Facility', 'Hub', 'Network'],
-        data_center: ['Datacenter', 'Server Farm', 'Cloud Hub', 'Computing Center', 'Data Facility'],
-        submarine: ['USS', 'HMS', 'Sub', 'Vessel', 'Boat', 'Platform', 'Unit', 'Fleet'],
-        space_command: ['Space Base', 'Control', 'Command', 'Station', 'Facility', 'Operations'],
-        bioweapon: ['Lab', 'Institute', 'Facility', 'Research', 'Center', 'Complex', 'Unit'],
-        quantum_lab: ['Quantum Lab', 'Q-Center', 'Facility', 'Research', 'Complex', 'Institute'],
-        dark_web: ['Server', 'Node', 'Hub', 'Network', 'Farm', 'Cluster', 'Operations'],
-        arms_dealer: ['Network', 'Operations', 'Supply Chain', 'Distribution', 'Warehouse'],
-        terror_cell: ['Cell', 'Network', 'Group', 'Operations', 'Safe House', 'Camp'],
-        money_laundering: ['Operations', 'Network', 'Shell Company', 'Front', 'Exchange'],
-        human_trafficking: ['Network', 'Operations', 'Route', 'Safe House', 'Transit Point'],
-        drug_lab: ['Lab', 'Facility', 'Operations', 'Processing', 'Manufacturing', 'Warehouse'],
-        cyber_mercenary: ['Group', 'Collective', 'Operations', 'Network', 'Unit', 'Team'],
-        crypto_exchange: ['Exchange', 'Platform', 'Hub', 'Center', 'Operations', 'Facility'],
-        weapon_storage: ['Depot', 'Arsenal', 'Storage', 'Warehouse', 'Facility', 'Cache'],
-        communications: ['Tower', 'Station', 'Hub', 'Center', 'Relay', 'Array', 'Network'],
-        radar_site: ['Radar', 'Station', 'Array', 'Facility', 'Installation', 'Site'],
-        missile_base: ['Base', 'Facility', 'Launch Site', 'Installation', 'Complex', 'Station'],
-        drone_base: ['Base', 'Operations', 'Control', 'Launch Site', 'Facility', 'Hub'],
-        prison: ['Prison', 'Facility', 'Detention', 'Correctional', 'Penitentiary', 'Camp'],
-        embassy: ['Embassy', 'Consulate', 'Mission', 'Diplomatic Post', 'Cultural Center'],
-        consulate: ['Consulate', 'Office', 'Mission', 'Diplomatic Post', 'Center'],
-        border_control: ['Border Station', 'Checkpoint', 'Control Point', 'Crossing', 'Facility']
-      };
-      
-      const prefix = prefixes[type][Math.floor(Math.random() * prefixes[type].length)];
-      const codename = Math.random().toString(36).substring(2, 8).toUpperCase();
       
       nodes.push({
-        id: `${type}_${nodeId++}`,
-        name: `${prefix} ${codename}`,
-        type,
-        coordinates: [lat, lon],
-        threatLevel,
-        status,
-        classification,
+        id: `gen_${regionIndex}_${i}`,
+        name: `${region.name} Node ${i + 1}`,
+        type: type as any,
+        coordinates: [validLat, validLon],
+        threatLevel: threatLevel as any,
+        status: status as any,
+        classification: classification as any,
         description: `${type.charAt(0).toUpperCase() + type.slice(1)} facility - ${region.name} operations`,
         lastActivity: new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000).toISOString(),
         operationalSince: `${Math.floor(Math.random() * 50) + 1970}`,
@@ -210,194 +204,80 @@ const getNodeIcon = (type: string) => {
     case 'military': return Shield;
     case 'intelligence': return Eye;
     case 'criminal': return Skull;
-    case 'hacker': return Zap;
+    case 'hacker': return Terminal;
     case 'government': return Lock;
-    case 'corporate': return Satellite;
-    case 'research': return Database;
+    case 'corporate': return Database;
+    case 'satellite': return Satellite;
+    case 'research': return Search;
     case 'nuclear': return AlertTriangle;
-    case 'satellite': return Radio;
-    case 'surveillance': return Wifi;
+    case 'surveillance': return Eye;
     case 'airport': return Activity;
-    case 'black_site': return Eye;
+    case 'black_site': return Lock;
     case 'cartel': return Skull;
-    case 'cyber_warfare': return Terminal;
+    case 'cyber_warfare': return Zap;
     case 'data_center': return Database;
     case 'submarine': return Activity;
     case 'space_command': return Satellite;
     case 'bioweapon': return AlertTriangle;
-    case 'quantum_lab': return Zap;
+    case 'quantum_lab': return Search;
     case 'dark_web': return Terminal;
     case 'arms_dealer': return Crosshair;
     case 'terror_cell': return Skull;
-    case 'money_laundering': return Search;
+    case 'money_laundering': return Database;
     case 'human_trafficking': return AlertTriangle;
-    case 'drug_lab': return AlertTriangle;
-    case 'cyber_mercenary': return Zap;
+    case 'drug_lab': return Activity;
+    case 'cyber_mercenary': return Terminal;
     case 'crypto_exchange': return Database;
     case 'weapon_storage': return Shield;
     case 'communications': return Radio;
-    case 'radar_site': return Activity;
+    case 'radar_site': return Satellite;
     case 'missile_base': return Crosshair;
     case 'drone_base': return Activity;
     case 'prison': return Lock;
-    case 'embassy': return Lock;
-    case 'consulate': return Lock;
-    case 'border_control': return Shield;
-    default: return Shield;
+    case 'embassy': return Shield;
+    case 'consulate': return Shield;
+    case 'border_control': return Lock;
+    default: return Wifi;
   }
 };
 
-const getThreatColor = (level: number) => {
+const getThreatColor = (level: number): string => {
   switch (level) {
-    case 1: return 'hsl(120, 100%, 50%)'; // Green
-    case 2: return 'hsl(90, 100%, 50%)'; // Yellow-green
-    case 3: return 'hsl(60, 100%, 50%)'; // Yellow
-    case 4: return 'hsl(30, 100%, 50%)'; // Orange
-    case 5: return 'hsl(0, 100%, 50%)'; // Red
-    case 6: return 'hsl(300, 100%, 50%)'; // Magenta - Critical/Cosmic
-    default: return 'hsl(120, 100%, 50%)';
+    case 1: return '#22c55e'; // Green
+    case 2: return '#84cc16'; // Light Green  
+    case 3: return '#eab308'; // Yellow
+    case 4: return '#f59e0b'; // Orange
+    case 5: return '#ef4444'; // Red
+    case 6: return '#dc2626'; // Dark Red
+    default: return '#6b7280'; // Gray
   }
 };
 
-const getStatusColor = (status: string) => {
+const getStatusColor = (status: string): string => {
   switch (status) {
-    case 'active': return 'hsl(120, 100%, 50%)';
-    case 'dormant': return 'hsl(60, 100%, 50%)';
-    case 'compromised': return 'hsl(30, 100%, 50%)';
-    case 'offline': return 'hsl(0, 100%, 50%)';
-    case 'ghost': return 'hsl(270, 100%, 50%)';
-    case 'dark': return 'hsl(0, 0%, 20%)';
-    case 'burned': return 'hsl(15, 100%, 40%)';
-    default: return 'hsl(120, 100%, 50%)';
+    case 'active': return '#22c55e';
+    case 'dormant': return '#eab308';
+    case 'compromised': return '#ef4444';
+    case 'offline': return '#6b7280';
+    case 'ghost': return '#8b5cf6';
+    case 'dark': return '#1f2937';
+    case 'burned': return '#dc2626';
+    default: return '#6b7280';
   }
 };
-
-// Projection functions for converting lat/lon to SVG coordinates
-const projectToSVG = (lat: number, lon: number, width: number = 1000, height: number = 500) => {
-  // Simple equirectangular projection
-  const x = ((lon + 180) / 360) * width;
-  const y = ((90 - lat) / 180) * height;
-  return { x, y };
-};
-
-// Enhanced penetration testing tools
-interface PenTestTool {
-  name: string;
-  command: string;
-  description: string;
-  category: 'reconnaissance' | 'scanning' | 'exploitation' | 'post-exploitation' | 'wireless';
-  dangerous: boolean;
-}
-
-const PENTEST_TOOLS: PenTestTool[] = [
-  // Reconnaissance
-  { name: 'Nmap Network Scanner', command: 'nmap -sS -A -O target', description: 'Advanced network discovery and security auditing', category: 'reconnaissance', dangerous: false },
-  { name: 'Masscan Port Scanner', command: 'masscan -p1-65535 --rate=1000 target', description: 'High-speed Internet port scanner', category: 'reconnaissance', dangerous: false },
-  { name: 'Shodan Search', command: 'shodan search "Server: Apache"', description: 'Search engine for Internet-connected devices', category: 'reconnaissance', dangerous: false },
-  { name: 'TheHarvester', command: 'theharvester -d domain.com -b google', description: 'Gather emails, subdomains, hosts, employee names', category: 'reconnaissance', dangerous: false },
-  
-  // Scanning & Enumeration
-  { name: 'Nikto Web Scanner', command: 'nikto -h http://target', description: 'Web server scanner for vulnerabilities', category: 'scanning', dangerous: false },
-  { name: 'SQLMap SQL Injection', command: 'sqlmap -u "http://target/page?id=1" --dbs', description: 'Automated SQL injection and database takeover tool', category: 'scanning', dangerous: true },
-  { name: 'Burp Suite Scanner', command: 'burpsuite --scanner-mode', description: 'Web application security testing platform', category: 'scanning', dangerous: false },
-  
-  // Exploitation
-  { name: 'Metasploit Framework', command: 'msfconsole -r exploit.rc', description: 'Penetration testing framework for exploitation', category: 'exploitation', dangerous: true },
-  { name: 'Social Engineer Toolkit', command: 'setoolkit', description: 'Advanced social engineering attacks', category: 'exploitation', dangerous: true },
-  
-  // Post Exploitation
-  { name: 'Mimikatz Credential Dump', command: 'mimikatz "sekurlsa::logonpasswords"', description: 'Extract plaintext passwords, hash, PIN code and kerberos tickets', category: 'post-exploitation', dangerous: true },
-  { name: 'Empire PowerShell', command: 'powershell-empire', description: 'PowerShell post-exploitation agent', category: 'post-exploitation', dangerous: true },
-  
-  // Wireless
-  { name: 'Aircrack-ng WPA Crack', command: 'aircrack-ng -a2 -b target_bssid -w wordlist.txt capture.cap', description: 'WiFi network security auditing', category: 'wireless', dangerous: true },
-  { name: 'Kismet Wireless Sniffer', command: 'kismet -c wlan0', description: 'Wireless network detector and sniffer', category: 'wireless', dangerous: false },
-];
 
 export const HackerMap: React.FC = () => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
   const [selectedNode, setSelectedNode] = useState<ClassifiedNode | null>(null);
-  const [scanMode, setScanMode] = useState<boolean>(false);
   const [filteredNodes, setFilteredNodes] = useState<ClassifiedNode[]>(CLASSIFIED_NODES.slice(0, 100));
   const [filterType, setFilterType] = useState<string>('all');
   const [threatFilter, setThreatFilter] = useState<number>(0);
   const [showAllNodes, setShowAllNodes] = useState<boolean>(false);
-  const [activeTool, setActiveTool] = useState<PenTestTool | null>(null);
-  const [scanResults, setScanResults] = useState<string[]>([]);
   const [showControlPanel, setShowControlPanel] = useState<boolean>(true);
-  const [mapboxToken, setMapboxToken] = useState<string>('pk.eyJ1IjoiY3JpbmtEZGFydCIsImEiOiJjbWZhbXJkeTgxZDloMmxvZjB1ZjQxczBzIn0.XanOxg-xA88pNFAvy5K5kA');
-  const [showTokenInput, setShowTokenInput] = useState<boolean>(false);
-  const [metasploitableVMs, setMetasploitableVMs] = useState([
-    { id: 'vm1', ip: '192.168.1.100', status: 'online', services: ['SSH', 'HTTP', 'FTP', 'Telnet'] },
-    { id: 'vm2', ip: '192.168.1.101', status: 'online', services: ['HTTP', 'MySQL', 'Samba'] },
-    { id: 'vm3', ip: '192.168.1.102', status: 'online', services: ['VNC', 'PostgreSQL', 'IRC'] },
-  ]);
-
-  const executePenTest = (tool: PenTestTool) => {
-    if (!activeTool) {
-      setActiveTool(tool);
-      setScanResults([]);
-      
-      // Simulate tool execution with realistic output
-      const simulateExecution = () => {
-        const results: string[] = [];
-        
-        switch (tool.name) {
-          case 'Nmap Network Scanner':
-            results.push('[+] Starting Nmap scan...');
-            results.push('[+] Discovered 5 hosts up on network');
-            results.push('[+] PORT     STATE    SERVICE     VERSION');
-            results.push('[+] 22/tcp   open     ssh         OpenSSH 7.4');
-            results.push('[+] 80/tcp   open     http        Apache 2.4.6');
-            results.push('[+] 443/tcp  open     https       Apache 2.4.6');
-            results.push('[+] 3306/tcp open     mysql       MySQL 5.7.34');
-            results.push('[!] Potential vulnerabilities detected');
-            break;
-            
-          case 'SQLMap SQL Injection':
-            results.push('[+] Testing SQL injection on target...');
-            results.push('[+] Testing GET parameter "id"');
-            results.push('[!] Parameter "id" is vulnerable to SQL injection');
-            results.push('[+] Database: MySQL 5.7.34');
-            results.push('[+] Available databases: [3]');
-            results.push('[+] information_schema, mysql, webapp_db');
-            results.push('[CRITICAL] Full database access achieved');
-            break;
-            
-          case 'Metasploit Framework':
-            results.push('[+] Loading Metasploit Framework...');
-            results.push('[+] Searching for exploits...');
-            results.push('[+] Found 15 matching exploits');
-            results.push('[+] exploit/linux/http/apache_mod_cgi_bash_env_exec');
-            results.push('[+] Setting target to 192.168.1.100...');
-            results.push('[+] Exploit completed successfully');
-            results.push('[+] Meterpreter session 1 opened');
-            break;
-            
-          default:
-            results.push(`[+] Executing ${tool.name}...`);
-            results.push('[+] Tool execution completed');
-            results.push('[+] Results saved to /tmp/scan_results');
-        }
-        
-        // Add results progressively
-        let index = 0;
-        const addResult = () => {
-          if (index < results.length) {
-            setScanResults(prev => [...prev, results[index]]);
-            index++;
-            setTimeout(addResult, 500 + Math.random() * 1000);
-          } else {
-            setTimeout(() => setActiveTool(null), 2000);
-          }
-        };
-        addResult();
-      };
-      
-      setTimeout(simulateExecution, 1000);
-    }
-  };
+  const [mapMode, setMapMode] = useState<'2d' | '3d'>('2d');
+  const [autoRotate, setAutoRotate] = useState(false);
+  const mapboxToken = 'pk.eyJ1IjoiY3JpbmtlZGFydCIsImEiOiJjbWZhbXJkeTgxZDloMmxvZjB1ZjQxczBzIn0.XanOxg-xA88pNFAvy5K5kA';
 
   const filterNodes = (type: string, threat: number, showAll: boolean) => {
     let nodes = showAll ? CLASSIFIED_NODES : CLASSIFIED_NODES.slice(0, 100);
@@ -434,14 +314,14 @@ export const HackerMap: React.FC = () => {
 
     mapboxgl.accessToken = token;
     
-    // Initialize map with Mapbox dark style
+    // Initialize map with proper settings for both 2D and 3D
     map.current = new mapboxgl.Map({
       container: mapContainer.current,
       style: 'mapbox://styles/mapbox/dark-v11',
       center: [0, 20],
-      zoom: 2,
-      projection: 'globe' as any,
-      pitch: 0,
+      zoom: mapMode === '3d' ? 1.5 : 2,
+      projection: mapMode === '3d' ? 'globe' : 'mercator',
+      pitch: mapMode === '3d' ? 45 : 0,
       bearing: 0,
       antialias: true,
       renderWorldCopies: false
@@ -466,22 +346,56 @@ export const HackerMap: React.FC = () => {
     map.current.doubleClickZoom.enable();
     map.current.touchZoomRotate.enable();
 
-    // Add fog effect when style loads
+    // Add fog effect for 3D mode
     map.current.on('style.load', () => {
       if (!map.current) return;
       
-      map.current.setFog({
-        'range': [-1, 2],
-        'color': '#1a1a1a',
-        'horizon-blend': 0.3,
-        'high-color': '#333333',
-      });
+      if (mapMode === '3d') {
+        map.current.setFog({
+          'range': [-1, 2],
+          'color': '#1a1a1a',
+          'horizon-blend': 0.3,
+          'high-color': '#333333',
+        });
+
+        // Add atmosphere for globe
+        map.current.addLayer({
+          'id': 'globe-atmosphere',
+          'type': 'sky',
+          'paint': {
+            'sky-type': 'atmosphere',
+            'sky-atmosphere-sun': [0.0, 0.0],
+            'sky-atmosphere-sun-intensity': 15
+          }
+        });
+      }
     });
+
+    // Auto-rotation for 3D mode
+    let rotationIntervalId: number | null = null;
+    
+    if (mapMode === '3d' && autoRotate) {
+      const rotateMap = () => {
+        if (map.current && autoRotate) {
+          const center = map.current.getCenter();
+          center.lng -= 0.2;
+          map.current.easeTo({ center, duration: 1000 });
+        }
+      };
+      rotationIntervalId = window.setInterval(rotateMap, 1000);
+    }
 
     // Add nodes as markers when map loads
     map.current.on('load', () => {
       addNodesToMap();
     });
+
+    // Clean up rotation on unmount
+    return () => {
+      if (rotationIntervalId) {
+        clearInterval(rotationIntervalId);
+      }
+    };
   };
 
   const addNodesToMap = () => {
@@ -530,7 +444,7 @@ export const HackerMap: React.FC = () => {
           .setHTML(`
             <div style="color: white; background: rgba(0,0,0,0.8); padding: 8px; border-radius: 4px; font-size: 10px; font-family: monospace;">
               <strong>${node.name}</strong><br/>
-              <span style="color: ${color};">Threat Level: ${node.threatLevel}/5</span><br/>
+              <span style="color: ${color};">Threat Level: ${node.threatLevel}/6</span><br/>
               <span style="color: ${getStatusColor(node.status)};">${node.status.toUpperCase()}</span>
             </div>
           `);
@@ -554,15 +468,51 @@ export const HackerMap: React.FC = () => {
     }
   }, [filteredNodes]);
 
-  const handleTokenSubmit = () => {
-    // Not needed since token is hardcoded
-    setShowTokenInput(false);
-  };
+  // Handle map mode changes
+  useEffect(() => {
+    if (map.current) {
+      if (mapMode === '3d') {
+        map.current.easeTo({
+          pitch: 45,
+          bearing: 0,
+          zoom: 1.5
+        });
+        map.current.setProjection('globe');
+      } else {
+        map.current.easeTo({
+          pitch: 0,
+          bearing: 0,
+          zoom: 2
+        });
+        map.current.setProjection('mercator');
+      }
+    }
+  }, [mapMode]);
+
+  // Handle auto-rotation
+  useEffect(() => {
+    let rotationIntervalId: number | null = null;
+    
+    if (mapMode === '3d' && autoRotate && map.current) {
+      const rotateMap = () => {
+        if (map.current && autoRotate) {
+          const center = map.current.getCenter();
+          center.lng -= 0.2;
+          map.current.easeTo({ center, duration: 1000 });
+        }
+      };
+      rotationIntervalId = window.setInterval(rotateMap, 1000);
+    }
+
+    return () => {
+      if (rotationIntervalId) {
+        clearInterval(rotationIntervalId);
+      }
+    };
+  }, [autoRotate, mapMode]);
 
   return (
     <div className="h-full relative">
-      {/* Map loads automatically with hardcoded token */}
-
       {/* Mapbox Container */}
       <div ref={mapContainer} className="w-full h-full" style={{ background: '#1a1a1a' }} />
       
@@ -578,12 +528,47 @@ export const HackerMap: React.FC = () => {
       {/* Enhanced Control Panel */}
       {showControlPanel && (
         <div className="absolute top-4 left-16 space-y-2 z-30 max-h-[80vh] overflow-y-auto w-80">
-        <Card className="p-3 bg-background/90 backdrop-blur border-primary/30">
+          <Card className="p-3 bg-background/90 backdrop-blur border-primary/30">
           <div className="space-y-2">
             <div className="text-xs text-primary font-mono font-bold">GLOBAL SURVEILLANCE NETWORK</div>
             <div className="text-xs text-muted-foreground">
               Tracking {CLASSIFIED_NODES.length.toLocaleString()} classified nodes worldwide
             </div>
+            
+            {/* Map Mode Controls */}
+            <div className="flex gap-2">
+              <Button
+                onClick={() => setMapMode('2d')}
+                variant={mapMode === '2d' ? "default" : "outline"}
+                size="sm"
+                className="flex-1"
+              >
+                <Map className="w-4 h-4 mr-1" />
+                2D
+              </Button>
+              <Button
+                onClick={() => setMapMode('3d')}
+                variant={mapMode === '3d' ? "default" : "outline"}
+                size="sm"
+                className="flex-1"
+              >
+                <Globe className="w-4 h-4 mr-1" />
+                3D
+              </Button>
+            </div>
+
+            {/* Auto-rotate for 3D */}
+            {mapMode === '3d' && (
+              <Button
+                onClick={() => setAutoRotate(!autoRotate)}
+                variant={autoRotate ? "default" : "outline"}
+                size="sm"
+                className="w-full"
+              >
+                <Activity className="w-4 h-4 mr-2" />
+                {autoRotate ? 'Stop Rotation' : 'Auto Rotate'}
+              </Button>
+            )}
             
             <Button 
               onClick={handleShowAllNodes}
@@ -595,205 +580,151 @@ export const HackerMap: React.FC = () => {
               {showAllNodes ? `Showing All (${filteredNodes.length})` : 'Show All Nodes'}
             </Button>
           </div>
-        </Card>
+          </Card>
 
-        {/* Filter Controls */}
-        <Card className="p-3 bg-background/90 backdrop-blur border-primary/30">
+          {/* Filter Controls */}
+          <Card className="p-3 bg-background/90 backdrop-blur border-primary/30">
           <div className="space-y-2">
-            <div className="text-xs text-primary font-mono">FILTER CONTROLS</div>
-            <div className="grid grid-cols-2 gap-1">
-              {['all', 'military', 'intelligence', 'nuclear', 'hacker', 'criminal'].map(type => (
+            <div className="text-xs text-primary font-mono font-bold">NODE FILTERS</div>
+            
+            {/* Node Type Filter */}
+            <div className="grid grid-cols-2 gap-1 text-xs">
+              {['all', 'military', 'intelligence', 'criminal', 'hacker', 'cyber_warfare', 'black_site', 'bioweapon'].map(type => (
                 <Button
                   key={type}
+                  onClick={() => handleTypeFilter(type)}
                   variant={filterType === type ? "default" : "outline"}
                   size="sm"
-                  className="text-xs"
-                  onClick={() => handleTypeFilter(type)}
+                  className="text-xs p-1 h-auto"
                 >
-                  {type.toUpperCase()}
+                  {type.replace('_', ' ').toUpperCase()}
                 </Button>
               ))}
             </div>
-            
-            <div className="text-xs text-primary font-mono mt-2">THREAT LEVEL</div>
-            <div className="flex gap-1">
-              {[0, 3, 4, 5].map(level => (
-                <Button
-                  key={level}
-                  variant={threatFilter === level ? "default" : "outline"}
-                  size="sm"
-                  className="text-xs flex-1"
-                  onClick={() => handleThreatFilter(level)}
-                >
-                  {level === 0 ? 'ALL' : `${level}+`}
-                </Button>
-              ))}
-            </div>
-          </div>
-        </Card>
 
-        {/* Penetration Testing Tools */}
-        <Card className="p-3 bg-background/90 backdrop-blur border-primary/30">
-          <div className="space-y-2">
-            <div className="text-xs text-primary font-mono flex items-center">
-              <Terminal className="w-3 h-3 mr-1" />
-              PENTEST ARSENAL
-            </div>
-            <div className="text-xs text-yellow-400 font-mono">
-              ⚠️ METASPLOITABLE VMS ACTIVE
-            </div>
-            
-            <div className="space-y-1 max-h-32 overflow-y-auto">
-              {PENTEST_TOOLS.slice(0, 6).map((tool, idx) => (
-                <Button
-                  key={idx}
-                  variant="outline"
-                  size="sm"
-                  className={`w-full text-xs justify-start h-8 ${tool.dangerous ? 'border-red-500/30 text-red-400' : 'border-green-500/30 text-green-400'}`}
-                  onClick={() => executePenTest(tool)}
-                  disabled={!!activeTool}
-                >
-                  <Terminal className="w-3 h-3 mr-1" />
-                  {tool.name}
-                </Button>
-              ))}
-            </div>
-          </div>
-        </Card>
-
-        {/* Tool Execution Output */}
-        {(activeTool || scanResults.length > 0) && (
-          <Card className="p-3 bg-background/90 backdrop-blur border-primary/30">
-            <div className="space-y-2">
-              <div className="text-xs text-primary font-mono">
-                {activeTool ? `EXECUTING: ${activeTool.name}` : 'LAST SCAN RESULTS'}
-              </div>
-              <div className="bg-black/80 p-2 rounded text-xs font-mono max-h-32 overflow-y-auto">
-                {scanResults.map((result, idx) => (
-                  <div 
-                    key={idx} 
-                    className={`${
-                      result.includes('[!]') ? 'text-yellow-400' :
-                      result.includes('[CRITICAL]') ? 'text-red-400' :
-                      result.includes('[+]') ? 'text-green-400' :
-                      'text-gray-300'
-                    }`}
+            {/* Threat Level Filter */}
+            <div className="space-y-1">
+              <div className="text-xs text-muted-foreground">Min Threat Level:</div>
+              <div className="flex gap-1">
+                {[0, 1, 2, 3, 4, 5, 6].map(level => (
+                  <Button
+                    key={level}
+                    onClick={() => handleThreatFilter(level)}
+                    variant={threatFilter === level ? "default" : "outline"}
+                    size="sm"
+                    className="text-xs p-1 h-6 w-6"
+                    style={{ backgroundColor: level === 0 ? undefined : getThreatColor(level) }}
                   >
-                    {result}
-                  </div>
+                    {level === 0 ? 'All' : level}
+                  </Button>
                 ))}
-                {activeTool && (
-                  <div className="text-green-400 animate-pulse">
-                    {'> '}█
-                  </div>
-                )}
               </div>
+            </div>
             </div>
           </Card>
-        )}
+        </div>
+      )}
 
-        {/* Metasploitable VMs Status */}
-        <Card className="p-3 bg-background/90 backdrop-blur border-primary/30">
-          <div className="space-y-2">
-            <div className="text-xs text-primary font-mono">SAFE TESTING ENVIRONMENT</div>
-            {metasploitableVMs.map(vm => (
-              <div key={vm.id} className="flex items-center justify-between text-xs">
-                <span className="font-mono">{vm.ip}</span>
-                <Badge variant="outline" className="text-green-400 border-green-500">
-                  {vm.status.toUpperCase()}
+      {/* Node Details Panel */}
+      {selectedNode && (
+        <Card className="absolute top-4 right-4 w-80 p-4 bg-background/95 backdrop-blur border-primary/30 z-30 max-h-[80vh] overflow-y-auto">
+          <div className="space-y-3">
+            <div className="flex items-start justify-between">
+              <div>
+                <h3 className="font-mono text-sm font-bold text-primary">{selectedNode.name}</h3>
+                <Badge 
+                  variant="outline" 
+                  className="mt-1"
+                  style={{ 
+                    borderColor: getThreatColor(selectedNode.threatLevel),
+                    color: getThreatColor(selectedNode.threatLevel)
+                  }}
+                >
+                  Threat Level {selectedNode.threatLevel}/6
                 </Badge>
               </div>
-            ))}
-          </div>
-        </Card>
-        </div>
-      )}
-
-      {/* Node Details Popup */}
-      {selectedNode && (
-        <div className="absolute top-4 right-4 z-40 max-w-sm">
-          <Card className="p-4 bg-background/90 backdrop-blur border-primary/30">
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <h3 className="font-mono text-sm font-bold text-primary">{selectedNode.name}</h3>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setSelectedNode(null)}
-                  className="w-6 h-6 p-0"
-                >
-                  ×
-                </Button>
-              </div>
-              
-              <Badge 
-                variant="destructive" 
-                className={`text-xs ${
-                  selectedNode.classification === 'TOP SECRET' ? 'bg-red-900/50 border-red-500' :
-                  selectedNode.classification === 'SECRET' ? 'bg-orange-900/50 border-orange-500' :
-                  selectedNode.classification === 'CONFIDENTIAL' ? 'bg-yellow-900/50 border-yellow-500' :
-                  'bg-gray-900/50 border-gray-500'
-                }`}
+              <Button
+                onClick={() => setSelectedNode(null)}
+                variant="ghost"
+                size="sm"
+                className="w-6 h-6 p-0"
               >
-                {selectedNode.classification}
-              </Badge>
-              
-              <div className="space-y-1 text-xs">
-                <div className="flex justify-between">
-                  <span>Type:</span>
-                  <span className="text-primary capitalize">{selectedNode.type}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Threat Level:</span>
-                  <span style={{ color: getThreatColor(selectedNode.threatLevel) }}>
-                    {selectedNode.threatLevel}/5
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Status:</span>
-                  <span style={{ color: getStatusColor(selectedNode.status) }}>
-                    {selectedNode.status.toUpperCase()}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Coordinates:</span>
-                  <span className="font-mono text-primary">
-                    {selectedNode.coordinates[0].toFixed(4)}, {selectedNode.coordinates[1].toFixed(4)}
-                  </span>
-                </div>
+                ×
+              </Button>
+            </div>
+
+            <div className="space-y-2 text-xs">
+              <div>
+                <span className="text-muted-foreground">Type:</span> {selectedNode.type.replace('_', ' ').toUpperCase()}
               </div>
-              
-              <p className="text-xs text-muted-foreground mt-2">{selectedNode.description}</p>
-              
-              <div className="text-xs text-muted-foreground mt-2">
-                Last Activity: {new Date(selectedNode.lastActivity).toLocaleString()}
+              <div>
+                <span className="text-muted-foreground">Status:</span> 
+                <span style={{ color: getStatusColor(selectedNode.status) }} className="ml-1 font-mono">
+                  {selectedNode.status.toUpperCase()}
+                </span>
               </div>
-              
+              <div>
+                <span className="text-muted-foreground">Classification:</span> 
+                <span className="ml-1 font-mono text-primary font-bold">{selectedNode.classification}</span>
+              </div>
+              <div>
+                <span className="text-muted-foreground">Coordinates:</span> 
+                <span className="ml-1 font-mono">{selectedNode.coordinates[0].toFixed(4)}, {selectedNode.coordinates[1].toFixed(4)}</span>
+              </div>
               {selectedNode.operationalSince && (
-                <div className="text-xs text-muted-foreground">
-                  Operational Since: {selectedNode.operationalSince}
+                <div>
+                  <span className="text-muted-foreground">Operational Since:</span> 
+                  <span className="ml-1 font-mono">{selectedNode.operationalSince}</span>
                 </div>
               )}
-              
               {selectedNode.coverName && (
-                <div className="text-xs text-yellow-400 mt-1">
-                  {selectedNode.coverName}
+                <div>
+                  <span className="text-muted-foreground">Cover Name:</span> 
+                  <span className="ml-1 font-mono">{selectedNode.coverName}</span>
+                </div>
+              )}
+              {selectedNode.riskLevel && (
+                <div>
+                  <span className="text-muted-foreground">Risk Level:</span> 
+                  <Badge variant="destructive" className="ml-1">
+                    {selectedNode.riskLevel}
+                  </Badge>
                 </div>
               )}
             </div>
-          </Card>
-        </div>
+
+            <div className="pt-2 border-t border-border">
+              <div className="text-xs text-muted-foreground">Description:</div>
+              <p className="text-xs mt-1">{selectedNode.description}</p>
+            </div>
+
+            <div className="pt-2 border-t border-border">
+              <div className="text-xs text-muted-foreground">Last Activity:</div>
+              <div className="text-xs mt-1 font-mono">{new Date(selectedNode.lastActivity).toLocaleString()}</div>
+            </div>
+          </div>
+        </Card>
       )}
 
-      <style>{`
-        @keyframes pulse {
-          0% { transform: scale(1); opacity: 1; }
-          50% { transform: scale(1.2); opacity: 0.7; }
-          100% { transform: scale(1); opacity: 1; }
-        }
-      `}</style>
+      {/* Add CSS for pulse animation */}
+      <style dangerouslySetInnerHTML={{
+        __html: `
+          @keyframes pulse {
+            0% {
+              transform: scale(1);
+              opacity: 1;
+            }
+            50% {
+              transform: scale(1.1);
+              opacity: 0.7;
+            }
+            100% {
+              transform: scale(1);
+              opacity: 1;
+            }
+          }
+        `
+      }} />
     </div>
   );
 };
-
-export default HackerMap;
