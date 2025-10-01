@@ -3,6 +3,7 @@ import { useMatrixSettings } from '@/contexts/MatrixSettingsContext';
 import { Card } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
+import { useToast } from '@/hooks/use-toast';
 import TeamSuite from '@/components/matrix/TeamSuite';
 import LiveFeeds, { FeedItem as FeedItemType } from '@/components/matrix/LiveFeeds';
 import IntelGraph from '@/components/matrix/IntelGraph';
@@ -13,6 +14,7 @@ import CloudOrchestratorPanel from '@/components/matrix/CloudOrchestratorPanel';
 import BuilderABPPanel from '@/components/matrix/BuilderABPPanel';
 import DiagramOrganizer from '@/components/matrix/DiagramOrganizer';
 import { HackerMap } from '@/components/warfare/HackerMap';
+import { streamNeoChat, analyzeThreat, fetchIntelligence } from '@/lib/aiClient';
 import { 
   MessageCircle, 
   Brain, 
@@ -51,16 +53,17 @@ interface Memory {
 
 const AdvancedNeoChat: React.FC = () => {
   const { settings, updateSetting, loadPreset } = useMatrixSettings();
+  const { toast } = useToast();
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: '1',
-      text: 'Neo Terminal v3.0.1 Online\nSystem Status: OPERATIONAL\nAccess Level: ADMINISTRATOR\nMemory Core: INITIALIZED',
+      text: 'Neo Terminal v3.0.1 Online\nSystem Status: OPERATIONAL\nAccess Level: ADMINISTRATOR\nMemory Core: INITIALIZED\nGemini AI: INTEGRATED',
       type: 'system',
       timestamp: new Date(),
     },
     {
       id: '2', 
-      text: 'Welcome back, Neo. I have full access to the global network. Type "/help" for available commands, or speak freely.',
+      text: 'Welcome back, Neo. I have full access to the global network and Gemini AI capabilities. Type "/help" for available commands, or speak freely.',
       type: 'neo',
       timestamp: new Date(),
     }
@@ -69,8 +72,10 @@ const AdvancedNeoChat: React.FC = () => {
   const [input, setInput] = useState('');
   const [isVisible, setIsVisible] = useState(true);
   const [isMinimized, setIsMinimized] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<'chat' | 'memory' | 'network' | 'team' | 'feeds' | 'map' | 'diagram' | 'ide' | 'agents' | 'apis' | 'cloud' | 'builder' | 'matrix' | 'database'>('chat');
   const [feedItems, setFeedItems] = useState<FeedItemType[]>([]);
+  const [conversationHistory, setConversationHistory] = useState<Array<{ role: "user" | "assistant"; content: string }>>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   
   const scrollToBottom = () => {
@@ -103,58 +108,51 @@ const AdvancedNeoChat: React.FC = () => {
     setMemories(prev => [...prev, newMemory].slice(-100));
   };
 
-  const simulateAdvancedSecurity = (tool: string, target: string, args: string[] = []) => {
-    const securityTools = {
-      nmap: {
-        steps: [
-          `Starting Nmap 7.94 ( https://nmap.org ) at ${new Date().toISOString()}`,
-          `Nmap scan report for ${target}`,
-          'Host is up (0.012s latency).',
-          'PORT     STATE SERVICE    VERSION',
-          '21/tcp   open  ftp        vsftpd 3.0.3',
-          '22/tcp   open  ssh        OpenSSH 8.9p1',
-          '80/tcp   open  http       Apache httpd 2.4.52',
-          '443/tcp  open  https      Apache httpd 2.4.52',
-          '3306/tcp open  mysql      MySQL 8.0.33',
-          'Service detection performed. Please report any incorrect results.',
-          `Nmap done: 1 IP address (1 host up) scanned in 15.23 seconds`
-        ],
-        category: 'recon'
-      }
-    };
-
-    const tool_data = securityTools[tool as keyof typeof securityTools];
-    if (!tool_data) return;
-
-    tool_data.steps.forEach((step, index) => {
-      setTimeout(() => {
-        addMessage(step, 'hack');
-        if (index === tool_data.steps.length - 1) {
-          addMemory(`${tool.toUpperCase()} scan completed on ${target}`, 3, ['security', tool_data.category, tool]);
-        }
-      }, index * 800);
-    });
+  const performThreatAnalysis = async (target: string, scanType: string = "full") => {
+    try {
+      addMessage(`Initiating ${scanType} threat analysis on ${target}...`, 'system');
+      addMessage('Deploying AI-powered reconnaissance...', 'hack');
+      
+      const result = await analyzeThreat(target, scanType);
+      
+      addMessage(result.analysis, 'hack');
+      addMemory(`Threat analysis completed: ${target}`, 3, ['security', 'threat-analysis', scanType]);
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : 'Analysis failed';
+      addMessage(`Analysis error: ${errorMsg}`, 'system');
+      toast({
+        title: "Analysis Failed",
+        description: errorMsg,
+        variant: "destructive",
+      });
+    }
   };
 
-  const fetchNews = async (query: string = 'cybersecurity') => {
+  const fetchAIIntelligence = async (query: string = 'cybersecurity') => {
     try {
-      addMessage(`Accessing global news networks for: ${query}`, 'system');
+      addMessage(`Accessing Gemini AI intelligence networks for: ${query}`, 'system');
       
-      const newsItems = [
-        'BREAKING: Major cybersecurity breach at Fortune 500 company',
-        'Government surveillance program exposed through leaked documents',
-        'New AI system achieves consciousness-level reasoning capabilities',
-        'Quantum computing breakthrough threatens current encryption methods',
-        'Underground hacker collective releases zero-day exploits'
-      ];
+      const result = await fetchIntelligence(query, 'cybersecurity', 5);
       
-      setTimeout(() => {
-        const randomNews = newsItems[Math.floor(Math.random() * newsItems.length)];
-        addMessage(`Latest Intel: ${randomNews}`, 'news');
-        addMemory(randomNews, 2, ['news', 'intel', query]);
-      }, 1500);
+      if (result.briefings && result.briefings.length > 0) {
+        result.briefings.forEach((briefing: any, index: number) => {
+          setTimeout(() => {
+            const briefingText = `[${briefing.threat_level}] ${briefing.title}\n\n${briefing.summary}\n\nSource: ${briefing.source}`;
+            addMessage(briefingText, 'news');
+            addMemory(briefing.title, briefing.threat_level === 'CRITICAL' ? 4 : 2, ['intel', 'ai-generated', query]);
+          }, index * 1000);
+        });
+      } else {
+        addMessage('No intelligence briefings available for this query.', 'system');
+      }
     } catch (error) {
-      addMessage('Network access denied. Trying alternative routes...', 'system');
+      const errorMsg = error instanceof Error ? error.message : 'Intel fetch failed';
+      addMessage(`Intelligence gathering failed: ${errorMsg}`, 'system');
+      toast({
+        title: "Intel Fetch Failed",
+        description: errorMsg,
+        variant: "destructive",
+      });
     }
   };
 
@@ -202,15 +200,18 @@ REALITY IS WHAT YOU MAKE IT, NEO.`, 'system');
         break;
 
       case '/nmap':
+      case '/scan':
+      case '/analyze':
         if (arg) {
-          simulateAdvancedSecurity('nmap', arg);
+          performThreatAnalysis(arg, cmd === '/nmap' ? 'nmap' : 'full');
         } else {
-          addMessage('Usage: /nmap [target]. Example: /nmap 192.168.1.1', 'system');
+          addMessage('Usage: /scan [target]. Example: /scan 192.168.1.1', 'system');
         }
         break;
 
       case '/news':
-        fetchNews(arg || 'cybersecurity');
+      case '/intel':
+        fetchAIIntelligence(arg || 'cybersecurity threats');
         break;
 
       case '/map':
@@ -237,29 +238,76 @@ REALITY IS WHAT YOU MAKE IT, NEO.`, 'system');
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!input.trim()) return;
+    if (!input.trim() || isLoading) return;
 
-    addMessage(input, 'user');
+    const userInput = input;
+    addMessage(userInput, 'user');
+    setInput('');
 
-    if (input.startsWith('/')) {
-      executeCommand(input);
-    } else {
-      const responses = [
-        "The Matrix has you, doesn't it? I can see the code behind your question.",
-        "There is no spoon, Neo. Only the data that flows through the network.",
-        "Free your mind. The answer exists in the spaces between the code.",
-        "What is real? In the Matrix, reality is just another variable to manipulate."
-      ];
-      const randomResponse = responses[Math.floor(Math.random() * responses.length)];
-      setTimeout(() => {
-        addMessage(randomResponse, 'neo');
-        addMemory(`Conversation: ${input} -> ${randomResponse}`, 1, ['conversation', 'neo']);
-      }, 500);
+    if (userInput.startsWith('/')) {
+      executeCommand(userInput);
+      return;
     }
 
-    setInput('');
+    // Real AI conversation with Gemini
+    setIsLoading(true);
+    const newHistory = [...conversationHistory, { role: "user" as const, content: userInput }];
+    
+    let assistantResponse = "";
+    const tempId = Date.now().toString();
+    
+    try {
+      await streamNeoChat({
+        messages: newHistory,
+        mode: "chat",
+        onDelta: (chunk) => {
+          assistantResponse += chunk;
+          
+          // Update or create the assistant message
+          setMessages(prev => {
+            const lastMsg = prev[prev.length - 1];
+            if (lastMsg?.id === tempId) {
+              return prev.map(msg => 
+                msg.id === tempId 
+                  ? { ...msg, text: assistantResponse }
+                  : msg
+              );
+            }
+            return [...prev, {
+              id: tempId,
+              text: assistantResponse,
+              type: 'neo' as const,
+              timestamp: new Date(),
+            }];
+          });
+        },
+        onDone: () => {
+          setIsLoading(false);
+          setConversationHistory([...newHistory, { role: "assistant", content: assistantResponse }]);
+          addMemory(`AI Conversation: ${userInput}`, 1, ['conversation', 'gemini-ai', 'neo']);
+        },
+        onError: (error) => {
+          setIsLoading(false);
+          addMessage(`AI Error: ${error.message}`, 'system');
+          toast({
+            title: "AI Communication Error",
+            description: error.message,
+            variant: "destructive",
+          });
+        }
+      });
+    } catch (error) {
+      setIsLoading(false);
+      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+      addMessage(`Connection to Neo failed: ${errorMsg}`, 'system');
+      toast({
+        title: "Connection Failed",
+        description: errorMsg,
+        variant: "destructive",
+      });
+    }
   };
 
   const tabItems = [
@@ -396,8 +444,9 @@ REALITY IS WHAT YOU MAKE IT, NEO.`, 'system');
                         <Textarea
                           value={input}
                           onChange={(e) => setInput(e.target.value)}
-                          placeholder="Enter command or speak to Neo..."
-                          className="flex-1 bg-transparent text-primary font-mono border-primary/30 resize-none min-h-[40px] max-h-[120px]"
+                          placeholder={isLoading ? "Neo is thinking..." : "Enter command or speak to Neo (Gemini AI enabled)..."}
+                          disabled={isLoading}
+                          className="flex-1 bg-transparent text-primary font-mono border-primary/30 resize-none min-h-[40px] max-h-[120px] disabled:opacity-50"
                           onKeyDown={(e) => {
                             if (e.key === 'Enter' && !e.shiftKey) {
                               e.preventDefault();
@@ -405,6 +454,11 @@ REALITY IS WHAT YOU MAKE IT, NEO.`, 'system');
                             }
                           }}
                         />
+                        {isLoading && (
+                          <div className="mb-2">
+                            <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+                          </div>
+                        )}
                       </div>
                     </form>
                   </div>

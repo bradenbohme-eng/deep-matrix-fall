@@ -1,6 +1,10 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
+import { useToast } from '@/hooks/use-toast';
+import { analyzeCode } from '@/lib/aiClient';
+import { Card } from '@/components/ui/card';
+import { Brain, Code2, Sparkles, AlertTriangle } from 'lucide-react';
 
 // IDEPanel: Minimal, theme-aligned code workspace (simulated editor)
 // Inputs: none
@@ -30,6 +34,9 @@ const seedTree: FileNode[] = [
 const IDEPanel: React.FC = () => {
   const [activePath, setActivePath] = useState<string>('README.md');
   const [content, setContent] = useState<string>('');
+  const [aiAnalysis, setAiAnalysis] = useState<string>('');
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const { toast } = useToast();
 
   // Load/save workspace
   useEffect(() => {
@@ -45,6 +52,49 @@ const IDEPanel: React.FC = () => {
 
   const save = () => {
     localStorage.setItem('neo_ide_workspace', JSON.stringify({ activePath, content }));
+    toast({
+      title: "Saved",
+      description: `${activePath} saved to local workspace`,
+    });
+  };
+
+  const runAIAnalysis = async (task: "analyze" | "explain" | "optimize" | "exploit") => {
+    if (!content.trim()) {
+      toast({
+        title: "No Code",
+        description: "Please enter some code to analyze",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsAnalyzing(true);
+    setAiAnalysis('');
+
+    try {
+      const language = activePath.endsWith('.tsx') || activePath.endsWith('.ts') 
+        ? 'typescript' 
+        : activePath.endsWith('.jsx') || activePath.endsWith('.js')
+        ? 'javascript'
+        : 'text';
+
+      const result = await analyzeCode(content, language, task);
+      setAiAnalysis(result.result);
+      
+      toast({
+        title: "Analysis Complete",
+        description: `Gemini AI has ${task}d your code`,
+      });
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : 'Analysis failed';
+      toast({
+        title: "Analysis Failed",
+        description: errorMsg,
+        variant: "destructive",
+      });
+    } finally {
+      setIsAnalyzing(false);
+    }
   };
 
   const tabs = useMemo(() => ['README.md', 'Index.tsx', 'AdvancedNeoChat.tsx'], []);
@@ -76,16 +126,66 @@ const IDEPanel: React.FC = () => {
           </div>
           <div className="flex gap-2">
             <Button variant="secondary" size="sm" onClick={save}>Save</Button>
-            <Button variant="default" size="sm" onClick={() => alert('Run (simulated). Wire to Edge Function for real exec.')}>Run</Button>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => runAIAnalysis('analyze')}
+              disabled={isAnalyzing}
+              className="gap-1"
+            >
+              <Brain className="w-3 h-3" />
+              Analyze
+            </Button>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => runAIAnalysis('optimize')}
+              disabled={isAnalyzing}
+              className="gap-1"
+            >
+              <Sparkles className="w-3 h-3" />
+              Optimize
+            </Button>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => runAIAnalysis('exploit')}
+              disabled={isAnalyzing}
+              className="gap-1"
+            >
+              <AlertTriangle className="w-3 h-3" />
+              Exploit
+            </Button>
           </div>
         </div>
-        <div className="flex-1 p-3">
-          <Textarea
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
-            placeholder={`Editing: ${activePath}`}
-            className="w-full h-full min-h-[400px] bg-transparent font-mono text-sm border-primary/30"
-          />
+        <div className="flex-1 flex">
+          <div className="flex-1 p-3">
+            <Textarea
+              value={content}
+              onChange={(e) => setContent(e.target.value)}
+              placeholder={`Editing: ${activePath}\n\nGemini AI code analysis available - click Analyze, Optimize, or Exploit`}
+              className="w-full h-full min-h-[400px] bg-transparent font-mono text-sm border-primary/30"
+            />
+          </div>
+          {aiAnalysis && (
+            <Card className="w-96 m-3 p-4 bg-card/95 border-primary/30 overflow-auto">
+              <div className="flex items-center gap-2 mb-3 text-primary">
+                <Code2 className="w-5 h-5" />
+                <h3 className="font-mono font-bold">AI ANALYSIS</h3>
+              </div>
+              <div className="text-sm font-mono text-muted-foreground whitespace-pre-wrap leading-relaxed">
+                {aiAnalysis}
+              </div>
+            </Card>
+          )}
+          {isAnalyzing && (
+            <div className="w-96 m-3 p-4 flex items-center justify-center">
+              <div className="flex flex-col items-center gap-3">
+                <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+                <p className="text-primary font-mono text-sm">Gemini AI analyzing...</p>
+              </div>
+            </div>
+          )}
         </div>
       </main>
     </section>
