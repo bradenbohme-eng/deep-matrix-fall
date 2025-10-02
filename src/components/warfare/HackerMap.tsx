@@ -4,7 +4,11 @@ import 'mapbox-gl/dist/mapbox-gl.css';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Shield, Zap, Eye, Skull, Satellite, Lock, AlertTriangle, Radio, Database, Wifi, Terminal, Search, Activity, Crosshair, ChevronLeft, ChevronRight, Settings, Globe, Map } from 'lucide-react';
+import { Shield, Zap, Eye, Skull, Satellite, Lock, AlertTriangle, Radio, Database, Wifi, Terminal, Search, Activity, Crosshair, ChevronLeft, ChevronRight, Settings, Globe, Map, Layers } from 'lucide-react';
+import NetworkTrafficOverlay from './NetworkTrafficOverlay';
+import NetworkStatsPanel from './NetworkStatsPanel';
+import HackingOpsPanel from './HackingOpsPanel';
+import AlertsPanel from './AlertsPanel';
 
 interface ClassifiedNode {
   id: string;
@@ -277,7 +281,11 @@ export const HackerMap: React.FC = () => {
   const [showControlPanel, setShowControlPanel] = useState<boolean>(true);
   const [mapMode, setMapMode] = useState<'2d' | '3d'>('2d');
   const [autoRotate, setAutoRotate] = useState(false);
+  const [showStats, setShowStats] = useState(true);
+  const [showOps, setShowOps] = useState(true);
+  const [showAlerts, setShowAlerts] = useState(true);
   const mapboxToken = 'pk.eyJ1IjoiY3JpbmtlZGFydCIsImEiOiJjbWZhbXJkeTgxZDloMmxvZjB1ZjQxczBzIn0.XanOxg-xA88pNFAvy5K5kA';
+  const markers = useRef<mapboxgl.Marker[]>([]);
 
   const filterNodes = (type: string, threat: number, showAll: boolean) => {
     let nodes = showAll ? CLASSIFIED_NODES : CLASSIFIED_NODES.slice(0, 100);
@@ -516,6 +524,9 @@ export const HackerMap: React.FC = () => {
       {/* Mapbox Container */}
       <div ref={mapContainer} className="w-full h-full" style={{ background: '#1a1a1a' }} />
       
+      {/* Network Traffic Overlay - Packet Visualization */}
+      <NetworkTrafficOverlay nodes={filteredNodes} />
+
       {/* Panel Toggle Button */}
       <Button
         onClick={() => setShowControlPanel(!showControlPanel)}
@@ -524,6 +535,61 @@ export const HackerMap: React.FC = () => {
       >
         {showControlPanel ? <ChevronLeft className="w-4 h-4" /> : <Settings className="w-4 h-4" />}
       </Button>
+
+      {/* Stats Panel Toggle */}
+      <Button
+        onClick={() => setShowStats(!showStats)}
+        className="absolute bottom-4 left-4 z-40 w-10 h-10 p-0"
+        variant="outline"
+        title="Toggle Stats"
+      >
+        <Activity className="w-4 h-4" />
+      </Button>
+
+      {/* Ops Panel Toggle */}
+      <Button
+        onClick={() => setShowOps(!showOps)}
+        className="absolute bottom-16 left-4 z-40 w-10 h-10 p-0"
+        variant="outline"
+        title="Toggle Operations"
+      >
+        <Terminal className="w-4 h-4" />
+      </Button>
+
+      {/* Alerts Panel Toggle */}
+      <Button
+        onClick={() => setShowAlerts(!showAlerts)}
+        className="absolute bottom-28 left-4 z-40 w-10 h-10 p-0"
+        variant="outline"
+        title="Toggle Alerts"
+      >
+        <AlertTriangle className="w-4 h-4" />
+      </Button>
+
+      {/* Network Stats Panel - Bottom Right */}
+      {showStats && (
+        <div className="absolute bottom-4 right-4 w-80 z-30 animate-fade-in">
+          <NetworkStatsPanel />
+        </div>
+      )}
+
+      {/* Hacking Operations Panel - Bottom Right */}
+      {showOps && (
+        <div className="absolute bottom-4 left-16 w-96 z-30 animate-fade-in max-h-[50vh] overflow-y-auto">
+          <Card className="p-4 bg-background/90 backdrop-blur border-primary/30">
+            <HackingOpsPanel />
+          </Card>
+        </div>
+      )}
+
+      {/* Alerts Panel - Top Right */}
+      {showAlerts && (
+        <div className="absolute top-16 right-4 w-80 z-30 animate-fade-in">
+          <Card className="p-4 bg-background/90 backdrop-blur border-red-500/30">
+            <AlertsPanel />
+          </Card>
+        </div>
+      )}
 
       {/* Enhanced Control Panel */}
       {showControlPanel && (

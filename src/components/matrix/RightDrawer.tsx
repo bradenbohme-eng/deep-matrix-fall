@@ -1,7 +1,7 @@
 import React from 'react';
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Settings, Shield, Database, Network, Cpu } from 'lucide-react';
+import { Settings, Shield, Cpu, X } from 'lucide-react';
 import MatrixSettingsPanel from './MatrixSettingsPanel';
 import AgentsPanel from './AgentsPanel';
 import CloudOrchestratorPanel from './CloudOrchestratorPanel';
@@ -12,46 +12,54 @@ interface RightDrawerProps {
 }
 
 const RightDrawer: React.FC<RightDrawerProps> = ({ open, onOpenChange }) => {
+  if (!open) return null;
+
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-[600px] sm:max-w-[600px] bg-background/95 backdrop-blur-xl border-primary/20">
-        <SheetHeader>
-          <SheetTitle className="text-primary font-mono flex items-center gap-2">
-            <Settings className="w-5 h-5 animate-spin-slow" />
-            COMMAND & CONTROL CENTER
-          </SheetTitle>
-        </SheetHeader>
-        
-        <Tabs defaultValue="settings" className="mt-6">
-          <TabsList className="grid w-full grid-cols-3 bg-muted/50">
-            <TabsTrigger value="settings" className="font-mono text-xs">
-              <Settings className="w-4 h-4 mr-2" />
-              SETTINGS
-            </TabsTrigger>
-            <TabsTrigger value="agents" className="font-mono text-xs">
-              <Shield className="w-4 h-4 mr-2" />
-              AI AGENTS
-            </TabsTrigger>
-            <TabsTrigger value="orchestrator" className="font-mono text-xs">
-              <Cpu className="w-4 h-4 mr-2" />
-              ORCHESTRATOR
-            </TabsTrigger>
-          </TabsList>
+    <div className="h-full w-[500px] bg-background/95 backdrop-blur-xl border-l border-primary/20 animate-slide-in-right overflow-hidden flex flex-col">
+      <div className="flex items-center justify-between p-4 border-b border-primary/20">
+        <div className="text-primary font-mono flex items-center gap-2 text-sm font-bold">
+          <Settings className="w-5 h-5 animate-spin-slow" />
+          COMMAND & CONTROL CENTER
+        </div>
+        <Button 
+          variant="ghost" 
+          size="sm" 
+          onClick={() => onOpenChange(false)}
+          className="h-8 w-8 p-0"
+        >
+          <X className="w-4 h-4" />
+        </Button>
+      </div>
+      
+      <Tabs defaultValue="settings" className="flex-1 flex flex-col overflow-hidden">
+        <TabsList className="grid w-full grid-cols-3 bg-muted/50 mx-4 mt-2">
+          <TabsTrigger value="settings" className="font-mono text-xs">
+            <Settings className="w-4 h-4 mr-2" />
+            SETTINGS
+          </TabsTrigger>
+          <TabsTrigger value="agents" className="font-mono text-xs">
+            <Shield className="w-4 h-4 mr-2" />
+            AI AGENTS
+          </TabsTrigger>
+          <TabsTrigger value="orchestrator" className="font-mono text-xs">
+            <Cpu className="w-4 h-4 mr-2" />
+            ORCHESTRATOR
+          </TabsTrigger>
+        </TabsList>
 
-          <TabsContent value="settings" className="mt-4 h-[calc(100vh-200px)] overflow-y-auto">
-            <MatrixSettingsPanel />
-          </TabsContent>
+        <TabsContent value="settings" className="flex-1 overflow-y-auto mt-2">
+          <MatrixSettingsPanel />
+        </TabsContent>
 
-          <TabsContent value="agents" className="mt-4 h-[calc(100vh-200px)] overflow-y-auto">
-            <AgentsPanel />
-          </TabsContent>
+        <TabsContent value="agents" className="flex-1 overflow-y-auto mt-2">
+          <AgentsPanel />
+        </TabsContent>
 
-          <TabsContent value="orchestrator" className="mt-4 h-[calc(100vh-200px)] overflow-y-auto">
-            <CloudOrchestratorPanel />
-          </TabsContent>
-        </Tabs>
-      </SheetContent>
-    </Sheet>
+        <TabsContent value="orchestrator" className="flex-1 overflow-y-auto mt-2">
+          <CloudOrchestratorPanel />
+        </TabsContent>
+      </Tabs>
+    </div>
   );
 };
 

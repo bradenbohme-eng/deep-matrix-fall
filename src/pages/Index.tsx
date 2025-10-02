@@ -46,10 +46,10 @@ const Index = () => {
   };
 
   return (
-    <div className="min-h-screen w-full relative overflow-hidden">
+    <div className="min-h-screen w-full relative overflow-hidden flex">
       
       {/* Full Screen Matrix Background */}
-      <div className="absolute inset-0">
+      <div className="absolute inset-0 pointer-events-none">
         {settings.show3D ? (
           <>
             {/* 3D Matrix Background */}
@@ -68,37 +68,43 @@ const Index = () => {
       </div>
 
       {/* Left Drawer Toggle Button */}
-      <div className="fixed left-0 top-1/2 -translate-y-1/2 z-50">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => setLeftDrawerOpen(!leftDrawerOpen)}
-          className="rounded-l-none rounded-r-lg border-l-0 bg-background/90 backdrop-blur-sm hover:bg-background/95 h-24 px-2"
-        >
-          <ChevronRight className={`w-4 h-4 transition-transform ${leftDrawerOpen ? 'rotate-180' : ''}`} />
-        </Button>
-      </div>
-
-      {/* Right Drawer Toggle Button */}
-      <div className="fixed right-0 top-1/2 -translate-y-1/2 z-50">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => setRightDrawerOpen(!rightDrawerOpen)}
-          className="rounded-r-none rounded-l-lg border-r-0 bg-background/90 backdrop-blur-sm hover:bg-background/95 h-24 px-2"
-        >
-          <ChevronLeft className={`w-4 h-4 transition-transform ${rightDrawerOpen ? 'rotate-180' : ''}`} />
-        </Button>
-      </div>
+      {!leftDrawerOpen && (
+        <div className="fixed left-0 top-1/2 -translate-y-1/2 z-50">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setLeftDrawerOpen(true)}
+            className="rounded-l-none rounded-r-lg border-l-0 bg-background/90 backdrop-blur-sm hover:bg-primary/20 h-24 px-2 border-primary/30"
+          >
+            <ChevronRight className="w-4 h-4" />
+          </Button>
+        </div>
+      )}
 
       {/* Left Drawer - Intel Operations */}
       <LeftDrawer open={leftDrawerOpen} onOpenChange={setLeftDrawerOpen} />
 
+      {/* Main Content Area - Neo Terminal */}
+      <div className={`flex-1 flex flex-col transition-all duration-300 ${leftDrawerOpen ? 'ml-2' : 'ml-0'} ${rightDrawerOpen ? 'mr-2' : 'mr-0'}`}>
+        <AdvancedNeoChat />
+      </div>
+
       {/* Right Drawer - Command & Control */}
       <RightDrawer open={rightDrawerOpen} onOpenChange={setRightDrawerOpen} />
 
-      {/* Neo Terminal Interface - Centered */}
-      <AdvancedNeoChat />
+      {/* Right Drawer Toggle Button */}
+      {!rightDrawerOpen && (
+        <div className="fixed right-0 top-1/2 -translate-y-1/2 z-50">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setRightDrawerOpen(true)}
+            className="rounded-r-none rounded-l-lg border-r-0 bg-background/90 backdrop-blur-sm hover:bg-primary/20 h-24 px-2 border-primary/30"
+          >
+            <ChevronLeft className="w-4 h-4" />
+          </Button>
+        </div>
+      )}
 
       {/* Show UI Toggle (when UI is hidden) */}
       {!settings.showUI && (
