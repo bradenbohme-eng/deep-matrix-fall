@@ -8,10 +8,16 @@ import MatrixRain2D_V3 from '@/components/matrix/MatrixRain2D_V3';
 import MatrixRain2D_V4 from '@/components/matrix/MatrixRain2D_V4';
 import MatrixRain2D_Enhanced from '@/components/matrix/MatrixRain2D_Enhanced';
 import AdvancedNeoChat from '@/components/matrix/AdvancedNeoChat';
+import LeftDrawer from '@/components/matrix/LeftDrawer';
+import RightDrawer from '@/components/matrix/RightDrawer';
+import { Button } from '@/components/ui/button';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 const Index = () => {
   const { settings, updateSetting } = useMatrixSettings();
   const [showMatrixControls, setShowMatrixControls] = useState(false);
+  const [leftDrawerOpen, setLeftDrawerOpen] = useState(false);
+  const [rightDrawerOpen, setRightDrawerOpen] = useState(false);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -59,14 +65,40 @@ const Index = () => {
             <MatrixHUD />
           </>
         )}
-
-      {/* Removed Matrix Simulation Panel - Now integrated into Neo Terminal */}
       </div>
+
+      {/* Left Drawer Toggle Button */}
+      <div className="fixed left-0 top-1/2 -translate-y-1/2 z-50">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setLeftDrawerOpen(!leftDrawerOpen)}
+          className="rounded-l-none rounded-r-lg border-l-0 bg-background/90 backdrop-blur-sm hover:bg-background/95 h-24 px-2"
+        >
+          <ChevronRight className={`w-4 h-4 transition-transform ${leftDrawerOpen ? 'rotate-180' : ''}`} />
+        </Button>
+      </div>
+
+      {/* Right Drawer Toggle Button */}
+      <div className="fixed right-0 top-1/2 -translate-y-1/2 z-50">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setRightDrawerOpen(!rightDrawerOpen)}
+          className="rounded-r-none rounded-l-lg border-r-0 bg-background/90 backdrop-blur-sm hover:bg-background/95 h-24 px-2"
+        >
+          <ChevronLeft className={`w-4 h-4 transition-transform ${rightDrawerOpen ? 'rotate-180' : ''}`} />
+        </Button>
+      </div>
+
+      {/* Left Drawer - Intel Operations */}
+      <LeftDrawer open={leftDrawerOpen} onOpenChange={setLeftDrawerOpen} />
+
+      {/* Right Drawer - Command & Control */}
+      <RightDrawer open={rightDrawerOpen} onOpenChange={setRightDrawerOpen} />
 
       {/* Neo Terminal Interface - Centered */}
       <AdvancedNeoChat />
-
-      {/* Settings Panel - Removed from main UI, now in Neo Terminal */}
 
       {/* Show UI Toggle (when UI is hidden) */}
       {!settings.showUI && (
