@@ -4,10 +4,11 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 
-// AgentsPanel: Provider keys and enablement (local only). For real prod, store in Supabase Secrets.
-// Inputs: none
-// Outputs: localStorage "neo_provider_keys"
-// TODOs: Replace local persistence with Supabase Edge Functions + Secrets.
+/**
+ * AgentsPanel: AI Provider Configuration
+ * Manages API keys and enablement for multiple AI providers
+ * Currently stores locally - production should use Supabase Secrets
+ */
 
 type Provider = 'anthropic' | 'openai' | 'gemini' | 'deepinfra' | 'cerebras' | 'perplexity' | 
   'securoBERT' | 'codeBERT' | 'metasploit_ai' | 'burp_ai' | 'nuclei_ai' | 'sqlmap_ai' | 
