@@ -13,6 +13,7 @@ import ApiRegistryPanel from '@/components/matrix/ApiRegistryPanel';
 import CloudOrchestratorPanel from '@/components/matrix/CloudOrchestratorPanel';
 import BuilderABPPanel from '@/components/matrix/BuilderABPPanel';
 import DiagramOrganizer from '@/components/matrix/DiagramOrganizer';
+import MatrixSidebarRain from '@/components/matrix/MatrixSidebarRain';
 import { HackerMap } from '@/components/warfare/HackerMap';
 import { streamNeoChat, analyzeThreat, fetchIntelligence } from '@/lib/aiClient';
 import { 
@@ -326,27 +327,27 @@ REALITY IS WHAT YOU MAKE IT, NEO.`, 'system');
     { id: 'database', icon: Database, label: 'Database' }
   ];
 
-  if (!settings.showUI) return null;
-
   return (
-    <div className="fixed inset-4 flex items-center justify-center pointer-events-none z-40">
-      <Card className={`bg-card/95 backdrop-blur-md border-primary/40 flex pointer-events-auto transition-all duration-500 ${
-        isMinimized ? 'w-16 h-16' : 'w-[1200px] h-[800px]'
-      } ${isVisible ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
-        
-        {isMinimized ? (
-          // Minimized State
-          <div 
-            onClick={() => setIsMinimized(false)}
-            className="w-full h-full flex items-center justify-center cursor-pointer bg-primary/20 hover:bg-primary/30 transition-colors rounded"
-          >
-            <MessageCircle className="w-6 h-6 text-primary" />
-          </div>
-        ) : (
-          // Expanded State
-          <div className="flex w-full h-full">
-            {/* Left Sidebar */}
-            <div className="w-16 bg-background/30 border-r border-primary/30 flex flex-col items-center py-4 space-y-2">
+    <div className={`flex w-full h-screen transition-all duration-500 ${
+      isVisible ? 'opacity-100' : 'opacity-0 pointer-events-none'
+    }`}>
+      {isMinimized ? (
+        // Minimized State
+        <div 
+          onClick={() => setIsMinimized(false)}
+          className="fixed bottom-4 right-4 w-16 h-16 flex items-center justify-center cursor-pointer bg-primary/20 hover:bg-primary/30 border border-primary/40 rounded-full transition-colors z-50"
+        >
+          <MessageCircle className="w-6 h-6 text-primary" />
+        </div>
+      ) : (
+        // Expanded State - Full Screen
+        <>
+          {/* Left Sidebar with Matrix Rain */}
+          <div className="relative w-16 bg-black/90 border-r border-primary/30 flex flex-col items-center py-4 space-y-2 overflow-hidden">
+            {/* Matrix Rain Background */}
+            <MatrixSidebarRain />
+            {/* Tab Buttons - Render on top of matrix rain */}
+            <div className="relative z-10 flex flex-col items-center space-y-2 w-full">
               {tabItems.map((item) => {
                 const IconComponent = item.icon;
                 return (
@@ -357,8 +358,8 @@ REALITY IS WHAT YOU MAKE IT, NEO.`, 'system');
                     size="sm"
                     className={`w-12 h-12 p-0 ${
                       activeTab === item.id 
-                        ? 'bg-primary/20 text-primary border border-primary/30' 
-                        : 'text-muted-foreground hover:text-primary hover:bg-primary/10'
+                        ? 'bg-primary/30 text-primary border border-primary/50 shadow-lg shadow-primary/20' 
+                        : 'text-primary/60 hover:text-primary hover:bg-primary/20 border border-transparent'
                     }`}
                     title={item.label}
                   >
@@ -367,9 +368,10 @@ REALITY IS WHAT YOU MAKE IT, NEO.`, 'system');
                 );
               })}
             </div>
+          </div>
 
-            {/* Main Content */}
-            <div className="flex-1 flex flex-col">
+          {/* Main Content */}
+          <div className="flex-1 flex flex-col bg-background/95 backdrop-blur-md">
               {/* Header */}
               <div className="flex items-center justify-between p-4 border-b border-primary/30">
                 <div className="flex items-center space-x-3">
@@ -697,25 +699,24 @@ REALITY IS WHAT YOU MAKE IT, NEO.`, 'system');
                 )}
               </div>
             </div>
+          </>
+        )}
+
+        {/* Toggle button when hidden - Fixed position */}
+        {!isVisible && (
+          <div className="fixed bottom-4 right-4 z-50">
+            <button
+              onClick={() => setIsVisible(true)}
+              className="w-16 h-16 bg-primary/20 hover:bg-primary/30 border border-primary/40 rounded-full flex items-center justify-center transition-all duration-300 group"
+            >
+              <div className="text-center">
+                <Terminal className="w-6 h-6 text-primary mb-1" />
+                <div className="text-primary/60 font-mono text-xs">NEO</div>
+              </div>
+            </button>
           </div>
         )}
-      </Card>
-
-      {/* Toggle button when hidden - Fixed position */}
-      {!isVisible && (
-        <div className="fixed bottom-4 right-4 pointer-events-auto">
-          <button
-            onClick={() => setIsVisible(true)}
-            className="w-16 h-16 bg-primary/20 hover:bg-primary/30 border border-primary/40 rounded-full flex items-center justify-center transition-all duration-300 group"
-          >
-            <div className="text-center">
-              <Terminal className="w-6 h-6 text-primary mb-1" />
-              <div className="text-primary/60 font-mono text-xs">NEO</div>
-            </div>
-          </button>
-        </div>
-      )}
-    </div>
+      </div>
   );
 };
 
