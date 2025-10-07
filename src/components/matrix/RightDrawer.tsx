@@ -1,11 +1,12 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Settings, Shield, Cpu, X, Code2 } from 'lucide-react';
+import { Settings, Shield, Cpu, X, Code2, FileText } from 'lucide-react';
 import MatrixSettingsPanel from './MatrixSettingsPanel';
 import AgentsPanel from './AgentsPanel';
 import CloudOrchestratorPanel from './CloudOrchestratorPanel';
 import IDEPanel from './IDEPanel';
+import { DocumentManager } from '@/components/document/DocumentManager';
 
 interface RightDrawerProps {
   open: boolean;
@@ -32,11 +33,15 @@ const RightDrawer: React.FC<RightDrawerProps> = ({ open, onOpenChange }) => {
         </Button>
       </div>
       
-      <Tabs defaultValue="ide" className="flex-1 flex flex-col overflow-hidden">
-        <TabsList className="grid w-full grid-cols-4 bg-muted/50 mx-4 mt-2">
+      <Tabs defaultValue="documents" className="flex-1 flex flex-col overflow-hidden">
+        <TabsList className="grid w-full grid-cols-5 bg-muted/50 mx-4 mt-2">
+          <TabsTrigger value="documents" className="font-mono text-xs">
+            <FileText className="w-4 h-4 mr-2" />
+            AI-MOS DOCS
+          </TabsTrigger>
           <TabsTrigger value="ide" className="font-mono text-xs">
             <Code2 className="w-4 h-4 mr-2" />
-            AI-MOS IDE
+            IDE
           </TabsTrigger>
           <TabsTrigger value="agents" className="font-mono text-xs">
             <Shield className="w-4 h-4 mr-2" />
@@ -51,6 +56,10 @@ const RightDrawer: React.FC<RightDrawerProps> = ({ open, onOpenChange }) => {
             SETTINGS
           </TabsTrigger>
         </TabsList>
+
+        <TabsContent value="documents" className="flex-1 overflow-y-auto mt-2">
+          <DocumentManager />
+        </TabsContent>
 
         <TabsContent value="ide" className="flex-1 overflow-hidden mt-2">
           <IDEPanel />

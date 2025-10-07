@@ -11,3 +11,6 @@ verify_jwt = false
 
 [functions.code-assistant]
 verify_jwt = false
+
+[functions.document-processor]
+verify_jwt = false
