@@ -36,12 +36,13 @@ export const DocumentManager = () => {
         .from('document-assets')
         .getPublicUrl(filePath);
 
-      // Read content for processing
+      // For non-text files, pass the storage URL - edge function will extract text
       let text = "";
       if (file.type.startsWith('text/') || file.name.endsWith('.md') || file.name.endsWith('.txt')) {
         text = await file.text();
       } else {
-        text = `Document uploaded: ${file.name} (${file.type})\nStorage URL: ${publicUrl}`;
+        // Pass URL for document processor to extract content
+        text = publicUrl;
       }
 
       setContent(text);

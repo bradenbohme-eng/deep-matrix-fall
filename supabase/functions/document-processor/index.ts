@@ -24,9 +24,35 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     );
 
+    // Extract text content if URL provided
+    let documentContent = content;
+    if (content.startsWith('http')) {
+      console.log('Extracting text from URL:', content);
+      
+      // Download file from storage
+      const fileResponse = await fetch(content);
+      if (!fileResponse.ok) {
+        throw new Error('Failed to download document from storage');
+      }
+      
+      const blob = await fileResponse.blob();
+      const arrayBuffer = await blob.arrayBuffer();
+      
+      // For .docx files, extract text (basic extraction)
+      if (content.includes('.docx')) {
+        // Use Gemini's file processing capability
+        documentContent = await extractTextWithGemini(arrayBuffer, GEMINI_API_KEY);
+      } else {
+        // For other files, try to decode as text
+        documentContent = new TextDecoder().decode(arrayBuffer);
+      }
+      
+      console.log('Extracted content length:', documentContent.length);
+    }
+
     // Hierarchical chunking with AI
     if (operation === "chunk") {
-      const chunks = await chunkDocument(content, GEMINI_API_KEY);
+      const chunks = await chunkDocument(documentContent, GEMINI_API_KEY);
       
       // Store chunks in database
       for (const chunk of chunks) {
@@ -47,7 +73,7 @@ serve(async (req) => {
 
     // Multi-level summarization
     if (operation === "summarize") {
-      const summaries = await generateHierarchicalSummaries(content, GEMINI_API_KEY);
+      const summaries = await generateHierarchicalSummaries(documentContent, GEMINI_API_KEY);
       
       return new Response(
         JSON.stringify({ success: true, summaries }),
@@ -57,7 +83,7 @@ serve(async (req) => {
 
     // Master index creation
     if (operation === "create_index") {
-      const masterIndex = await createMasterIndex(content, GEMINI_API_KEY);
+      const masterIndex = await createMasterIndex(documentContent, GEMINI_API_KEY);
       
       return new Response(
         JSON.stringify({ success: true, masterIndex }),
@@ -195,6 +221,41 @@ Return as JSON: {structure{}, keyInsights[], thematicMap{}, navigationGraph{}, q
   const data = await response.json();
   const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "{}";
   return JSON.parse(text.replace(/```json\n?|\n?```/g, ""));
+}
+
+async function extractTextWithGemini(arrayBuffer: ArrayBuffer, apiKey: string): Promise<string> {
+  // Convert to base64 for Gemini
+  const bytes = new Uint8Array(arrayBuffer);
+  const base64 = btoa(String.fromCharCode(...bytes));
+  
+  const response = await fetch(
+    "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=" + apiKey,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [{
+          parts: [
+            {
+              inline_data: {
+                mime_type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                data: base64
+              }
+            },
+            {
+              text: "Extract all text content from this document. Return only the plain text content, preserving structure and paragraphs but removing all formatting."
+            }
+          ]
+        }],
+        generationConfig: {
+          temperature: 0.1,
+        }
+      })
+    }
+  );
+
+  const data = await response.json();
+  return data.candidates?.[0]?.content?.parts?.[0]?.text || "";
 }
 
 async function getEditSuggestion(
