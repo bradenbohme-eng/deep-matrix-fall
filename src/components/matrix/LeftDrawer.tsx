@@ -7,7 +7,8 @@ import {
   Activity, Search, Network, Zap, Eye, X 
 } from 'lucide-react';
 import LiveFeeds from './LiveFeeds';
-import IntelGraph from './IntelGraph';
+import AdvancedIntelGraph from './AdvancedIntelGraph';
+import AdvancedScanOps from './AdvancedScanOps';
 
 interface LeftDrawerProps {
   open: boolean;
@@ -57,62 +58,11 @@ const LeftDrawer: React.FC<LeftDrawerProps> = ({ open, onOpenChange }) => {
         </TabsContent>
 
         <TabsContent value="graph" className="flex-1 overflow-hidden mt-2">
-          <IntelGraph items={feedItems} />
+          <AdvancedIntelGraph items={feedItems} />
         </TabsContent>
 
-        <TabsContent value="scanner" className="flex-1 overflow-y-auto mt-2 px-4">
-          <div className="space-y-4">
-            <Card className="p-4 border border-primary/20 bg-card/60">
-                <h3 className="text-primary font-mono text-sm mb-3 flex items-center gap-2">
-                  <Search className="w-4 h-4" />
-                  RECONNAISSANCE TOOLS
-                </h3>
-                <div className="grid grid-cols-2 gap-2">
-                  <Button variant="outline" className="font-mono text-xs">
-                    <Terminal className="w-3 h-3 mr-2" />
-                    nmap
-                  </Button>
-                  <Button variant="outline" className="font-mono text-xs">
-                    <Zap className="w-3 h-3 mr-2" />
-                    masscan
-                  </Button>
-                  <Button variant="outline" className="font-mono text-xs">
-                    <Shield className="w-3 h-3 mr-2" />
-                    nikto
-                  </Button>
-                  <Button variant="outline" className="font-mono text-xs">
-                    <Database className="w-3 h-3 mr-2" />
-                    sqlmap
-                  </Button>
-                  <Button variant="outline" className="font-mono text-xs">
-                    <Eye className="w-3 h-3 mr-2" />
-                    shodan
-                  </Button>
-                  <Button variant="outline" className="font-mono text-xs">
-                    <Network className="w-3 h-3 mr-2" />
-                    wireshark
-                  </Button>
-              </div>
-            </Card>
-
-            <Card className="p-4 border border-primary/20 bg-card/60">
-                <h3 className="text-primary font-mono text-sm mb-3">ACTIVE SCANS</h3>
-                <div className="space-y-2 text-xs font-mono text-muted-foreground">
-                  <div className="flex items-center justify-between p-2 bg-muted/30 rounded">
-                    <span>Port scan: 192.168.1.0/24</span>
-                    <span className="text-yellow-400">RUNNING</span>
-                  </div>
-                  <div className="flex items-center justify-between p-2 bg-muted/30 rounded">
-                    <span>Vuln scan: target.example.com</span>
-                    <span className="text-green-400">COMPLETE</span>
-                  </div>
-                  <div className="flex items-center justify-between p-2 bg-muted/30 rounded">
-                    <span>Recon: 10.0.0.0/16</span>
-                    <span className="text-blue-400">QUEUED</span>
-                </div>
-              </div>
-            </Card>
-          </div>
+        <TabsContent value="scanner" className="flex-1 overflow-y-auto mt-2">
+          <AdvancedScanOps />
         </TabsContent>
       </Tabs>
     </div>

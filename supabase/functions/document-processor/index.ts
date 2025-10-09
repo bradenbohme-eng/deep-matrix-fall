@@ -224,38 +224,65 @@ Return as JSON: {structure{}, keyInsights[], thematicMap{}, navigationGraph{}, q
 }
 
 async function extractTextWithGemini(arrayBuffer: ArrayBuffer, apiKey: string): Promise<string> {
-  // Convert to base64 for Gemini
+  // Convert to base64 in chunks to avoid stack overflow
   const bytes = new Uint8Array(arrayBuffer);
-  const base64 = btoa(String.fromCharCode(...bytes));
+  const chunkSize = 0x8000; // 32KB chunks
+  let base64 = '';
   
-  const response = await fetch(
-    "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=" + apiKey,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        contents: [{
-          parts: [
-            {
-              inline_data: {
-                mime_type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-                data: base64
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    const chunk = bytes.subarray(i, Math.min(i + chunkSize, bytes.length));
+    base64 += btoa(String.fromCharCode.apply(null, Array.from(chunk)));
+  }
+  
+  console.log('Base64 length:', base64.length, 'Original size:', bytes.length);
+  
+  try {
+    const response = await fetch(
+      "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=" + apiKey,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [{
+            parts: [
+              {
+                inline_data: {
+                  mime_type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                  data: base64
+                }
+              },
+              {
+                text: "Extract ALL text content from this Word document. Include headers, body text, tables, lists - everything. Return the complete plain text while preserving paragraph structure. Do not summarize, return the FULL text."
               }
-            },
-            {
-              text: "Extract all text content from this document. Return only the plain text content, preserving structure and paragraphs but removing all formatting."
-            }
-          ]
-        }],
-        generationConfig: {
-          temperature: 0.1,
-        }
-      })
-    }
-  );
+            ]
+          }],
+          generationConfig: {
+            temperature: 0,
+            maxOutputTokens: 100000,
+          }
+        })
+      }
+    );
 
-  const data = await response.json();
-  return data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Gemini API error:', response.status, errorText);
+      throw new Error(`Gemini API error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    const extractedText = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+    console.log('Extracted text length:', extractedText.length);
+    
+    if (!extractedText) {
+      console.warn('No text extracted from document - Gemini returned empty');
+    }
+    
+    return extractedText;
+  } catch (error) {
+    console.error('Text extraction failed:', error);
+    throw error;
+  }
 }
 
 async function getEditSuggestion(
