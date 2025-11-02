@@ -4,7 +4,7 @@ import 'mapbox-gl/dist/mapbox-gl.css';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Shield, Zap, Eye, Skull, Satellite, Lock, AlertTriangle, Radio, Database, Wifi, Terminal, Search, Activity, Crosshair, ChevronLeft, ChevronRight, Settings, Globe, Map, Layers } from 'lucide-react';
+import { Shield, Zap, Eye, Skull, Satellite, Lock, AlertTriangle, Radio, Database, Wifi, Terminal, Search, Activity, Crosshair, ChevronLeft, ChevronRight, Settings, Globe, Map, Layers, ChevronDown, ChevronUp, X } from 'lucide-react';
 import NetworkTrafficOverlay from './NetworkTrafficOverlay';
 import NetworkStatsPanel from './NetworkStatsPanel';
 import HackingOpsPanel from './HackingOpsPanel';
@@ -281,9 +281,10 @@ export const HackerMap: React.FC = () => {
   const [showControlPanel, setShowControlPanel] = useState<boolean>(true);
   const [mapMode, setMapMode] = useState<'2d' | '3d'>('2d');
   const [autoRotate, setAutoRotate] = useState(false);
-  const [showStats, setShowStats] = useState(true);
-  const [showOps, setShowOps] = useState(true);
-  const [showAlerts, setShowAlerts] = useState(true);
+  const [showStats, setShowStats] = useState(false);
+  const [showOps, setShowOps] = useState(false);
+  const [showAlerts, setShowAlerts] = useState(false);
+  const [showNodeFilters, setShowNodeFilters] = useState(false);
   const mapboxToken = 'pk.eyJ1IjoiY3JpbmtlZGFydCIsImEiOiJjbWZhbXJkeTgxZDloMmxvZjB1ZjQxczBzIn0.XanOxg-xA88pNFAvy5K5kA';
   const markers = useRef<mapboxgl.Marker[]>([]);
 
@@ -648,45 +649,115 @@ export const HackerMap: React.FC = () => {
           </div>
           </Card>
 
-          {/* Filter Controls */}
-          <Card className="p-3 bg-background/90 backdrop-blur border-primary/30">
-          <div className="space-y-2">
-            <div className="text-xs text-primary font-mono font-bold">NODE FILTERS</div>
-            
-            {/* Node Type Filter */}
-            <div className="grid grid-cols-2 gap-1 text-xs">
-              {['all', 'military', 'intelligence', 'criminal', 'hacker', 'cyber_warfare', 'black_site', 'bioweapon'].map(type => (
+          {/* Node Filters Card */}
+          {showNodeFilters && (
+            <Card className="p-3 bg-background/90 backdrop-blur border-primary/30">
+              <div className="flex items-center justify-between mb-2">
+                <div className="text-xs text-primary font-mono font-bold">NODE FILTERS</div>
                 <Button
-                  key={type}
-                  onClick={() => handleTypeFilter(type)}
-                  variant={filterType === type ? "default" : "outline"}
+                  variant="ghost"
                   size="sm"
-                  className="text-xs p-1 h-auto"
+                  onClick={() => setShowNodeFilters(false)}
+                  className="w-6 h-6 p-0"
                 >
-                  {type.replace('_', ' ').toUpperCase()}
+                  <X className="w-4 h-4" />
                 </Button>
-              ))}
-            </div>
-
-            {/* Threat Level Filter */}
-            <div className="space-y-1">
-              <div className="text-xs text-muted-foreground">Min Threat Level:</div>
-              <div className="flex gap-1">
-                {[0, 1, 2, 3, 4, 5, 6].map(level => (
+              </div>
+              
+              {/* Node Type Filter */}
+              <div className="grid grid-cols-2 gap-1 text-xs mb-2">
+                {['all', 'military', 'intelligence', 'criminal', 'hacker', 'cyber_warfare', 'black_site', 'bioweapon'].map(type => (
                   <Button
-                    key={level}
-                    onClick={() => handleThreatFilter(level)}
-                    variant={threatFilter === level ? "default" : "outline"}
+                    key={type}
+                    onClick={() => handleTypeFilter(type)}
+                    variant={filterType === type ? "default" : "outline"}
                     size="sm"
-                    className="text-xs p-1 h-6 w-6"
-                    style={{ backgroundColor: level === 0 ? undefined : getThreatColor(level) }}
+                    className="text-xs p-1 h-auto"
                   >
-                    {level === 0 ? 'All' : level}
+                    {type.replace('_', ' ').toUpperCase()}
                   </Button>
                 ))}
               </div>
+
+              {/* Threat Level Filter */}
+              <div className="space-y-1">
+                <div className="text-xs text-muted-foreground">Min Threat Level:</div>
+                <div className="flex gap-1">
+                  {[0, 1, 2, 3, 4, 5, 6].map(level => (
+                    <Button
+                      key={level}
+                      onClick={() => handleThreatFilter(level)}
+                      variant={threatFilter === level ? "default" : "outline"}
+                      size="sm"
+                      className="text-xs p-1 h-6 w-6"
+                      style={{ backgroundColor: level === 0 ? undefined : getThreatColor(level) }}
+                    >
+                      {level === 0 ? 'All' : level}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            </Card>
+          )}
+        </div>
+      )}
+
+      {/* Network Stats Panel */}
+      {showStats && (
+        <div className="absolute bottom-4 right-4 w-80 z-30">
+          <Card className="p-3 bg-background/90 backdrop-blur border-primary/30">
+            <div className="flex items-center justify-between mb-2">
+              <div className="text-xs text-primary font-mono font-bold">NETWORK STATS</div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowStats(false)}
+                className="w-6 h-6 p-0"
+              >
+                <X className="w-4 h-4" />
+              </Button>
             </div>
+            <NetworkStatsPanel />
+          </Card>
+        </div>
+      )}
+
+      {/* Operations Panel */}
+      {showOps && (
+        <div className="absolute bottom-4 left-16 w-96 z-30 max-h-[50vh] overflow-y-auto">
+          <Card className="p-3 bg-background/90 backdrop-blur border-primary/30">
+            <div className="flex items-center justify-between mb-2">
+              <div className="text-xs text-primary font-mono font-bold">HACKING OPS</div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowOps(false)}
+                className="w-6 h-6 p-0"
+              >
+                <X className="w-4 h-4" />
+              </Button>
             </div>
+            <HackingOpsPanel />
+          </Card>
+        </div>
+      )}
+
+      {/* Alerts Panel */}
+      {showAlerts && (
+        <div className="absolute top-4 right-4 w-80 z-30">
+          <Card className="p-3 bg-background/90 backdrop-blur border-red-500/30">
+            <div className="flex items-center justify-between mb-2">
+              <div className="text-xs text-destructive font-mono font-bold">THREAT ALERTS</div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowAlerts(false)}
+                className="w-6 h-6 p-0"
+              >
+                <X className="w-4 h-4" />
+              </Button>
+            </div>
+            <AlertsPanel />
           </Card>
         </div>
       )}
