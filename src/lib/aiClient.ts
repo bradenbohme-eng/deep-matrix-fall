@@ -5,12 +5,16 @@ type Msg = { role: "user" | "assistant" | "system"; content: string };
 export async function streamNeoChat({
   messages,
   mode = "chat",
+  userId,
+  conversationId,
   onDelta,
   onDone,
   onError,
 }: {
   messages: Msg[];
   mode?: "chat" | "intel" | "hack" | "news";
+  userId?: string;
+  conversationId?: string;
   onDelta: (deltaText: string) => void;
   onDone: () => void;
   onError?: (error: Error) => void;
