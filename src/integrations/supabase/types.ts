@@ -273,7 +273,7 @@ export type Database = {
           action_type: string
           details: Json | null
           id: number
-          ip_address: unknown | null
+          ip_address: unknown
           performance_impact: Json | null
           project_id: string
           session_id: string | null
@@ -285,7 +285,7 @@ export type Database = {
           action_type: string
           details?: Json | null
           id?: number
-          ip_address?: unknown | null
+          ip_address?: unknown
           performance_impact?: Json | null
           project_id: string
           session_id?: string | null
@@ -297,7 +297,7 @@ export type Database = {
           action_type?: string
           details?: Json | null
           id?: number
-          ip_address?: unknown | null
+          ip_address?: unknown
           performance_impact?: Json | null
           project_id?: string
           session_id?: string | null
@@ -380,6 +380,48 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      chat_memories: {
+        Row: {
+          confidence_score: number | null
+          content: string
+          conversation_id: string
+          created_at: string | null
+          id: string
+          metadata: Json | null
+          mode: string | null
+          role: string
+          summary: string
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          confidence_score?: number | null
+          content: string
+          conversation_id: string
+          created_at?: string | null
+          id?: string
+          metadata?: Json | null
+          mode?: string | null
+          role: string
+          summary: string
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          confidence_score?: number | null
+          content?: string
+          conversation_id?: string
+          created_at?: string | null
+          id?: string
+          metadata?: Json | null
+          mode?: string | null
+          role?: string
+          summary?: string
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
       }
       chunks: {
         Row: {
@@ -1594,6 +1636,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      knowledge_entities: {
+        Row: {
+          confidence: number | null
+          content: string
+          created_at: string | null
+          entity_type: string
+          id: string
+          last_accessed: string | null
+          relations: string[] | null
+          user_id: string | null
+        }
+        Insert: {
+          confidence?: number | null
+          content: string
+          created_at?: string | null
+          entity_type: string
+          id?: string
+          last_accessed?: string | null
+          relations?: string[] | null
+          user_id?: string | null
+        }
+        Update: {
+          confidence?: number | null
+          content?: string
+          created_at?: string | null
+          entity_type?: string
+          id?: string
+          last_accessed?: string | null
+          relations?: string[] | null
+          user_id?: string | null
+        }
+        Relationships: []
       }
       knowledge_graph_edges: {
         Row: {
@@ -4247,6 +4322,33 @@ export type Database = {
           },
         ]
       }
+      timeline_events: {
+        Row: {
+          content: string
+          conversation_id: string
+          created_at: string | null
+          event_type: string
+          id: string
+          metadata: Json | null
+        }
+        Insert: {
+          content: string
+          conversation_id: string
+          created_at?: string | null
+          event_type: string
+          id?: string
+          metadata?: Json | null
+        }
+        Update: {
+          content?: string
+          conversation_id?: string
+          created_at?: string | null
+          event_type?: string
+          id?: string
+          metadata?: Json | null
+        }
+        Relationships: []
+      }
       token_usage_log: {
         Row: {
           api_name: string | null
@@ -5148,10 +5250,6 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      binary_quantize: {
-        Args: { "": string } | { "": unknown }
-        Returns: unknown
-      }
       find_similar_memories: {
         Args: {
           max_results?: number
@@ -5167,81 +5265,9 @@ export type Database = {
           similarity: number
         }[]
       }
-      gtrgm_compress: {
-        Args: { "": unknown }
-        Returns: unknown
-      }
-      gtrgm_decompress: {
-        Args: { "": unknown }
-        Returns: unknown
-      }
-      gtrgm_in: {
-        Args: { "": unknown }
-        Returns: unknown
-      }
-      gtrgm_options: {
-        Args: { "": unknown }
-        Returns: undefined
-      }
-      gtrgm_out: {
-        Args: { "": unknown }
-        Returns: unknown
-      }
-      halfvec_avg: {
-        Args: { "": number[] }
-        Returns: unknown
-      }
-      halfvec_out: {
-        Args: { "": unknown }
-        Returns: unknown
-      }
-      halfvec_send: {
-        Args: { "": unknown }
-        Returns: string
-      }
-      halfvec_typmod_in: {
-        Args: { "": unknown[] }
-        Returns: number
-      }
-      hnsw_bit_support: {
-        Args: { "": unknown }
-        Returns: unknown
-      }
-      hnsw_halfvec_support: {
-        Args: { "": unknown }
-        Returns: unknown
-      }
-      hnsw_sparsevec_support: {
-        Args: { "": unknown }
-        Returns: unknown
-      }
-      hnswhandler: {
-        Args: { "": unknown }
-        Returns: unknown
-      }
       initialize_user_knowledge: {
         Args: { target_user_id: string }
         Returns: undefined
-      }
-      ivfflat_bit_support: {
-        Args: { "": unknown }
-        Returns: unknown
-      }
-      ivfflat_halfvec_support: {
-        Args: { "": unknown }
-        Returns: unknown
-      }
-      ivfflathandler: {
-        Args: { "": unknown }
-        Returns: unknown
-      }
-      l2_norm: {
-        Args: { "": unknown } | { "": unknown }
-        Returns: number
-      }
-      l2_normalize: {
-        Args: { "": string } | { "": unknown } | { "": unknown }
-        Returns: string
       }
       match_chunks: {
         Args: {
@@ -5305,54 +5331,8 @@ export type Database = {
           similarity: number
         }[]
       }
-      set_limit: {
-        Args: { "": number }
-        Returns: number
-      }
-      show_limit: {
-        Args: Record<PropertyKey, never>
-        Returns: number
-      }
-      show_trgm: {
-        Args: { "": string }
-        Returns: string[]
-      }
-      sparsevec_out: {
-        Args: { "": unknown }
-        Returns: unknown
-      }
-      sparsevec_send: {
-        Args: { "": unknown }
-        Returns: string
-      }
-      sparsevec_typmod_in: {
-        Args: { "": unknown[] }
-        Returns: number
-      }
-      vector_avg: {
-        Args: { "": number[] }
-        Returns: string
-      }
-      vector_dims: {
-        Args: { "": string } | { "": unknown }
-        Returns: number
-      }
-      vector_norm: {
-        Args: { "": string }
-        Returns: number
-      }
-      vector_out: {
-        Args: { "": string }
-        Returns: unknown
-      }
-      vector_send: {
-        Args: { "": string }
-        Returns: string
-      }
-      vector_typmod_in: {
-        Args: { "": unknown[] }
-        Returns: number
-      }
+      show_limit: { Args: never; Returns: number }
+      show_trgm: { Args: { "": string }; Returns: string[] }
     }
     Enums: {
       [_ in never]: never

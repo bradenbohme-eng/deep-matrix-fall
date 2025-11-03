@@ -43,7 +43,7 @@ export class MemoryManager {
   ): Promise<void> {
     const summary = this.generateSummary(content);
     
-    await supabase.from('chat_memories').insert({
+    await supabase.from('chat_memories' as any).insert({
       conversation_id: this.conversationId,
       user_id: this.userId,
       role,
@@ -60,7 +60,7 @@ export class MemoryManager {
   // Retrieve relevant memories (HHNI-inspired retrieval)
   async retrieveMemories(limit: number = 10): Promise<MemoryNode[]> {
     const { data, error } = await supabase
-      .from('chat_memories')
+      .from('chat_memories' as any)
       .select('*')
       .eq('conversation_id', this.conversationId)
       .order('created_at', { ascending: false })
@@ -71,7 +71,7 @@ export class MemoryManager {
       return [];
     }
 
-    return (data || []).map(m => ({
+    return (data || []).map((m: any) => ({
       id: m.id,
       conversationId: m.conversation_id,
       role: m.role,
@@ -88,7 +88,7 @@ export class MemoryManager {
     // In production, this would use vector embeddings
     // For now, simple text matching
     const { data, error } = await supabase
-      .from('chat_memories')
+      .from('chat_memories' as any)
       .select('*')
       .eq('conversation_id', this.conversationId)
       .ilike('content', `%${query}%`)
@@ -99,7 +99,7 @@ export class MemoryManager {
       return [];
     }
 
-    return (data || []).map(m => ({
+    return (data || []).map((m: any) => ({
       id: m.id,
       conversationId: m.conversation_id,
       role: m.role,
@@ -179,7 +179,7 @@ export class KnowledgeGraph {
     relations: string[] = [],
     confidence: number = 0.85
   ): Promise<void> {
-    await supabase.from('knowledge_entities').insert({
+    await supabase.from('knowledge_entities' as any).insert({
       user_id: this.userId,
       entity_type: entityType,
       content,
@@ -192,7 +192,7 @@ export class KnowledgeGraph {
   // Retrieve related entities
   async getRelatedEntities(entityType: string, limit: number = 10): Promise<KnowledgeEntity[]> {
     const { data, error } = await supabase
-      .from('knowledge_entities')
+      .from('knowledge_entities' as any)
       .select('*')
       .eq('entity_type', entityType)
       .order('last_accessed', { ascending: false })
@@ -203,7 +203,7 @@ export class KnowledgeGraph {
       return [];
     }
 
-    return (data || []).map(e => ({
+    return (data || []).map((e: any) => ({
       id: e.id,
       entityType: e.entity_type,
       content: e.content,
@@ -249,7 +249,7 @@ export class TimelineTracker {
     content: string,
     metadata?: Record<string, any>
   ): Promise<void> {
-    await supabase.from('timeline_events').insert({
+    await supabase.from('timeline_events' as any).insert({
       conversation_id: this.conversationId,
       event_type: eventType,
       content,
@@ -262,7 +262,7 @@ export class TimelineTracker {
 
   async getTimeline(limit: number = 50): Promise<any[]> {
     const { data, error } = await supabase
-      .from('timeline_events')
+      .from('timeline_events' as any)
       .select('*')
       .eq('conversation_id', this.conversationId)
       .order('created_at', { ascending: false })
