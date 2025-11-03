@@ -438,8 +438,12 @@ export const HackerMap: React.FC = () => {
       }
 
       // Create marker and add click event
+      // Coordinates are stored as [lat, lng], but Mapbox expects [lng, lat]
+      const lng = node.coordinates[1];
+      const lat = node.coordinates[0];
+      
       const marker = new mapboxgl.Marker(markerElement)
-        .setLngLat([node.coordinates[1], node.coordinates[0]])
+        .setLngLat([lng, lat])
         .addTo(map.current!);
 
       markerElement.addEventListener('click', () => {
@@ -449,7 +453,7 @@ export const HackerMap: React.FC = () => {
       // Add popup for high-threat nodes
       if (node.threatLevel >= 4) {
         const popup = new mapboxgl.Popup({ offset: 15, closeButton: false })
-          .setLngLat([node.coordinates[1], node.coordinates[0]])
+          .setLngLat([lng, lat])
           .setHTML(`
             <div style="color: white; background: rgba(0,0,0,0.8); padding: 8px; border-radius: 4px; font-size: 10px; font-family: monospace;">
               <strong>${node.name}</strong><br/>
