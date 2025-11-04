@@ -4102,6 +4102,160 @@ export type Database = {
         }
         Relationships: []
       }
+      surveillance_analytics: {
+        Row: {
+          camera_id: string | null
+          created_at: string
+          id: string
+          metadata: Json | null
+          metric_type: string
+          metric_value: number
+          period_end: string
+          period_start: string
+        }
+        Insert: {
+          camera_id?: string | null
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          metric_type: string
+          metric_value: number
+          period_end: string
+          period_start: string
+        }
+        Update: {
+          camera_id?: string | null
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          metric_type?: string
+          metric_value?: number
+          period_end?: string
+          period_start?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "surveillance_analytics_camera_id_fkey"
+            columns: ["camera_id"]
+            isOneToOne: false
+            referencedRelation: "surveillance_cameras"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      surveillance_cameras: {
+        Row: {
+          camera_type: string
+          capabilities: Json | null
+          coordinates: Json
+          coverage_area: Json | null
+          created_at: string
+          feed_url: string | null
+          id: string
+          last_ping: string | null
+          location: string
+          metadata: Json | null
+          name: string
+          resolution: string | null
+          status: string
+          threat_level: number | null
+          updated_at: string
+        }
+        Insert: {
+          camera_type: string
+          capabilities?: Json | null
+          coordinates: Json
+          coverage_area?: Json | null
+          created_at?: string
+          feed_url?: string | null
+          id?: string
+          last_ping?: string | null
+          location: string
+          metadata?: Json | null
+          name: string
+          resolution?: string | null
+          status?: string
+          threat_level?: number | null
+          updated_at?: string
+        }
+        Update: {
+          camera_type?: string
+          capabilities?: Json | null
+          coordinates?: Json
+          coverage_area?: Json | null
+          created_at?: string
+          feed_url?: string | null
+          id?: string
+          last_ping?: string | null
+          location?: string
+          metadata?: Json | null
+          name?: string
+          resolution?: string | null
+          status?: string
+          threat_level?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      surveillance_events: {
+        Row: {
+          camera_id: string | null
+          confidence: number | null
+          coordinates: Json | null
+          created_at: string
+          description: string | null
+          detected_objects: Json | null
+          event_type: string
+          id: string
+          image_url: string | null
+          metadata: Json | null
+          priority: number | null
+          processed: boolean | null
+          timestamp: string
+          video_url: string | null
+        }
+        Insert: {
+          camera_id?: string | null
+          confidence?: number | null
+          coordinates?: Json | null
+          created_at?: string
+          description?: string | null
+          detected_objects?: Json | null
+          event_type: string
+          id?: string
+          image_url?: string | null
+          metadata?: Json | null
+          priority?: number | null
+          processed?: boolean | null
+          timestamp?: string
+          video_url?: string | null
+        }
+        Update: {
+          camera_id?: string | null
+          confidence?: number | null
+          coordinates?: Json | null
+          created_at?: string
+          description?: string | null
+          detected_objects?: Json | null
+          event_type?: string
+          id?: string
+          image_url?: string | null
+          metadata?: Json | null
+          priority?: number | null
+          processed?: boolean | null
+          timestamp?: string
+          video_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "surveillance_events_camera_id_fkey"
+            columns: ["camera_id"]
+            isOneToOne: false
+            referencedRelation: "surveillance_cameras"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       symbolic_glyphs: {
         Row: {
           associated_pattern: string | null
@@ -4373,6 +4527,57 @@ export type Database = {
           id?: string
           task_type?: string | null
           tokens_used?: number | null
+        }
+        Relationships: []
+      }
+      traffic_monitoring: {
+        Row: {
+          congestion_level: string | null
+          coordinates: Json
+          created_at: string
+          density: number | null
+          flow_rate: number | null
+          id: string
+          incident_detected: boolean | null
+          incident_type: string | null
+          location: string
+          metadata: Json | null
+          occupancy: number | null
+          speed_avg: number | null
+          timestamp: string
+          vehicle_count: number | null
+        }
+        Insert: {
+          congestion_level?: string | null
+          coordinates: Json
+          created_at?: string
+          density?: number | null
+          flow_rate?: number | null
+          id?: string
+          incident_detected?: boolean | null
+          incident_type?: string | null
+          location: string
+          metadata?: Json | null
+          occupancy?: number | null
+          speed_avg?: number | null
+          timestamp?: string
+          vehicle_count?: number | null
+        }
+        Update: {
+          congestion_level?: string | null
+          coordinates?: Json
+          created_at?: string
+          density?: number | null
+          flow_rate?: number | null
+          id?: string
+          incident_detected?: boolean | null
+          incident_type?: string | null
+          location?: string
+          metadata?: Json | null
+          occupancy?: number | null
+          speed_avg?: number | null
+          timestamp?: string
+          vehicle_count?: number | null
         }
         Relationships: []
       }

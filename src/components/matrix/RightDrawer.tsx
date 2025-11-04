@@ -8,6 +8,7 @@ import CloudOrchestratorPanel from './CloudOrchestratorPanel';
 import EnhancedIDEPanel from './EnhancedIDEPanel';
 import { DocumentManager } from '@/components/document/DocumentManager';
 import { HackerMap } from '../warfare/HackerMap';
+import SurveillancePanel from './SurveillancePanel';
 
 interface RightDrawerProps {
   open: boolean;
@@ -35,10 +36,14 @@ const RightDrawer: React.FC<RightDrawerProps> = ({ open, onOpenChange }) => {
       </div>
       
       <Tabs defaultValue="documents" className="flex-1 flex flex-col overflow-hidden">
-        <TabsList className="flex-shrink-0 grid w-full grid-cols-6 bg-muted/50 mx-4 mt-2">
+        <TabsList className="flex-shrink-0 grid w-full grid-cols-7 bg-muted/50 mx-4 mt-2">
           <TabsTrigger value="documents" className="font-mono text-xs">
             <FileText className="w-4 h-4 mr-2" />
             AI-MOS DOCS
+          </TabsTrigger>
+          <TabsTrigger value="surveillance" className="font-mono text-xs">
+            <Shield className="w-4 h-4 mr-2" />
+            SURVEILLANCE
           </TabsTrigger>
           <TabsTrigger value="map" className="font-mono text-xs">
             <Map className="w-4 h-4 mr-2" />
@@ -64,6 +69,12 @@ const RightDrawer: React.FC<RightDrawerProps> = ({ open, onOpenChange }) => {
 
         <TabsContent value="documents" className="flex-1 overflow-y-auto mt-2">
           <DocumentManager />
+        </TabsContent>
+
+        <TabsContent value="surveillance" className="flex-1 overflow-hidden mt-2">
+          <div className="h-full w-full">
+            <SurveillancePanel />
+          </div>
         </TabsContent>
 
         <TabsContent value="map" className="flex-1 overflow-hidden mt-2">
