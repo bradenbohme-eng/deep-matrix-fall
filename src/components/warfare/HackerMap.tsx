@@ -410,12 +410,17 @@ export const HackerMap: React.FC = () => {
   const addNodesToMap = () => {
     if (!map.current) return;
 
+    console.log('Adding nodes to map, filtered nodes count:', filteredNodes.length);
+
     // Remove existing markers
-    const existingMarkers = document.querySelectorAll('.hacker-node-marker');
-    existingMarkers.forEach(marker => marker.remove());
+    markers.current.forEach(marker => marker.remove());
+    markers.current = [];
 
     // Add filtered nodes as markers
-    filteredNodes.forEach((node) => {
+    filteredNodes.forEach((node, index) => {
+      if (index < 5) {
+        console.log(`Node ${index}:`, node.name, 'coords:', node.coordinates);
+      }
       const color = getThreatColor(node.threatLevel);
       
       // Create custom marker element
@@ -442,9 +447,20 @@ export const HackerMap: React.FC = () => {
       const lng = node.coordinates[1];
       const lat = node.coordinates[0];
       
+      if (!lng || !lat || isNaN(lng) || isNaN(lat)) {
+        console.error('Invalid coordinates for node:', node.name, [lng, lat]);
+        return;
+      }
+      
       const marker = new mapboxgl.Marker(markerElement)
         .setLngLat([lng, lat])
         .addTo(map.current!);
+      
+      markers.current.push(marker);
+      
+      if (markers.current.length <= 5) {
+        console.log(`Created marker for ${node.name} at [${lng}, ${lat}]`);
+      }
 
       markerElement.addEventListener('click', () => {
         setSelectedNode(node);
