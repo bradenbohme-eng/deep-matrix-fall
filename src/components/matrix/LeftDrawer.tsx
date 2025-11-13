@@ -16,7 +16,7 @@ interface LeftDrawerProps {
 }
 
 const LeftDrawer: React.FC<LeftDrawerProps> = ({ open, onOpenChange }) => {
-  const [feedItems, setFeedItems] = useState([]);
+  const [feedItems, setFeedItems] = useState<any[]>([]);
 
   if (!open) return null;
 
