@@ -1,11 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { ScrollArea } from '@/components/ui/scroll-area';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { supabase } from '@/integrations/supabase/client';
-import { Eye, Video, Activity, AlertTriangle, Shield, Zap, Camera, TrendingUp, Users, Car } from 'lucide-react';
-import { toast } from 'sonner';
+import { Camera, Activity, MapPin, AlertCircle, RefreshCw, Globe, Eye, Zap, Shield } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 
 interface SurveillanceCamera {
   id: string;

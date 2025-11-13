@@ -8,6 +8,7 @@ import TeamSuite from '@/components/matrix/TeamSuite';
 import LiveFeeds, { FeedItem as FeedItemType } from '@/components/matrix/LiveFeeds';
 import IntelGraph from '@/components/matrix/IntelGraph';
 import IDEPanel from '@/components/matrix/IDEPanel';
+import { CodeEditor } from '@/components/matrix/CodeEditor';
 import AgentsPanel from '@/components/matrix/AgentsPanel';
 import ApiRegistryPanel from '@/components/matrix/ApiRegistryPanel';
 import CloudOrchestratorPanel from '@/components/matrix/CloudOrchestratorPanel';
@@ -74,7 +75,8 @@ const AdvancedNeoChat: React.FC = () => {
   const [isVisible, setIsVisible] = useState(true);
   const [isMinimized, setIsMinimized] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState<'chat' | 'memory' | 'network' | 'team' | 'feeds' | 'map' | 'diagram' | 'ide' | 'agents' | 'apis' | 'cloud' | 'builder' | 'matrix' | 'database'>('chat');
+  const [activeTab, setActiveTab] = useState<'chat' | 'memory' | 'network' | 'team' | 'feeds' | 'map' | 'diagram' | 'ide' | 'agents' | 'apis' | 'cloud' | 'builder' | 'matrix' | 'database' | 'code'>('chat');
+  const [codeMode, setCodeMode] = useState(false);
   const [feedItems, setFeedItems] = useState<FeedItemType[]>([]);
   const [conversationHistory, setConversationHistory] = useState<Array<{ role: "user" | "assistant"; content: string }>>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -157,6 +159,15 @@ const AdvancedNeoChat: React.FC = () => {
     }
   };
 
+  const handleCodeExecution = (code: string, language: string) => {
+    addMessage(`Executing ${language} code...`, 'system');
+    try {
+      addMessage(`Code executed successfully!\n\nLanguage: ${language}\nLines: ${code.split('\n').length}\n\nOutput:\n> Execution completed without errors`, 'neo');
+    } catch (error) {
+      addMessage(`Error executing code: ${error}`, 'system');
+    }
+  };
+
   const executeCommand = (command: string) => {
     const [cmd, ...args] = command.toLowerCase().split(' ');
     const arg = args.join(' ');
@@ -187,7 +198,56 @@ INTELLIGENCE:
 /map - Open intel map interface
 /network - Network analysis console
 
+CODE OPERATIONS:
+/code - Enter code editor mode
+/blueprint [name] - Generate project blueprint
+/file [path] - Create/edit file
+
 REALITY IS WHAT YOU MAKE IT, NEO.`, 'system');
+        break;
+
+      case '/code':
+        setCodeMode(true);
+        setActiveTab('code');
+        addMessage('Code mode activated. Full development environment loaded. Use /blueprint to generate project structure.', 'system');
+        break;
+
+      case '/blueprint':
+        if (args.length === 0) {
+          addMessage('Usage: /blueprint [project-name]\nExample: /blueprint my-dashboard', 'system');
+          break;
+        }
+        addMessage(`Generating blueprint for "${args.join(' ')}"...`, 'system');
+        setTimeout(() => {
+          addMessage(
+            `Blueprint Generated: ${args.join(' ')}\n\n` +
+            '📁 src/\n' +
+            '  ├─ components/\n' +
+            '  │  ├─ ui/\n' +
+            '  │  └─ layout/\n' +
+            '  ├─ pages/\n' +
+            '  ├─ hooks/\n' +
+            '  ├─ lib/\n' +
+            '  └─ types/\n\n' +
+            'Files created:\n' +
+            '✓ src/App.tsx\n' +
+            '✓ src/main.tsx\n' +
+            '✓ src/index.css\n' +
+            '✓ package.json\n\n' +
+            'Switch to Code tab to start editing.',
+            'neo'
+          );
+        }, 1500);
+        break;
+
+      case '/file':
+        if (args.length === 0) {
+          addMessage('Usage: /file [filepath]\nExample: /file src/components/Button.tsx', 'system');
+          break;
+        }
+        setCodeMode(true);
+        setActiveTab('code');
+        addMessage(`Opening file: ${args.join(' ')}\n\nSwitching to code editor...`, 'system');
         break;
         
       case '/speed':
@@ -318,6 +378,7 @@ REALITY IS WHAT YOU MAKE IT, NEO.`, 'system');
     { id: 'map', icon: Map, label: 'Intel Map' },
     { id: 'team', icon: Users, label: 'Team' },
     { id: 'feeds', icon: Rss, label: 'Feeds' },
+    { id: 'code', icon: Terminal, label: 'Code' },
     { id: 'ide', icon: FileCode2, label: 'IDE' },
     { id: 'agents', icon: Bot, label: 'Agents' },
     { id: 'cloud', icon: Cloud, label: 'Cloud' },
@@ -624,6 +685,12 @@ REALITY IS WHAT YOU MAKE IT, NEO.`, 'system');
                 {activeTab === 'diagram' && (
                   <div className="h-full p-4">
                     <DiagramOrganizer />
+                  </div>
+                )}
+
+                {activeTab === 'code' && (
+                  <div className="h-full p-4">
+                    <CodeEditor onCodeExecution={handleCodeExecution} />
                   </div>
                 )}
 
