@@ -3,9 +3,10 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { supabase } from '@/integrations/supabase/client';
-import { Camera, Activity, MapPin, AlertCircle, RefreshCw, Globe, Eye, Zap, Shield } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
+import { Camera, Activity, MapPin, AlertCircle, RefreshCw, Globe, Eye, Zap, Shield, AlertTriangle, Car, Video, TrendingUp, Users } from 'lucide-react';
+import { toast } from '@/hooks/use-toast';
 
 interface SurveillanceCamera {
   id: string;
@@ -103,7 +104,11 @@ const SurveillancePanel = () => {
       updateStats((camerasData as any) || [], (eventsData as any) || []);
     } catch (error) {
       console.error('Error loading surveillance data:', error);
-      toast.error('Failed to load surveillance data');
+      toast({
+        title: "Error",
+        description: "Failed to load surveillance data",
+        variant: "destructive"
+      });
     } finally {
       setIsLoading(false);
     }
@@ -143,7 +148,10 @@ const SurveillancePanel = () => {
           setEvents((prev) => [newEvent, ...prev].slice(0, 50));
           
           if (newEvent.priority >= 4) {
-            toast.warning(`High Priority Alert: ${newEvent.description}`);
+            toast({
+              title: "High Priority Alert",
+              description: newEvent.description,
+            });
           }
         }
       )
