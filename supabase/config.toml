@@ -17,3 +17,6 @@ verify_jwt = false
 
 [functions.surveillance-processor]
 verify_jwt = false
+
+[functions.aimos-core]
+verify_jwt = false

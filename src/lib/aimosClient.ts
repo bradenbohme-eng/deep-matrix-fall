@@ -1,7 +1,49 @@
 // AIM-OS Integration Client
 // Inspired by AIM-OS consciousness framework for persistent, verifiable AI interaction
+// Implements CMC, HHNI, VIF, APOE, SEG protocols from The North Star Document
 
 import { supabase } from '@/integrations/supabase/client';
+
+// ============ AIMOS Core Reasoning Interfaces ============
+
+export interface AIMOSReasoningResponse {
+  response: string;
+  reasoning_chain: Array<{
+    step: number;
+    thought: string;
+    action?: string;
+    observation?: string;
+    confidence: number;
+  }>;
+  response_type: 'short_chat' | 'detailed_doc' | 'hybrid';
+  complexity: string;
+  chain_id?: string;
+}
+
+export interface AIMOSMemoryAtom {
+  id: string;
+  content: string;
+  content_type: string;
+  tags: string[];
+  metadata: Record<string, any>;
+  confidence_score: number;
+  created_at: string;
+}
+
+export interface AIMOSPlan {
+  id: string;
+  title: string;
+  objective: string;
+  steps: Array<{
+    id: number;
+    title: string;
+    description: string;
+    status: string;
+    gates: string[];
+  }>;
+  status: string;
+  created_at: string;
+}
 
 export interface MemoryNode {
   id: string;
@@ -276,3 +318,203 @@ export class TimelineTracker {
     return data || [];
   }
 }
+
+// ============ AIMOS Core Reasoning Client ============
+// Implements advanced reasoning, chain-of-thought, and intelligent response type selection
+
+export interface AIMOSReasoningResponse {
+  response: string;
+  reasoning_chain: Array<{
+    step: number;
+    thought: string;
+    action?: string;
+    observation?: string;
+    confidence: number;
+  }>;
+  response_type: 'short_chat' | 'detailed_doc' | 'hybrid';
+  complexity: string;
+  chain_id?: string;
+}
+
+export interface AIMOSMemoryAtom {
+  id: string;
+  content: string;
+  content_type: string;
+  tags: string[];
+  metadata: Record<string, any>;
+  confidence_score: number;
+  created_at: string;
+}
+
+export interface AIMOSPlan {
+  id: string;
+  title: string;
+  objective: string;
+  steps: Array<{
+    id: number;
+    title: string;
+    description: string;
+    status: string;
+    gates: string[];
+  }>;
+  status: string;
+  created_at: string;
+}
+
+export class AIMOSReasoningClient {
+  private conversationId: string;
+  
+  constructor(conversationId: string = 'default') {
+    this.conversationId = conversationId;
+  }
+
+  /**
+   * Advanced reasoning with chain-of-thought processing
+   * Automatically determines whether to provide short chat or detailed documentation
+   */
+  async reason(
+    query: string,
+    options?: {
+      responseType?: 'auto' | 'short_chat' | 'detailed_doc' | 'hybrid';
+      userId?: string;
+      context?: Record<string, any>;
+    }
+  ): Promise<AIMOSReasoningResponse> {
+    const { data, error } = await supabase.functions.invoke('aimos-core', {
+      body: {
+        action: 'reason',
+        query,
+        conversationId: this.conversationId,
+        responseType: options?.responseType || 'auto',
+        context: {
+          userId: options?.userId,
+          ...options?.context,
+        },
+      },
+    });
+
+    if (error) throw error;
+    return data;
+  }
+
+  /**
+   * Store memory atom in CMC (Consciousness Memory Core)
+   */
+  async storeMemoryAtom(
+    content: string,
+    options?: {
+      contentType?: string;
+      tags?: string[];
+      metadata?: Record<string, any>;
+      confidence?: number;
+    }
+  ): Promise<AIMOSMemoryAtom> {
+    const { data, error } = await supabase.functions.invoke('aimos-core', {
+      body: {
+        action: 'store_memory',
+        query: content,
+        context: {
+          conversationId: this.conversationId,
+          contentType: options?.contentType || 'evidence',
+          tags: options?.tags || [],
+          metadata: options?.metadata || {},
+          confidence: options?.confidence || 0.5,
+        },
+      },
+    });
+
+    if (error) throw error;
+    return data.memory;
+  }
+
+  /**
+   * Retrieve memories using HHNI (Hierarchical Hypergraph Navigation Interface)
+   */
+  async retrieveMemoryAtoms(options?: {
+    tags?: string[];
+    limit?: number;
+  }): Promise<AIMOSMemoryAtom[]> {
+    const { data, error } = await supabase.functions.invoke('aimos-core', {
+      body: {
+        action: 'retrieve_memory',
+        context: {
+          conversationId: this.conversationId,
+          tags: options?.tags,
+          limit: options?.limit || 10,
+        },
+      },
+    });
+
+    if (error) throw error;
+    return data.memories;
+  }
+
+  /**
+   * Create executable plan using APOE (Agentic Plan Orchestration Engine)
+   */
+  async createPlan(
+    objective: string,
+    options?: {
+      title?: string;
+      successCriteria?: Record<string, any>;
+      gates?: Record<string, any>;
+    }
+  ): Promise<AIMOSPlan> {
+    const { data, error } = await supabase.functions.invoke('aimos-core', {
+      body: {
+        action: 'create_plan',
+        query: objective,
+        context: {
+          conversationId: this.conversationId,
+          title: options?.title,
+          successCriteria: options?.successCriteria,
+          gates: options?.gates,
+        },
+      },
+    });
+
+    if (error) throw error;
+    return data.plan;
+  }
+
+  /**
+   * Get reasoning chains for analysis
+   */
+  async getReasoningChains(limit: number = 10) {
+    const { data, error } = await supabase
+      .from('aimos_reasoning_chains')
+      .select('*')
+      .eq('conversation_id', this.conversationId)
+      .order('created_at', { ascending: false })
+      .limit(limit);
+
+    if (error) throw error;
+    return data;
+  }
+
+  /**
+   * Get consciousness metrics
+   */
+  async getConsciousnessMetrics(limit: number = 10) {
+    const { data, error } = await supabase
+      .from('aimos_consciousness_metrics')
+      .select('*')
+      .order('measured_at', { ascending: false })
+      .limit(limit);
+
+    if (error) throw error;
+    return data;
+  }
+}
+
+// Export a factory for easy instantiation
+export function createAIMOSClient(conversationId: string, userId?: string) {
+  return {
+    memory: new MemoryManager(conversationId, userId),
+    confidence: new ConfidenceGating(),
+    knowledge: new KnowledgeGraph(userId),
+    timeline: new TimelineTracker(conversationId),
+    reasoning: new AIMOSReasoningClient(conversationId)
+  };
+}
+
