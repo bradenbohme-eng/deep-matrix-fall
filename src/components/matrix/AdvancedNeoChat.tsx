@@ -36,6 +36,7 @@ import {
   Terminal
 } from 'lucide-react';
 import MatrixSettingsPanel from '@/components/matrix/MatrixSettingsPanel';
+import { RichMessageRenderer } from '@/components/matrix/RichMessageRenderer';
 
 interface ChatMessage {
   id: string;
@@ -43,6 +44,11 @@ interface ChatMessage {
   type: 'user' | 'system' | 'neo' | 'hack' | 'news' | 'memory';
   timestamp: Date;
   category?: string;
+  aimosData?: {
+    reasoning?: Array<{ step: number; thought: string; confidence: number }>;
+    metrics?: { coherence?: number; reasoning_depth?: number; memory_utilization?: number };
+    memoryAtoms?: Array<{ content: string; confidence_score: number; tags: string[] }>;
+  };
 }
 
 interface Memory {
@@ -485,7 +491,7 @@ REALITY IS WHAT YOU MAKE IT, NEO.`, 'system');
                               ? 'bg-purple-500/15 text-purple-400 border-purple-500/30'
                               : 'bg-muted/15 text-muted-foreground border-muted/30'
                           }`}>
-                            <div className="whitespace-pre-wrap leading-relaxed">{message.text}</div>
+                            <RichMessageRenderer content={message.text} aimosData={message.aimosData} />
                             <div className="text-xs opacity-60 mt-2 flex items-center justify-between">
                               <span>{message.timestamp.toLocaleTimeString()}</span>
                               {message.type !== 'user' && (
