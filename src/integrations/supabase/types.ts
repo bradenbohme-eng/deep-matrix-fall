@@ -214,6 +214,367 @@ export type Database = {
         }
         Relationships: []
       }
+      aimos_confidence_metrics: {
+        Row: {
+          completeness: number | null
+          confidence_trend: string | null
+          consistency: number | null
+          contradiction_count: number | null
+          created_at: string
+          entity_id: string
+          entity_type: string
+          factual_accuracy: number | null
+          id: string
+          last_validated_at: string | null
+          overall_confidence: number
+          relevance: number | null
+          updated_at: string
+          validation_count: number | null
+        }
+        Insert: {
+          completeness?: number | null
+          confidence_trend?: string | null
+          consistency?: number | null
+          contradiction_count?: number | null
+          created_at?: string
+          entity_id: string
+          entity_type: string
+          factual_accuracy?: number | null
+          id?: string
+          last_validated_at?: string | null
+          overall_confidence: number
+          relevance?: number | null
+          updated_at?: string
+          validation_count?: number | null
+        }
+        Update: {
+          completeness?: number | null
+          confidence_trend?: string | null
+          consistency?: number | null
+          contradiction_count?: number | null
+          created_at?: string
+          entity_id?: string
+          entity_type?: string
+          factual_accuracy?: number | null
+          id?: string
+          last_validated_at?: string | null
+          overall_confidence?: number
+          relevance?: number | null
+          updated_at?: string
+          validation_count?: number | null
+        }
+        Relationships: []
+      }
+      aimos_consciousness_metrics: {
+        Row: {
+          coherence_score: number | null
+          context_stability: number | null
+          evidence_consistency: number | null
+          id: string
+          measured_at: string
+          memory_utilization: number | null
+          metadata: Json | null
+          metric_type: string
+          plan_completion_rate: number | null
+          reasoning_depth: number | null
+          self_validation_score: number | null
+        }
+        Insert: {
+          coherence_score?: number | null
+          context_stability?: number | null
+          evidence_consistency?: number | null
+          id?: string
+          measured_at?: string
+          memory_utilization?: number | null
+          metadata?: Json | null
+          metric_type: string
+          plan_completion_rate?: number | null
+          reasoning_depth?: number | null
+          self_validation_score?: number | null
+        }
+        Update: {
+          coherence_score?: number | null
+          context_stability?: number | null
+          evidence_consistency?: number | null
+          id?: string
+          measured_at?: string
+          memory_utilization?: number | null
+          metadata?: Json | null
+          metric_type?: string
+          plan_completion_rate?: number | null
+          reasoning_depth?: number | null
+          self_validation_score?: number | null
+        }
+        Relationships: []
+      }
+      aimos_evidence_graph: {
+        Row: {
+          created_at: string
+          id: string
+          relationship_type: string
+          source_atom_id: string
+          strength: number | null
+          target_atom_id: string
+          validated: boolean | null
+          validated_at: string | null
+          validated_by: string | null
+          validation_notes: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          relationship_type: string
+          source_atom_id: string
+          strength?: number | null
+          target_atom_id: string
+          validated?: boolean | null
+          validated_at?: string | null
+          validated_by?: string | null
+          validation_notes?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          relationship_type?: string
+          source_atom_id?: string
+          strength?: number | null
+          target_atom_id?: string
+          validated?: boolean | null
+          validated_at?: string | null
+          validated_by?: string | null
+          validation_notes?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "aimos_evidence_graph_source_atom_id_fkey"
+            columns: ["source_atom_id"]
+            isOneToOne: false
+            referencedRelation: "aimos_memory_atoms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "aimos_evidence_graph_target_atom_id_fkey"
+            columns: ["target_atom_id"]
+            isOneToOne: false
+            referencedRelation: "aimos_memory_atoms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      aimos_memory_atoms: {
+        Row: {
+          confidence_score: number | null
+          content: string
+          content_type: string
+          created_at: string
+          id: string
+          metadata: Json | null
+          parent_id: string | null
+          quality_score: number | null
+          relevance_score: number | null
+          source_refs: string[] | null
+          stored_at: string
+          tags: string[] | null
+          thread_id: string | null
+          updated_at: string
+          user_id: string | null
+          valid_from: string
+          valid_to: string | null
+          verification_status: string | null
+        }
+        Insert: {
+          confidence_score?: number | null
+          content: string
+          content_type: string
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          parent_id?: string | null
+          quality_score?: number | null
+          relevance_score?: number | null
+          source_refs?: string[] | null
+          stored_at?: string
+          tags?: string[] | null
+          thread_id?: string | null
+          updated_at?: string
+          user_id?: string | null
+          valid_from?: string
+          valid_to?: string | null
+          verification_status?: string | null
+        }
+        Update: {
+          confidence_score?: number | null
+          content?: string
+          content_type?: string
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          parent_id?: string | null
+          quality_score?: number | null
+          relevance_score?: number | null
+          source_refs?: string[] | null
+          stored_at?: string
+          tags?: string[] | null
+          thread_id?: string | null
+          updated_at?: string
+          user_id?: string | null
+          valid_from?: string
+          valid_to?: string | null
+          verification_status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "aimos_memory_atoms_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "aimos_memory_atoms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      aimos_plans: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          created_by: string | null
+          current_step: number | null
+          execution_log: Json | null
+          gates: Json | null
+          id: string
+          objective: string
+          parent_plan_id: string | null
+          status: string
+          steps: Json
+          success_criteria: Json
+          thread_id: string | null
+          title: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          current_step?: number | null
+          execution_log?: Json | null
+          gates?: Json | null
+          id?: string
+          objective: string
+          parent_plan_id?: string | null
+          status?: string
+          steps: Json
+          success_criteria: Json
+          thread_id?: string | null
+          title: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          current_step?: number | null
+          execution_log?: Json | null
+          gates?: Json | null
+          id?: string
+          objective?: string
+          parent_plan_id?: string | null
+          status?: string
+          steps?: Json
+          success_criteria?: Json
+          thread_id?: string | null
+          title?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "aimos_plans_parent_plan_id_fkey"
+            columns: ["parent_plan_id"]
+            isOneToOne: false
+            referencedRelation: "aimos_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      aimos_reasoning_chains: {
+        Row: {
+          coherence_score: number | null
+          completeness_score: number | null
+          complexity: string | null
+          conversation_id: string
+          created_at: string
+          depth: number
+          evidence_atom_ids: string[] | null
+          final_answer: string
+          id: string
+          reasoning_steps: Json
+          response_type: string
+          source_refs: string[] | null
+          user_query: string
+        }
+        Insert: {
+          coherence_score?: number | null
+          completeness_score?: number | null
+          complexity?: string | null
+          conversation_id: string
+          created_at?: string
+          depth: number
+          evidence_atom_ids?: string[] | null
+          final_answer: string
+          id?: string
+          reasoning_steps: Json
+          response_type: string
+          source_refs?: string[] | null
+          user_query: string
+        }
+        Update: {
+          coherence_score?: number | null
+          completeness_score?: number | null
+          complexity?: string | null
+          conversation_id?: string
+          created_at?: string
+          depth?: number
+          evidence_atom_ids?: string[] | null
+          final_answer?: string
+          id?: string
+          reasoning_steps?: Json
+          response_type?: string
+          source_refs?: string[] | null
+          user_query?: string
+        }
+        Relationships: []
+      }
+      aimos_tag_hierarchy: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          level: number
+          metadata: Json | null
+          parent_tag: string | null
+          tag_name: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          level?: number
+          metadata?: Json | null
+          parent_tag?: string | null
+          tag_name: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          level?: number
+          metadata?: Json | null
+          parent_tag?: string | null
+          tag_name?: string
+        }
+        Relationships: []
+      }
       assets: {
         Row: {
           created_at: string | null
