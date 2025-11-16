@@ -37,6 +37,8 @@ import {
 } from 'lucide-react';
 import MatrixSettingsPanel from '@/components/matrix/MatrixSettingsPanel';
 import { RichMessageRenderer } from '@/components/matrix/RichMessageRenderer';
+import { ThinkingPanel } from '@/components/matrix/ThinkingPanel';
+import { ChatModeSelector, ChatMode } from '@/components/matrix/ChatModeSelector';
 
 interface ChatMessage {
   id: string;
@@ -44,6 +46,14 @@ interface ChatMessage {
   type: 'user' | 'system' | 'neo' | 'hack' | 'news' | 'memory';
   timestamp: Date;
   category?: string;
+  thinking?: Array<{
+    step: number;
+    phase: 'analysis' | 'research' | 'synthesis' | 'validation' | 'audit';
+    thought: string;
+    confidence: number;
+    subSteps?: Array<{ action: string; result: string; confidence: number }>;
+    checks?: Array<{ type: string; passed: boolean; details: string }>;
+  }>;
   aimosData?: {
     reasoning?: Array<{ step: number; thought: string; confidence: number }>;
     metrics?: { coherence?: number; reasoning_depth?: number; memory_utilization?: number };
@@ -85,6 +95,9 @@ const AdvancedNeoChat: React.FC = () => {
   const [codeMode, setCodeMode] = useState(false);
   const [feedItems, setFeedItems] = useState<FeedItemType[]>([]);
   const [conversationHistory, setConversationHistory] = useState<Array<{ role: "user" | "assistant"; content: string }>>([]);
+  const [chatMode, setChatMode] = useState<ChatMode>('chat');
+  const [currentThinking, setCurrentThinking] = useState<ChatMessage['thinking']>([]);
+  const [isThinking, setIsThinking] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   
   const scrollToBottom = () => {
@@ -318,19 +331,40 @@ REALITY IS WHAT YOU MAKE IT, NEO.`, 'system');
       return;
     }
 
-    // Real AI conversation with Gemini
+    // Real AI conversation with mode-specific behavior
     setIsLoading(true);
+    if (chatMode === 'deep-think') {
+      setIsThinking(true);
+      setCurrentThinking([]);
+    }
+    
     const newHistory = [...conversationHistory, { role: "user" as const, content: userInput }];
     
     let assistantResponse = "";
+    let thinkingSteps: any[] = [];
     const tempId = Date.now().toString();
     
     try {
       await streamNeoChat({
         messages: newHistory,
-        mode: "chat",
+        mode: chatMode,
         onDelta: (chunk) => {
           assistantResponse += chunk;
+          
+          // Parse thinking steps if in deep-think mode
+          if (chatMode === 'deep-think' && chunk.includes('THINKING:')) {
+            const thinkMatch = chunk.match(/THINKING:\s*Step\s*(\d+)\s*-\s*([^:]+):\s*([^\n]+)/);
+            if (thinkMatch) {
+              const step = {
+                step: parseInt(thinkMatch[1]),
+                phase: thinkMatch[2].toLowerCase() as any,
+                thought: thinkMatch[3],
+                confidence: 0.8
+              };
+              thinkingSteps.push(step);
+              setCurrentThinking(prev => [...prev, step]);
+            }
+          }
           
           // Update or create the assistant message
           setMessages(prev => {
@@ -338,7 +372,7 @@ REALITY IS WHAT YOU MAKE IT, NEO.`, 'system');
             if (lastMsg?.id === tempId) {
               return prev.map(msg => 
                 msg.id === tempId 
-                  ? { ...msg, text: assistantResponse }
+                  ? { ...msg, text: assistantResponse, thinking: thinkingSteps }
                   : msg
               );
             }
@@ -347,16 +381,19 @@ REALITY IS WHAT YOU MAKE IT, NEO.`, 'system');
               text: assistantResponse,
               type: 'neo' as const,
               timestamp: new Date(),
+              thinking: thinkingSteps
             }];
           });
         },
         onDone: () => {
           setIsLoading(false);
+          setIsThinking(false);
           setConversationHistory([...newHistory, { role: "assistant", content: assistantResponse }]);
-          addMemory(`AI Conversation: ${userInput}`, 1, ['conversation', 'gemini-ai', 'neo']);
+          addMemory(`${chatMode} conversation: ${userInput}`, chatMode === 'deep-think' ? 3 : 1, ['conversation', chatMode, 'aimos']);
         },
         onError: (error) => {
           setIsLoading(false);
+          setIsThinking(false);
           addMessage(`AI Error: ${error.message}`, 'system');
           toast({
             title: "AI Communication Error",
@@ -367,6 +404,7 @@ REALITY IS WHAT YOU MAKE IT, NEO.`, 'system');
       });
     } catch (error) {
       setIsLoading(false);
+      setIsThinking(false);
       const errorMsg = error instanceof Error ? error.message : 'Unknown error';
       addMessage(`Connection to Neo failed: ${errorMsg}`, 'system');
       toast({

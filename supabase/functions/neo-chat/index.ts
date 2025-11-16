@@ -14,11 +14,122 @@ const CONFIDENCE_THRESHOLDS = {
   REJECT: 0.40 // Below this, refuse to answer
 };
 
+// MCP Tool Definitions for AIMOS
+interface MCPTool {
+  name: string;
+  description: string;
+  parameters: {
+    type: string;
+    properties: Record<string, any>;
+    required: string[];
+  };
+}
+
+const aimosTools: MCPTool[] = [
+  {
+    name: "aimos_reason",
+    description: "Execute deep AIMOS reasoning with chain-of-thought, memory retrieval, and confidence scoring",
+    parameters: {
+      type: "object",
+      properties: {
+        query: { type: "string", description: "The query to reason about" },
+        depth: { type: "string", enum: ["shallow", "medium", "deep"], description: "Reasoning depth" }
+      },
+      required: ["query"]
+    }
+  },
+  {
+    name: "aimos_memory_store",
+    description: "Store information in AIMOS persistent memory (CMC)",
+    parameters: {
+      type: "object",
+      properties: {
+        content: { type: "string", description: "Content to store" },
+        tags: { type: "array", items: { type: "string" }, description: "Classification tags" },
+        importance: { type: "number", description: "Importance score 0-1" }
+      },
+      required: ["content"]
+    }
+  },
+  {
+    name: "aimos_memory_search",
+    description: "Search AIMOS memory for relevant information",
+    parameters: {
+      type: "object",
+      properties: {
+        query: { type: "string", description: "Search query" },
+        tags: { type: "array", items: { type: "string" }, description: "Filter by tags" },
+        limit: { type: "number", description: "Max results" }
+      },
+      required: ["query"]
+    }
+  },
+  {
+    name: "aimos_create_plan",
+    description: "Create a multi-step execution plan with APOE",
+    parameters: {
+      type: "object",
+      properties: {
+        objective: { type: "string", description: "Plan objective" },
+        complexity: { type: "string", enum: ["simple", "moderate", "complex"], description: "Plan complexity" }
+      },
+      required: ["objective"]
+    }
+  },
+  {
+    name: "file_read",
+    description: "Read a file from the project",
+    parameters: {
+      type: "object",
+      properties: {
+        path: { type: "string", description: "File path relative to project root" }
+      },
+      required: ["path"]
+    }
+  },
+  {
+    name: "file_write",
+    description: "Write or update a file in the project",
+    parameters: {
+      type: "object",
+      properties: {
+        path: { type: "string", description: "File path" },
+        content: { type: "string", description: "File content" }
+      },
+      required: ["path", "content"]
+    }
+  },
+  {
+    name: "web_search",
+    description: "Search the web for current information",
+    parameters: {
+      type: "object",
+      properties: {
+        query: { type: "string", description: "Search query" },
+        numResults: { type: "number", description: "Number of results" }
+      },
+      required: ["query"]
+    }
+  },
+  {
+    name: "code_analyze",
+    description: "Analyze code structure and patterns",
+    parameters: {
+      type: "object",
+      properties: {
+        code: { type: "string", description: "Code to analyze" },
+        language: { type: "string", description: "Programming language" }
+      },
+      required: ["code"]
+    }
+  }
+];
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { messages, mode = "chat", userId, conversationId } = await req.json();
+    const { messages, mode = "chat", userId, conversationId, enableThinking = false } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
@@ -147,13 +258,39 @@ PART VIII - GEOMETRIC KERNEL:
 
 ${memoryContext}`;
 
-    const systemPrompts = {
-      chat: aimosKnowledge,
+    const systemPrompts: Record<string, string> = {
+      chat: aimosKnowledge + "\n\nYou have access to MCP tools for AIMOS operations, memory, planning, file operations, and web search. Use them when appropriate.",
+      planning: aimosKnowledge + "\n\nMode: STRATEGIC PLANNING - You are in planning mode with APOE (Agentic Plan Orchestration Engine). Create detailed, executable plans with quality gates and success criteria. Use aimos_create_plan tool. Break down complex objectives into actionable steps.",
+      developing: aimosKnowledge + "\n\nMode: CODE DEVELOPMENT - You are in development mode with full IDE capabilities. Use file_read, file_write, and code_analyze tools. Write clean, maintainable code following best practices. Explain your code changes.",
+      building: aimosKnowledge + "\n\nMode: SYSTEM ARCHITECTURE - You are in building mode focused on system design and architecture. Think about scalability, maintainability, and integration patterns. Use planning and development tools together.",
+      hacking: aimosKnowledge + "\n\nMode: SECURITY ANALYSIS - You are in ethical hacking mode. Analyze systems for vulnerabilities, security flaws, and attack vectors. Think like an attacker but act defensively. Use code_analyze and web_search for CVE research.",
+      "deep-think": aimosKnowledge + "\n\nMode: DEEP REASONING - You are in deep thinking mode with recursive multi-step reasoning. For EVERY response: 1) Analyze the query deeply, 2) Research relevant context, 3) Synthesize information, 4) Validate conclusions, 5) Audit your reasoning. Show confidence scores at each step. Use aimos_reason tool extensively.",
+      research: aimosKnowledge + "\n\nMode: RESEARCH - You are in research mode. Use web_search extensively to find current, accurate information. Cross-reference multiple sources. Validate information quality. Use aimos_memory_store to save important findings.",
       intel: aimosKnowledge + "\n\nMode: INTELLIGENCE ANALYSIS - Focus on threat assessment, tactical analysis, and vulnerability identification.",
       hack: aimosKnowledge + "\n\nMode: PENETRATION TESTING - Focus on security research, attack vectors, and technical exploits.",
       news: aimosKnowledge + "\n\nMode: GLOBAL INTELLIGENCE - Focus on current events, geopolitical analysis, and strategic implications."
     };
 
+    // Add tools based on mode
+    const getModeTools = (m: string) => {
+      const baseTools = aimosTools.filter(t => t.name.startsWith('aimos_'));
+      switch (m) {
+        case 'developing':
+        case 'building':
+          return [...baseTools, ...aimosTools.filter(t => t.name.startsWith('file_') || t.name === 'code_analyze')];
+        case 'research':
+          return [...baseTools, ...aimosTools.filter(t => t.name === 'web_search')];
+        case 'deep-think':
+          return aimosTools; // All tools available
+        case 'hacking':
+          return [...baseTools, ...aimosTools.filter(t => t.name === 'code_analyze' || t.name === 'web_search')];
+        default:
+          return baseTools;
+      }
+    };
+
+    const modeTools = getModeTools(mode);
+    
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -161,11 +298,19 @@ ${memoryContext}`;
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
+        model: mode === 'deep-think' ? "google/gemini-2.5-pro" : "google/gemini-2.5-flash",
         messages: [
-          { role: "system", content: systemPrompts[mode as keyof typeof systemPrompts] || systemPrompts.chat },
+          { role: "system", content: systemPrompts[mode] || systemPrompts.chat },
           ...messages,
         ],
+        tools: modeTools.map(t => ({
+          type: "function",
+          function: {
+            name: t.name,
+            description: t.description,
+            parameters: t.parameters
+          }
+        })),
         stream: true,
       }),
     });
