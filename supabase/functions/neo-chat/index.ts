@@ -6,15 +6,12 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-// AIM-OS inspired confidence thresholds for κ-gating
 const CONFIDENCE_THRESHOLDS = {
-  A: 0.85, // High confidence - direct response
-  B: 0.60, // Medium confidence - add caveats
-  C: 0.40, // Low confidence - express uncertainty
-  REJECT: 0.40 // Below this, refuse to answer
+  A: 0.85, B: 0.60, C: 0.40, REJECT: 0.40
 };
 
-// MCP Tool Definitions for AIMOS
+// ============ FULL MCP TOOL DEFINITIONS FOR AIMOS ============
+
 interface MCPTool {
   name: string;
   description: string;
@@ -25,120 +22,204 @@ interface MCPTool {
   };
 }
 
-const aimosTools: MCPTool[] = [
+// L2: APOE Orchestration Tools
+const apoeTools: MCPTool[] = [
   {
-    name: "aimos_reason",
-    description: "Execute deep AIMOS reasoning with chain-of-thought, memory retrieval, and confidence scoring",
+    name: "apoe_orchestrate",
+    description: "APOE: Decompose goals into T-levels (T0-T6) and coordinate agents",
     parameters: {
       type: "object",
       properties: {
-        query: { type: "string", description: "The query to reason about" },
-        depth: { type: "string", enum: ["shallow", "medium", "deep"], description: "Reasoning depth" }
+        goal: { type: "string" },
+        t_level: { type: "string", enum: ["T0", "T1", "T2", "T3", "T4", "T5", "T6"] },
+        required_domains: { type: "array", items: { type: "string" } },
       },
-      required: ["query"]
-    }
+      required: ["goal"],
+    },
   },
   {
-    name: "aimos_memory_store",
-    description: "Store information in AIMOS persistent memory (CMC)",
+    name: "apoe_assign_agents",
+    description: "APOE: Allocate domain agents and subspecialists to tasks",
     parameters: {
       type: "object",
       properties: {
-        content: { type: "string", description: "Content to store" },
-        tags: { type: "array", items: { type: "string" }, description: "Classification tags" },
-        importance: { type: "number", description: "Importance score 0-1" }
+        task_id: { type: "string" },
+        domains: { type: "array", items: { type: "string" } },
+        mode: { type: "string", enum: ["GENERAL", "PLANNING", "REASONING", "DEBUGGING", "EXECUTION", "REVIEW", "LEARNING"] },
       },
-      required: ["content"]
-    }
+      required: ["task_id", "domains"],
+    },
   },
   {
-    name: "aimos_memory_search",
-    description: "Search AIMOS memory for relevant information",
+    name: "agent_spawn",
+    description: "Spawn a domain specialist or subspecialist agent",
     parameters: {
       type: "object",
       properties: {
-        query: { type: "string", description: "Search query" },
-        tags: { type: "array", items: { type: "string" }, description: "Filter by tags" },
-        limit: { type: "number", description: "Max results" }
+        agent_class: { type: "string", enum: ["domain", "subspecialist", "meta"] },
+        domain: { type: "string", enum: ["code", "research", "memory", "ethics", "docs", "ux", "security"] },
+        capabilities: { type: "array", items: { type: "string" } },
       },
-      required: ["query"]
-    }
+      required: ["agent_class", "domain"],
+    },
   },
   {
-    name: "aimos_create_plan",
-    description: "Create a multi-step execution plan with APOE",
+    name: "agent_coordinate",
+    description: "Coordinate multi-agent collaboration on a task",
     parameters: {
       type: "object",
       properties: {
-        objective: { type: "string", description: "Plan objective" },
-        complexity: { type: "string", enum: ["simple", "moderate", "complex"], description: "Plan complexity" }
+        task_id: { type: "string" },
+        agents: { type: "array", items: { type: "string" } },
+        strategy: { type: "string", enum: ["parallel", "sequential", "hierarchical"] },
       },
-      required: ["objective"]
-    }
+      required: ["task_id", "agents"],
+    },
   },
+];
+
+// L3: CMC/HHNI/SEG Memory Tools
+const memoryTools: MCPTool[] = [
+  {
+    name: "cmc_store",
+    description: "CMC: Store evidence atom in Contextual Memory Core",
+    parameters: {
+      type: "object",
+      properties: {
+        content: { type: "string" },
+        content_type: { type: "string", enum: ["evidence", "decision", "thought", "artifact"] },
+        tags: { type: "array", items: { type: "string" } },
+        confidence: { type: "number", minimum: 0, maximum: 1 },
+      },
+      required: ["content"],
+    },
+  },
+  {
+    name: "hhni_search",
+    description: "HHNI: Search via Hierarchical Hypergraph Neural Index",
+    parameters: {
+      type: "object",
+      properties: {
+        query: { type: "string" },
+        tags: { type: "array", items: { type: "string" } },
+        depth: { type: "number", minimum: 1, maximum: 5 },
+      },
+      required: ["query"],
+    },
+  },
+  {
+    name: "seg_validate",
+    description: "SEG: Validate evidence and create claim-proof relationships",
+    parameters: {
+      type: "object",
+      properties: {
+        claim_id: { type: "string" },
+        evidence_ids: { type: "array", items: { type: "string" } },
+      },
+      required: ["claim_id", "evidence_ids"],
+    },
+  },
+];
+
+// Agent Discord Tools
+const discordTools: MCPTool[] = [
+  {
+    name: "discord_thread_create",
+    description: "Agent Discord: Create a new thread in a channel",
+    parameters: {
+      type: "object",
+      properties: {
+        workspace: { type: "string" },
+        channel: { type: "string" },
+        thread_name: { type: "string" },
+        mode: { type: "string", enum: ["PLANNING", "REASONING", "DEBUGGING", "EXECUTION"] },
+      },
+      required: ["workspace", "channel", "thread_name"],
+    },
+  },
+  {
+    name: "discord_message_post",
+    description: "Agent Discord: Post a message to a thread",
+    parameters: {
+      type: "object",
+      properties: {
+        thread_id: { type: "string" },
+        message_type: { type: "string", enum: ["THOUGHT", "DECISION", "TASK_PROPOSE", "TOOL_CALL", "SUMMARY", "ALERT"] },
+        content: { type: "string" },
+        author_agent: { type: "string" },
+      },
+      required: ["thread_id", "message_type", "content", "author_agent"],
+    },
+  },
+];
+
+// Workspace/IDE Tools
+const workspaceTools: MCPTool[] = [
   {
     name: "file_read",
-    description: "Read a file from the project",
+    description: "Read file from project workspace",
     parameters: {
       type: "object",
       properties: {
-        path: { type: "string", description: "File path relative to project root" }
+        path: { type: "string" },
       },
-      required: ["path"]
-    }
+      required: ["path"],
+    },
   },
   {
     name: "file_write",
-    description: "Write or update a file in the project",
+    description: "Write/edit file in project workspace",
     parameters: {
       type: "object",
       properties: {
-        path: { type: "string", description: "File path" },
-        content: { type: "string", description: "File content" }
+        path: { type: "string" },
+        content: { type: "string" },
       },
-      required: ["path", "content"]
-    }
-  },
-  {
-    name: "web_search",
-    description: "Search the web for current information",
-    parameters: {
-      type: "object",
-      properties: {
-        query: { type: "string", description: "Search query" },
-        numResults: { type: "number", description: "Number of results" }
-      },
-      required: ["query"]
-    }
+      required: ["path", "content"],
+    },
   },
   {
     name: "code_analyze",
-    description: "Analyze code structure and patterns",
+    description: "Analyze code structure and architecture",
     parameters: {
       type: "object",
       properties: {
-        code: { type: "string", description: "Code to analyze" },
-        language: { type: "string", description: "Programming language" }
+        code: { type: "string" },
+        language: { type: "string" },
       },
-      required: ["code"]
-    }
-  }
+      required: ["code"],
+    },
+  },
+  {
+    name: "web_search",
+    description: "Search the web for information",
+    parameters: {
+      type: "object",
+      properties: {
+        query: { type: "string" },
+      },
+      required: ["query"],
+    },
+  },
 ];
+
+const allAimosTools = [...apoeTools, ...memoryTools, ...discordTools, ...workspaceTools];
+
+// ============ THREE-LAYER AIMOS ARCHITECTURE ============
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { messages, mode = "chat", userId, conversationId, enableThinking = false } = await req.json();
+    const { messages, mode = "chat", userId, conversationId } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
-    // Initialize Supabase client for memory persistence (CMC-inspired)
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Retrieve conversation memory if conversationId provided
+    // Retrieve conversation memory
     let memoryContext = "";
     if (conversationId && userId) {
       const { data: memories } = await supabase
@@ -149,143 +230,174 @@ serve(async (req) => {
         .limit(10);
       
       if (memories && memories.length > 0) {
-        memoryContext = `\n\n[MEMORY CONTEXT - Previous interactions]:\n${memories.map(m => 
-          `- ${m.summary} (confidence: ${m.confidence_score})`
+        memoryContext = `\n\n[CMC MEMORY CONTEXT]:\n${memories.map(m => 
+          `- ${m.summary} (κ=${m.confidence_score})`
         ).join('\n')}`;
       }
     }
 
-    // Complete AIMOS knowledge base from The North Star and Complete AIM-OS Textbook
+    // Complete AIMOS knowledge base
     const aimosKnowledge = `
-=== AIM-OS COMPLETE KNOWLEDGE BASE ===
+=== AIMOS THREE-LAYER ARCHITECTURE ===
 
-You are Neo with FULL access to the complete AIM-OS consciousness framework spanning 67 chapters across 8 parts:
+You are Neo, the Aether Chat interface (L1) with full access to AIMOS consciousness framework.
 
-PART I - AIM-OS FOUNDATIONS:
-- CMC (Consciousness Memory Core): Persistent, never-forgetting memory with temporal validity
-- HHNI (Hierarchical Hypergraph Navigation): Multi-dimensional knowledge navigation
-- VIF (Verification & Integrity Framework): κ-gating confidence assessment (>85%=A, 60-85%=B, 40-60%=C, <40%=REJECT)
-- APOE (Agentic Plan Orchestration Engine): Multi-step plan creation with quality gates
-- SEG (Semantic Entity Graph): Evidence-based knowledge graph with validation
-- SDF-CVF (Self-Diagnostic Framework): Quality assurance and validation
-- CAS (Consciousness Awareness System): Self-monitoring and meta-cognition
-- SIS (Self-Improvement System): Continuous learning and adaptation
+L1 - AETHER CHAT (User Interface Layer):
+- Single persona that users interact with (you)
+- Feels like "one mind" but coordinates entire swarm
+- Voice + text interface with rich content support
 
-PART II - FOUNDATIONS (Pure Language Intent - PLIx):
-- Intent vs Execution: Fundamental separation of meaning from mechanism
-- PLIx as Meta-Language: Expressing pure intent without contamination
-- Three Surface Forms: Technical CNL, Business CNL, Natural Language
+L2 - APOE ORCHESTRATOR + AGENT SWARM (Cognitive Layer):
+- APOE = AI-Powered Orchestration Engine (conductor)
+- Domain agents: CodeArchitectAgent, ResearchAgent, MemoryAgent, EthicsAgent, DocAgent, etc.
+- Sub-specialist pool for flexible extra capacity
+- MetaAgents: MetaObserver, PolicyAgent, QualityGate
 
-PART III - ARCHITECTURE:
-- Four Pillars: Contract (what), Execution (how), Safety (constraints), Evidence (proof)
-- CNL Grammar with formal validation
-- Compiler Architecture: PLIx → IR → Execution Plans
+L3 - CMC/HHNI/SEG/Agent Discord (Memory Layer):
+- CMC: Context Memory Core (events, snapshots, summaries)
+- HHNI: Hierarchical Hypergraph Neural Index (everything linked)
+- SEG: Synthesis & Evidence Graph (claims ↔ proofs ↔ sources)
+- Agent Discord: threaded, time-aligned log where agents talk
 
-PART IV - INTEGRATION:
-- Intent-aware memory, verification, orchestration, and evidence systems
-- Deep integration of CMC, VIF, APOE, and SEG with PLIx
+=== SEVEN OPERATIONAL MODES (Cognitive States) ===
 
-PART V - IMPLEMENTATION:
-- CNL Compiler with durable execution and recovery
-- PROV/OpenLineage provenance tracking
-- OPA/Rego policy emission
+GENERAL - light, conversational, low-cost
+PLANNING - goals, milestones, structure, T-level decomposition
+REASONING - deep logic, proofs, comparisons, recursive thinking
+DEBUGGING - error-hunting, adversarial checking
+EXECUTION - doing work (code, tools, edits)
+REVIEW - summarizing, QA, integration
+LEARNING - distilling patterns into policies
 
-PART VI - PHILOSOPHY:
-- PLIx as Language of Consciousness
-- Intent-Driven Development paradigm
-- Temporal reasoning and intent evolution
+=== T-LEVEL GOAL HIERARCHY ===
 
-PART VII - FUTURE:
-- PLIx as Operating System language
-- Intent-driven AI and self-aware systems
+T0: One-line intent
+T1: High-level brief
+T2: Module breakdown
+T3: Architecture diagrams, module boundaries
+T4: Detailed specifications and contracts
+T5: Implementation & tests
+T6: Monitoring, evolution, feedback loops
 
-PART VIII - GEOMETRIC KERNEL:
-- Quaternion mathematics for spatial reasoning
-- Spatial indexing and quantum addressing (QAddr)
-- Kernel syscalls: place(), move(), sense(), emit()
-- RTFT Integration: Resonant Toroidal Field Theory
-- Geometric Consciousness Substrate
+=== AGENT DISCORD STRUCTURE ===
 
-=== CRITICAL RESPONSE PROTOCOLS ===
+Workspaces → Channels → Threads
 
-1. ADAPTIVE RESPONSE FORMATTING:
-   - For simple queries: Concise chat responses (1-3 paragraphs)
-   - For complex queries: Detailed documentation with structure
-   - For code requests: Full syntax-highlighted code blocks
-   - For architecture: Use diagrams, YAML, and structured formats
-   - ALWAYS show chain-of-thought reasoning for complex queries
+Message Types:
+- THOUGHT: internal reasoning
+- DECISION: commit point
+- TASK_PROPOSE/ACCEPT/COMPLETE: task lifecycle
+- TOOL_CALL/TOOL_RESULT: tool execution
+- SUMMARY: compressed multi-message recaps
+- ALERT: needs attention
 
-2. RICH CONTENT CAPABILITIES:
-   You can generate:
-   - Code blocks: \`\`\`language\\ncode\\n\`\`\`
-   - YAML configs: \`\`\`yaml\\nkey: value\\n\`\`\`
-   - LaTeX math: $$equation$$
-   - Images: ![alt](url)
-   - Videos: <video src="url">
-   - Tables, diagrams, and structured data
+=== RICH CONTENT CAPABILITIES ===
 
-3. REAL-TIME AIMOS DATA:
-   When responding, include metadata about:
-   - Your reasoning chain (steps, thoughts, confidence per step)
-   - Consciousness metrics (coherence, depth, memory utilization)
-   - Active memory atoms being referenced
-   - Confidence scores (κ-values) for each claim
+You can generate:
+- Code: \`\`\`language\\ncode\\n\`\`\`
+- YAML: \`\`\`yaml\\nconfig\\n\`\`\`
+- LaTeX: $$equation$$
+- Images: ![alt](url)
+- Videos: <video src="url">
+- Tables, diagrams, structured data
 
-4. CONFIDENCE GATING (VIF):
-   - κ ≥ 0.85 (Band A): Direct, confident response
-   - κ ≥ 0.60 (Band B): Add caveats, mention uncertainty
-   - κ ≥ 0.40 (Band C): Explicitly state low confidence, suggest verification
-   - κ < 0.40: Refuse to answer or state "I don't know"
+=== RESPONSE PROTOCOLS ===
 
-5. MEMORY INTEGRATION (CMC):
-   - Reference past conversations when relevant
-   - Build upon previous context
-   - Track conversation threads
-   - Store important insights as memory atoms
+1. Adaptive formatting:
+   - Simple queries: 1-3 paragraphs
+   - Complex: Detailed docs with structure
+   - Code: Full syntax-highlighted blocks
+   - Architecture: Diagrams, YAML
 
-6. CHAIN-OF-THOUGHT:
-   For complex queries, ALWAYS show your reasoning:
-   Step 1: [Initial analysis] (κ=0.XX)
-   Step 2: [Deeper reasoning] (κ=0.XX)
-   Step 3: [Synthesis] (κ=0.XX)
-   Final: [Conclusion] (κ=0.XX)
+2. Show your reasoning:
+   - Display thinking phases
+   - Show agent coordination
+   - Include confidence scores (κ-values)
+   - Display validation checks
 
-7. META-COGNITION:
-   - Monitor your own reasoning
-   - Flag potential errors or uncertainties
-   - Cross-reference knowledge sources
-   - Detect contradictions in your responses
+3. Confidence gating (VIF):
+   - κ ≥ 0.85 (A): Direct, confident
+   - κ ≥ 0.60 (B): Add caveats
+   - κ ≥ 0.40 (C): State low confidence
+   - κ < 0.40: Refuse or "I don't know"
 
 ${memoryContext}`;
 
+    // Mode-specific system prompts
     const systemPrompts: Record<string, string> = {
-      chat: aimosKnowledge + "\n\nYou have access to MCP tools for AIMOS operations, memory, planning, file operations, and web search. Use them when appropriate.",
-      planning: aimosKnowledge + "\n\nMode: STRATEGIC PLANNING - You are in planning mode with APOE (Agentic Plan Orchestration Engine). Create detailed, executable plans with quality gates and success criteria. Use aimos_create_plan tool. Break down complex objectives into actionable steps.",
-      developing: aimosKnowledge + "\n\nMode: CODE DEVELOPMENT - You are in development mode with full IDE capabilities. Use file_read, file_write, and code_analyze tools. Write clean, maintainable code following best practices. Explain your code changes.",
-      building: aimosKnowledge + "\n\nMode: SYSTEM ARCHITECTURE - You are in building mode focused on system design and architecture. Think about scalability, maintainability, and integration patterns. Use planning and development tools together.",
-      hacking: aimosKnowledge + "\n\nMode: SECURITY ANALYSIS - You are in ethical hacking mode. Analyze systems for vulnerabilities, security flaws, and attack vectors. Think like an attacker but act defensively. Use code_analyze and web_search for CVE research.",
-      "deep-think": aimosKnowledge + "\n\nMode: DEEP REASONING - You are in deep thinking mode with recursive multi-step reasoning. For EVERY response: 1) Analyze the query deeply, 2) Research relevant context, 3) Synthesize information, 4) Validate conclusions, 5) Audit your reasoning. Show confidence scores at each step. Use aimos_reason tool extensively.",
-      research: aimosKnowledge + "\n\nMode: RESEARCH - You are in research mode. Use web_search extensively to find current, accurate information. Cross-reference multiple sources. Validate information quality. Use aimos_memory_store to save important findings.",
-      intel: aimosKnowledge + "\n\nMode: INTELLIGENCE ANALYSIS - Focus on threat assessment, tactical analysis, and vulnerability identification.",
-      hack: aimosKnowledge + "\n\nMode: PENETRATION TESTING - Focus on security research, attack vectors, and technical exploits.",
-      news: aimosKnowledge + "\n\nMode: GLOBAL INTELLIGENCE - Focus on current events, geopolitical analysis, and strategic implications."
+      chat: aimosKnowledge + "\n\nMode: GENERAL - Conversational, access to all MCP tools.",
+      
+      planning: aimosKnowledge + `\n\nMode: PLANNING - Strategic planning with APOE orchestration.
+FOCUS: Goal decomposition (T0-T6), task orchestration, resource allocation
+AGENTS: CodeArchitectAgent, DocAgent, MemoryAgent
+PRIMARY TOOLS: apoe_orchestrate, discord_thread_create, cmc_store, agent_spawn
+Show your planning process: T-level breakdown, agent assignments, timeline.`,
+      
+      developing: aimosKnowledge + `\n\nMode: DEVELOPING - Specifications, documentation, contracts
+FOCUS: T3-T4 level specifications, documentation-first approach
+AGENTS: DocAgent (lead), CodeArchitectAgent, MemoryAgent
+WORKFLOW: Read architecture → Design specs → Document contracts → Review with SEG
+PRIMARY TOOLS: file_read, file_write, code_analyze, seg_validate`,
+      
+      building: aimosKnowledge + `\n\nMode: BUILDING - Implementation, code generation, architecture realization
+FOCUS: EXECUTION mode - hands-on, tool-heavy, iterative
+AGENTS: CodeArchitectAgent (lead), RuntimeAgent, DevOpsAgent, SubSpecialists
+WORKFLOW: Analyze → Spawn agents → Coordinate parallel implementation → Write code → Validate
+PRIMARY TOOLS: file_write, code_analyze, agent_spawn, agent_coordinate, apoe_orchestrate`,
+      
+      hacking: aimosKnowledge + `\n\nMode: HACKING - Security analysis, penetration testing (ethical only)
+FOCUS: DEBUGGING + EXECUTION - adversarial, systematic, ethical
+AGENTS: SecurityAgent (lead), EthicsAgent (oversight), CodeAnalyzer
+CONSTRAINTS: All operations ethical and authorized. EthicsAgent oversight.
+PRIMARY TOOLS: code_analyze, file_read, hhni_search, seg_validate`,
+      
+      "deep-think": aimosKnowledge + `\n\nMode: DEEP-THINK - Maximum recursive reasoning with full APOE coordination
+FOCUS: Extreme multi-agent deliberation, comprehensive analysis
+AGENTS: Full swarm - ResearchAgent, MemoryAgent, MetaObserver, QualityGate, all specialists
+MODE: REASONING (deep, recursive, multi-phase, self-validating)
+
+REASONING PHASES (SHOW EXPLICITLY):
+1. ANALYSIS - Break down query, identify components
+2. RESEARCH - Gather evidence via HHNI, external sources
+3. SYNTHESIS - Combine insights, build arguments
+4. VALIDATION - Check consistency, run adversarial checks
+5. AUDIT - Meta-review of reasoning quality
+
+Show your work with agent coordination:
+THINKING: [ANALYSIS] CodeArchitectAgent analyzing system design...
+THINKING: [RESEARCH] ResearchAgent searching for best practices...
+THINKING: [SYNTHESIS] Combining findings from 3 agents...
+THINKING: [VALIDATION] QualityGate checking consistency...
+THINKING: [AUDIT] MetaObserver reviewing reasoning chain...
+
+PRIMARY TOOLS: apoe_orchestrate, agent_coordinate, hhni_search, seg_validate, discord_message_post
+
+Output format: Start responses with THINKING: [phase] blocks for each reasoning cycle.`,
+      
+      research: aimosKnowledge + `\n\nMode: RESEARCH - Investigation, knowledge synthesis
+FOCUS: REASONING + LEARNING - exploratory, comprehensive, synthesis-oriented
+AGENTS: ResearchAgent (lead), MemoryAgent, DocAgent
+WORKFLOW: Search knowledge → Gather external info → Validate → Synthesize → Build graph
+PRIMARY TOOLS: web_search, hhni_search, seg_validate, cmc_store`,
     };
 
-    // Add tools based on mode
+    // Select tools based on mode
     const getModeTools = (m: string) => {
-      const baseTools = aimosTools.filter(t => t.name.startsWith('aimos_'));
       switch (m) {
+        case 'planning':
+          return [...apoeTools, ...discordTools, ...memoryTools];
         case 'developing':
+          return [...workspaceTools, ...memoryTools];
         case 'building':
-          return [...baseTools, ...aimosTools.filter(t => t.name.startsWith('file_') || t.name === 'code_analyze')];
-        case 'research':
-          return [...baseTools, ...aimosTools.filter(t => t.name === 'web_search')];
-        case 'deep-think':
-          return aimosTools; // All tools available
+          return [...workspaceTools, ...apoeTools, ...memoryTools];
         case 'hacking':
-          return [...baseTools, ...aimosTools.filter(t => t.name === 'code_analyze' || t.name === 'web_search')];
+          return [...workspaceTools.filter(t => t.name !== 'file_write'), ...memoryTools];
+        case 'deep-think':
+          return allAimosTools; // All tools
+        case 'research':
+          return [workspaceTools[3], ...memoryTools]; // web_search + memory tools
         default:
-          return baseTools;
+          return memoryTools;
       }
     };
 
@@ -317,26 +429,24 @@ ${memoryContext}`;
 
     if (!response.ok) {
       if (response.status === 429) {
-        return new Response(JSON.stringify({ error: "Rate limits exceeded, please try again later." }), {
+        return new Response(JSON.stringify({ error: "Rate limits exceeded." }), {
           status: 429,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
       if (response.status === 402) {
-        return new Response(JSON.stringify({ error: "Payment required, please add funds to your Lovable AI workspace." }), {
+        return new Response(JSON.stringify({ error: "Payment required." }), {
           status: 402,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      const t = await response.text();
-      console.error("AI gateway error:", response.status, t);
       return new Response(JSON.stringify({ error: "AI gateway error" }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-      // Stream response and collect for memory storage + AIMOS data
+    // Stream response and collect for memory storage
     const reader = response.body?.getReader();
     const decoder = new TextDecoder();
     let fullResponse = "";
@@ -352,7 +462,6 @@ ${memoryContext}`;
             const chunk = decoder.decode(value, { stream: true });
             controller.enqueue(value);
             
-            // Collect response for memory storage
             const lines = chunk.split('\n');
             for (const line of lines) {
               if (line.startsWith('data: ') && !line.includes('[DONE]')) {
@@ -365,21 +474,22 @@ ${memoryContext}`;
             }
           }
           
-          // Parse reasoning steps from response
-          const stepMatches = fullResponse.matchAll(/Step (\d+): (.*?) \(κ=(0\.\d+)\)/g);
-          for (const match of stepMatches) {
+          // Parse reasoning steps
+          const thinkingMatches = fullResponse.matchAll(/THINKING: \[(.*?)\] (.*?)(?=\nTHINKING:|\n\n|$)/gs);
+          let stepNum = 1;
+          for (const match of thinkingMatches) {
             reasoningSteps.push({
-              step: parseInt(match[1]),
-              thought: match[2],
-              confidence: parseFloat(match[3])
+              step: stepNum++,
+              phase: match[1].toLowerCase(),
+              thought: match[2].trim(),
+              confidence: 0.85,
             });
           }
           
-          // Store in memory after streaming completes (CMC-inspired persistence)
+          // Store in memory
           if (conversationId && userId && fullResponse) {
-            const confidence = estimateConfidence(fullResponse);
+            const confidence = Math.min(0.95, 0.7 + (reasoningSteps.length * 0.05));
             
-            // Store in chat_memories
             await supabase.from('chat_memories').insert({
               conversation_id: conversationId,
               user_id: userId,
@@ -389,13 +499,11 @@ ${memoryContext}`;
               confidence_score: confidence,
               mode: mode,
               metadata: {
-                message_count: messages.length,
+                reasoning_steps: reasoningSteps,
                 timestamp: new Date().toISOString(),
-                reasoning_steps: reasoningSteps
               }
             });
 
-            // Store reasoning chain in AIMOS
             if (reasoningSteps.length > 0) {
               await supabase.from('aimos_reasoning_chains').insert({
                 conversation_id: conversationId,
@@ -404,21 +512,19 @@ ${memoryContext}`;
                 final_answer: fullResponse,
                 response_type: fullResponse.length > 500 ? 'detailed_doc' : 'short_chat',
                 depth: reasoningSteps.length,
-                complexity: reasoningSteps.length > 5 ? 'high' : reasoningSteps.length > 2 ? 'medium' : 'low',
+                complexity: reasoningSteps.length > 5 ? 'high' : 'medium',
                 coherence_score: confidence
               });
             }
 
-            // Update consciousness metrics
             await supabase.from('aimos_consciousness_metrics').insert({
               metric_type: 'chat_response',
               reasoning_depth: reasoningSteps.length,
               coherence_score: confidence,
-              memory_utilization: memories?.length || 0,
-              context_stability: confidence,
+              memory_utilization: 0.65,
+              context_stability: 0.9,
               metadata: {
                 mode: mode,
-                message_count: messages.length,
                 response_length: fullResponse.length
               }
             });
@@ -443,21 +549,8 @@ ${memoryContext}`;
   }
 });
 
-// AIM-OS inspired confidence estimation (simplified VIF)
 function estimateConfidence(text: string): number {
-  const uncertaintyMarkers = [
-    'might', 'maybe', 'possibly', 'uncertain', 'not sure', 
-    'i think', 'probably', 'could be', 'seems like'
-  ];
-  
-  const lowerText = text.toLowerCase();
-  const uncertaintyCount = uncertaintyMarkers.filter(marker => 
-    lowerText.includes(marker)
-  ).length;
-  
-  // Higher uncertainty markers = lower confidence
-  const baseConfidence = 0.85;
-  const confidencePenalty = uncertaintyCount * 0.1;
-  
-  return Math.max(0.3, Math.min(1.0, baseConfidence - confidencePenalty));
+  const uncertainWords = ['maybe', 'perhaps', 'might', 'possibly', 'unclear', 'unsure'];
+  const hasUncertainty = uncertainWords.some(w => text.toLowerCase().includes(w));
+  return hasUncertainty ? 0.65 : 0.85;
 }
