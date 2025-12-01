@@ -1,6 +1,7 @@
 const SUPABASE_URL = "https://trevewovdgsxhatsytlw.supabase.co";
 
 type Msg = { role: "user" | "assistant" | "system"; content: string };
+export type ChatMode = "chat" | "intel" | "hack" | "news" | "planning" | "developing" | "building" | "hacking" | "deep-think" | "research";
 
 export async function streamNeoChat({
   messages,
@@ -12,7 +13,7 @@ export async function streamNeoChat({
   onError,
 }: {
   messages: Msg[];
-  mode?: "chat" | "intel" | "hack" | "news";
+  mode?: ChatMode;
   userId?: string;
   conversationId?: string;
   onDelta: (deltaText: string) => void;

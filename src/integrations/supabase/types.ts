@@ -1268,6 +1268,91 @@ export type Database = {
         }
         Relationships: []
       }
+      deployment_configs: {
+        Row: {
+          build_command: string
+          created_at: string | null
+          domain: string | null
+          environment_variables: Json | null
+          id: string
+          name: string
+          output_directory: string
+          project_id: string | null
+          provider: string
+          updated_at: string | null
+        }
+        Insert: {
+          build_command?: string
+          created_at?: string | null
+          domain?: string | null
+          environment_variables?: Json | null
+          id?: string
+          name: string
+          output_directory?: string
+          project_id?: string | null
+          provider: string
+          updated_at?: string | null
+        }
+        Update: {
+          build_command?: string
+          created_at?: string | null
+          domain?: string | null
+          environment_variables?: Json | null
+          id?: string
+          name?: string
+          output_directory?: string
+          project_id?: string | null
+          provider?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "deployment_configs_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      deployments: {
+        Row: {
+          completed_at: string | null
+          config_id: string | null
+          created_at: string | null
+          id: string
+          logs: string[] | null
+          status: string
+          url: string | null
+        }
+        Insert: {
+          completed_at?: string | null
+          config_id?: string | null
+          created_at?: string | null
+          id: string
+          logs?: string[] | null
+          status: string
+          url?: string | null
+        }
+        Update: {
+          completed_at?: string | null
+          config_id?: string | null
+          created_at?: string | null
+          id?: string
+          logs?: string[] | null
+          status?: string
+          url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "deployments_config_id_fkey"
+            columns: ["config_id"]
+            isOneToOne: false
+            referencedRelation: "deployment_configs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       doc_structure: {
         Row: {
           cluster_ids: string[] | null
