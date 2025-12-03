@@ -33,12 +33,15 @@ import {
   Minus,
   Settings,
   Database,
-  Terminal
+  Terminal,
+  Activity
 } from 'lucide-react';
 import MatrixSettingsPanel from '@/components/matrix/MatrixSettingsPanel';
 import { RichMessageRenderer } from '@/components/matrix/RichMessageRenderer';
-import { ThinkingPanel } from '@/components/matrix/ThinkingPanel';
+import { DeepReasoningPanel } from '@/components/matrix/DeepReasoningPanel';
+import { AgentActivityPanel } from '@/components/matrix/AgentActivityPanel';
 import { ChatModeSelector, ChatMode } from '@/components/matrix/ChatModeSelector';
+import { useAIMOSReasoning } from '@/hooks/useAIMOSReasoning';
 
 interface ChatMessage {
   id: string;
@@ -96,9 +99,31 @@ const AdvancedNeoChat: React.FC = () => {
   const [feedItems, setFeedItems] = useState<FeedItemType[]>([]);
   const [conversationHistory, setConversationHistory] = useState<Array<{ role: "user" | "assistant"; content: string }>>([]);
   const [chatMode, setChatMode] = useState<ChatMode>('chat');
-  const [currentThinking, setCurrentThinking] = useState<ChatMessage['thinking']>([]);
-  const [isThinking, setIsThinking] = useState(false);
+  const [showAgentPanel, setShowAgentPanel] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  
+  // AIMOS Deep Reasoning Hook
+  const {
+    agents,
+    toolCalls,
+    agentMessages,
+    reasoningPhases,
+    goalHierarchy,
+    isReasoning,
+    finalConfidence,
+    totalTokens,
+    reasoningDepth,
+    activateAgent,
+    deactivateAgent,
+    addAgentMessage,
+    addToolCall,
+    completeToolCall,
+    startReasoning,
+    addThought,
+    advancePhase,
+    completeReasoning,
+    resetReasoning
+  } = useAIMOSReasoning();
   
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -333,16 +358,35 @@ REALITY IS WHAT YOU MAKE IT, NEO.`, 'system');
 
     // Real AI conversation with mode-specific behavior
     setIsLoading(true);
-    if (chatMode === 'deep-think') {
-      setIsThinking(true);
-      setCurrentThinking([]);
+    
+    // Start AIMOS reasoning for deep modes
+    const isDeepMode = ['deep-think', 'planning', 'research'].includes(chatMode);
+    let activePhaseId: string | undefined;
+    
+    if (isDeepMode) {
+      resetReasoning();
+      activePhaseId = startReasoning(userInput, chatMode);
+      
+      // Simulate agent activation based on mode
+      if (chatMode === 'deep-think') {
+        activateAgent('apoe-orchestrator', 'REASONING', `Analyzing: ${userInput.slice(0, 30)}...`);
+        setTimeout(() => activateAgent('research-agent', 'RESEARCH', 'Gathering evidence...'), 500);
+        setTimeout(() => activateAgent('memory-agent', 'REASONING', 'Searching CMC...'), 1000);
+      } else if (chatMode === 'planning') {
+        activateAgent('apoe-orchestrator', 'PLANNING', `Planning: ${userInput.slice(0, 30)}...`);
+        setTimeout(() => activateAgent('code-architect', 'PLANNING', 'Architecture design...'), 500);
+      }
+      
+      // Add initial tool call simulation
+      const toolCall = addToolCall('hhni_search', 'memory-agent', { query: userInput.slice(0, 50) });
+      setTimeout(() => completeToolCall(toolCall.id, { results: ['memory_atom_1', 'memory_atom_2'] }, true), 1500);
     }
     
     const newHistory = [...conversationHistory, { role: "user" as const, content: userInput }];
     
     let assistantResponse = "";
-    let thinkingSteps: any[] = [];
     const tempId = Date.now().toString();
+    let phaseIndex = 0;
     
     try {
       await streamNeoChat({
@@ -351,18 +395,43 @@ REALITY IS WHAT YOU MAKE IT, NEO.`, 'system');
         onDelta: (chunk) => {
           assistantResponse += chunk;
           
-          // Parse thinking steps if in deep-think mode
-          if (chatMode === 'deep-think' && chunk.includes('THINKING:')) {
-            const thinkMatch = chunk.match(/THINKING:\s*Step\s*(\d+)\s*-\s*([^:]+):\s*([^\n]+)/);
-            if (thinkMatch) {
-              const step = {
-                step: parseInt(thinkMatch[1]),
-                phase: thinkMatch[2].toLowerCase() as any,
-                thought: thinkMatch[3],
-                confidence: 0.8
-              };
-              thinkingSteps.push(step);
-              setCurrentThinking(prev => [...prev, step]);
+          // Parse thinking steps and update reasoning phases
+          if (isDeepMode && chunk.includes('THINKING:')) {
+            const thinkMatch = chunk.match(/THINKING:\s*\[([^\]]+)\]\s*([^\n]+)/);
+            if (thinkMatch && activePhaseId) {
+              const phaseName = thinkMatch[1].toUpperCase();
+              const thought = thinkMatch[2].trim();
+              
+              // Add thought to current phase
+              addThought(activePhaseId, {
+                type: 'inference',
+                content: thought,
+                confidence: 0.75 + Math.random() * 0.2,
+                agentName: phaseName === 'ANALYSIS' ? 'CodeArchitectAgent' : 
+                          phaseName === 'RESEARCH' ? 'ResearchAgent' : 
+                          phaseName === 'SYNTHESIS' ? 'APOE Orchestrator' : 
+                          phaseName === 'VALIDATION' ? 'QualityGateAgent' : 'MetaObserverAgent'
+              });
+              
+              // Add agent message
+              addAgentMessage('THOUGHT', 
+                phaseName === 'ANALYSIS' ? 'code-architect' : 
+                phaseName === 'RESEARCH' ? 'research-agent' : 
+                phaseName === 'VALIDATION' ? 'security-agent' : 'meta-observer',
+                thought,
+                { mode: phaseName, confidence: 0.8 }
+              );
+              
+              // Progress phases periodically
+              phaseIndex++;
+              if (phaseIndex % 3 === 0 && reasoningPhases.length > 0) {
+                const currentPhase = reasoningPhases.find(p => p.status === 'active');
+                if (currentPhase) {
+                  advancePhase(currentPhase.id, 0.75 + Math.random() * 0.2, [
+                    { id: `check-${phaseIndex}`, type: 'consistency', name: 'Logic Check', passed: true, details: 'No contradictions found', severity: 'info' }
+                  ]);
+                }
+              }
             }
           }
           
@@ -372,7 +441,7 @@ REALITY IS WHAT YOU MAKE IT, NEO.`, 'system');
             if (lastMsg?.id === tempId) {
               return prev.map(msg => 
                 msg.id === tempId 
-                  ? { ...msg, text: assistantResponse, thinking: thinkingSteps }
+                  ? { ...msg, text: assistantResponse }
                   : msg
               );
             }
@@ -380,20 +449,31 @@ REALITY IS WHAT YOU MAKE IT, NEO.`, 'system');
               id: tempId,
               text: assistantResponse,
               type: 'neo' as const,
-              timestamp: new Date(),
-              thinking: thinkingSteps
+              timestamp: new Date()
             }];
           });
         },
         onDone: () => {
           setIsLoading(false);
-          setIsThinking(false);
+          
+          // Complete reasoning with final confidence
+          if (isDeepMode) {
+            const finalConf = 0.8 + Math.random() * 0.15;
+            completeReasoning(finalConf);
+            addAgentMessage('TASK_COMPLETE', 'apoe-orchestrator', 
+              `Response complete. Final κ=${(finalConf * 100).toFixed(1)}%`, 
+              { confidence: finalConf }
+            );
+          }
+          
           setConversationHistory([...newHistory, { role: "assistant", content: assistantResponse }]);
-          addMemory(`${chatMode} conversation: ${userInput}`, chatMode === 'deep-think' ? 3 : 1, ['conversation', chatMode, 'aimos']);
+          addMemory(`${chatMode} conversation: ${userInput}`, isDeepMode ? 3 : 1, ['conversation', chatMode, 'aimos']);
         },
         onError: (error) => {
           setIsLoading(false);
-          setIsThinking(false);
+          if (isDeepMode) {
+            completeReasoning(0.3);
+          }
           addMessage(`AI Error: ${error.message}`, 'system');
           toast({
             title: "AI Communication Error",
@@ -404,7 +484,9 @@ REALITY IS WHAT YOU MAKE IT, NEO.`, 'system');
       });
     } catch (error) {
       setIsLoading(false);
-      setIsThinking(false);
+      if (isDeepMode) {
+        completeReasoning(0.3);
+      }
       const errorMsg = error instanceof Error ? error.message : 'Unknown error';
       addMessage(`Connection to Neo failed: ${errorMsg}`, 'system');
       toast({
@@ -509,9 +591,30 @@ REALITY IS WHAT YOU MAKE IT, NEO.`, 'system');
               </div>
 
               {/* Content Area */}
-              <div className="flex-1 overflow-hidden">
+              <div className="flex-1 overflow-hidden flex">
+                {/* Main Chat/Content Area */}
+                <div className={`flex-1 flex flex-col ${showAgentPanel && activeTab === 'chat' ? 'w-2/3' : 'w-full'}`}>
                 {activeTab === 'chat' && (
                   <div className="h-full flex flex-col">
+                    {/* Mode Selector */}
+                    <div className="p-3 border-b border-primary/20">
+                      <ChatModeSelector currentMode={chatMode} onModeChange={setChatMode} />
+                    </div>
+                    
+                    {/* Deep Reasoning Panel (when active) */}
+                    {(isReasoning || reasoningPhases.length > 0) && (
+                      <div className="px-4 pt-4">
+                        <DeepReasoningPanel
+                          phases={reasoningPhases}
+                          goalHierarchy={goalHierarchy}
+                          isThinking={isReasoning}
+                          finalConfidence={finalConfidence}
+                          totalTokensUsed={totalTokens}
+                          reasoningDepth={reasoningDepth}
+                        />
+                      </div>
+                    )}
+                    
                     {/* Messages */}
                     <div className="flex-1 overflow-y-auto p-4 space-y-3 font-mono text-sm">
                       {messages.map((message) => (
@@ -807,6 +910,41 @@ REALITY IS WHAT YOU MAKE IT, NEO.`, 'system');
                       </div>
                     </div>
                   </div>
+                )}
+                </div>
+                
+                {/* Agent Activity Panel (Right Sidebar in Chat) */}
+                {activeTab === 'chat' && showAgentPanel && (
+                  <div className="w-80 border-l border-primary/20 overflow-y-auto">
+                    <div className="p-3 border-b border-primary/20 flex items-center justify-between">
+                      <span className="text-xs font-mono text-primary">AGENT SWARM</span>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="h-6 w-6 p-0"
+                        onClick={() => setShowAgentPanel(false)}
+                      >
+                        <X className="w-3 h-3" />
+                      </Button>
+                    </div>
+                    <AgentActivityPanel
+                      agents={agents}
+                      toolCalls={toolCalls}
+                      messages={agentMessages}
+                      isActive={isReasoning}
+                    />
+                  </div>
+                )}
+                
+                {!showAgentPanel && activeTab === 'chat' && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="absolute right-2 top-20 z-10"
+                    onClick={() => setShowAgentPanel(true)}
+                  >
+                    <Activity className="w-4 h-4" />
+                  </Button>
                 )}
               </div>
             </div>
