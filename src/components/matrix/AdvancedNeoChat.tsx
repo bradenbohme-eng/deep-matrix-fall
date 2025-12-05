@@ -401,6 +401,9 @@ REALITY IS WHAT YOU MAKE IT, NEO.`, 'system');
         onDelta: (chunk) => {
           assistantResponse += chunk;
           
+          // Parse stream content for cognitive panel visualization
+          advancedAIMOS.parseStreamContent(assistantResponse);
+          
           // Parse thinking steps and update reasoning phases
           if (isDeepMode && chunk.includes('THINKING:')) {
             const thinkMatch = chunk.match(/THINKING:\s*\[([^\]]+)\]\s*([^\n]+)/);

@@ -614,6 +614,110 @@ export const useAdvancedAIMOS = () => {
     activeChainRef.current = null;
   }, []);
 
+  // ========== STREAM PARSING FOR REAL-TIME UPDATES ==========
+
+  const parseStreamContent = useCallback((content: string) => {
+    // Parse THINKING markers
+    const thinkingMatches = content.matchAll(/THINKING:\s*\[([^\]]+)\]\s*([^\n]+)/g);
+    for (const match of thinkingMatches) {
+      const phase = match[1].trim();
+      const thought = match[2].trim();
+      
+      // Check if we already have this thought
+      const existingThought = thinkingNodes.find(t => t.content === thought);
+      if (!existingThought) {
+        addThinkingNode({
+          type: 'inference',
+          content: thought,
+          confidence: 0.75 + Math.random() * 0.2,
+          depth: thinkingDepth,
+          phase,
+          agentId: 'apoe-orchestrator',
+          agentName: 'APOE Orchestrator'
+        });
+        setCurrentPhase(phase);
+      }
+    }
+    
+    // Parse AGENT markers
+    const agentMatches = content.matchAll(/AGENT:\s*\[([^\]]+)\]\s*\[([^\]]+)\]\s*([^(κ\n]+)(?:\(κ=(\d+)%\))?/g);
+    for (const match of agentMatches) {
+      const agentName = match[1].trim();
+      const action = match[2].trim();
+      const description = match[3].trim();
+      const confidence = match[4] ? parseInt(match[4]) / 100 : 0.8;
+      
+      // Find agent by name similarity
+      const agent = agents.find(a => 
+        a.name.toLowerCase().includes(agentName.toLowerCase().split('agent')[0])
+      );
+      
+      if (agent) {
+        // Update agent status
+        setAgents(prev => prev.map(a => 
+          a.id === agent.id 
+            ? { ...a, status: 'processing', currentMode: 'REASONING', currentTask: description.slice(0, 50) }
+            : a
+        ));
+        
+        // Add discord message
+        const existingMsg = discordMessages.find(m => m.content === description);
+        if (!existingMsg) {
+          addDiscordMessage(action === 'VALIDATING' ? 'TASK_COMPLETE' : 'THOUGHT', agent.id, description, {
+            confidence,
+            mode: action
+          });
+        }
+      }
+    }
+    
+    // Parse MEMORY markers
+    const memoryMatches = content.matchAll(/MEMORY:\s*\[([^\]]+)\]\s*([^\n]+)/g);
+    for (const match of memoryMatches) {
+      const operation = match[1].trim();
+      const details = match[2].trim();
+      
+      const existingMsg = discordMessages.find(m => m.content.includes(details.slice(0, 30)));
+      if (!existingMsg) {
+        addDiscordMessage('INSIGHT', 'memory-agent', `[${operation}] ${details}`, {
+          confidence: 0.9
+        });
+      }
+      
+      // Add as search result if it's a retrieval
+      if (operation === 'RECALL' || operation === 'RETRIEVE') {
+        addSearchResult({
+          source: 'CMC',
+          title: 'Memory Recall',
+          content: details,
+          relevance: 0.85,
+          confidence: 0.9,
+          tags: ['memory', 'recall']
+        });
+      }
+    }
+    
+    // Parse VALIDATION markers
+    const validationMatches = content.matchAll(/VALIDATION:\s*\[([^\]]+)\]\s*Result:\s*(PASS|FAIL)\s*-\s*([^\n]+)/g);
+    for (const match of validationMatches) {
+      const checkType = match[1].trim();
+      const passed = match[2] === 'PASS';
+      const details = match[3].trim();
+      
+      // Add validation to active chain
+      const activeChain = reasoningChains.find(c => c.status === 'active');
+      if (activeChain) {
+        addValidationCheck(activeChain.id, {
+          type: checkType.toLowerCase() as any,
+          name: `${checkType} Check`,
+          passed,
+          details,
+          severity: passed ? 'info' : 'warning'
+        });
+      }
+    }
+  }, [thinkingNodes, agents, discordMessages, thinkingDepth, addThinkingNode, addDiscordMessage, addSearchResult, addValidationCheck, reasoningChains]);
+
   // ========== RETURN ==========
 
   return {
@@ -666,7 +770,10 @@ export const useAdvancedAIMOS = () => {
     advanceToNextPhase,
     completeProcessing,
     resetProcessing,
-    getAgentsForPhase
+    getAgentsForPhase,
+    
+    // Stream parsing
+    parseStreamContent
   };
 };
 
