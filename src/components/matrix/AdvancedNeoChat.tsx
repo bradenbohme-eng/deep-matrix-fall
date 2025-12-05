@@ -34,7 +34,8 @@ import {
   Settings,
   Database,
   Terminal,
-  Activity
+  Activity,
+  Sparkles
 } from 'lucide-react';
 import MatrixSettingsPanel from '@/components/matrix/MatrixSettingsPanel';
 import { RichMessageRenderer } from '@/components/matrix/RichMessageRenderer';
@@ -42,6 +43,8 @@ import { DeepReasoningPanel } from '@/components/matrix/DeepReasoningPanel';
 import { AgentActivityPanel } from '@/components/matrix/AgentActivityPanel';
 import { ChatModeSelector, ChatMode } from '@/components/matrix/ChatModeSelector';
 import { useAIMOSReasoning } from '@/hooks/useAIMOSReasoning';
+import { CognitiveSwarmPanel } from '@/components/matrix/CognitiveSwarmPanel';
+import { useAdvancedAIMOS } from '@/hooks/useAdvancedAIMOS';
 
 interface ChatMessage {
   id: string;
@@ -94,7 +97,7 @@ const AdvancedNeoChat: React.FC = () => {
   const [isVisible, setIsVisible] = useState(true);
   const [isMinimized, setIsMinimized] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState<'chat' | 'memory' | 'network' | 'team' | 'feeds' | 'map' | 'diagram' | 'ide' | 'agents' | 'apis' | 'cloud' | 'builder' | 'matrix' | 'database' | 'code'>('chat');
+  const [activeTab, setActiveTab] = useState<'chat' | 'memory' | 'network' | 'team' | 'feeds' | 'map' | 'diagram' | 'ide' | 'agents' | 'apis' | 'cloud' | 'builder' | 'matrix' | 'database' | 'code' | 'cognitive'>('chat');
   const [codeMode, setCodeMode] = useState(false);
   const [feedItems, setFeedItems] = useState<FeedItemType[]>([]);
   const [conversationHistory, setConversationHistory] = useState<Array<{ role: "user" | "assistant"; content: string }>>([]);
@@ -124,6 +127,9 @@ const AdvancedNeoChat: React.FC = () => {
     completeReasoning,
     resetReasoning
   } = useAIMOSReasoning();
+  
+  // Advanced AIMOS Cognitive System
+  const advancedAIMOS = useAdvancedAIMOS();
   
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -499,6 +505,7 @@ REALITY IS WHAT YOU MAKE IT, NEO.`, 'system');
 
   const tabItems = [
     { id: 'chat', icon: MessageCircle, label: 'Chat' },
+    { id: 'cognitive', icon: Sparkles, label: 'Cognitive Swarm' },
     { id: 'memory', icon: Brain, label: 'Memory' },
     { id: 'network', icon: Network, label: 'Network' },
     { id: 'map', icon: Map, label: 'Intel Map' },
@@ -671,6 +678,24 @@ REALITY IS WHAT YOU MAKE IT, NEO.`, 'system');
                         )}
                       </div>
                     </form>
+                  </div>
+                )}
+
+                {activeTab === 'cognitive' && (
+                  <div className="h-full flex flex-col">
+                    <CognitiveSwarmPanel
+                      agents={advancedAIMOS.agents}
+                      reasoningChains={advancedAIMOS.reasoningChains}
+                      thinkingNodes={advancedAIMOS.thinkingNodes}
+                      searchResults={advancedAIMOS.searchResults}
+                      toolExecutions={advancedAIMOS.toolExecutions}
+                      discordMessages={advancedAIMOS.discordMessages}
+                      goalHierarchy={advancedAIMOS.goalHierarchy}
+                      isActive={advancedAIMOS.isActive}
+                      currentPhase={advancedAIMOS.currentPhase}
+                      globalConfidence={advancedAIMOS.globalConfidence}
+                      totalTokens={advancedAIMOS.totalTokens}
+                    />
                   </div>
                 )}
 
