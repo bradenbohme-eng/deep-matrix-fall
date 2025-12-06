@@ -17,6 +17,8 @@ export type ChatMode = 'chat' | 'planning' | 'developing' | 'building' | 'hackin
 interface ChatModeSelectorProps {
   currentMode: ChatMode;
   onModeChange: (mode: ChatMode) => void;
+  detectedMode?: ChatMode;
+  hybridModes?: ChatMode[];
 }
 
 const modes = [
@@ -71,31 +73,56 @@ const modes = [
   }
 ];
 
-export const ChatModeSelector: React.FC<ChatModeSelectorProps> = ({ currentMode, onModeChange }) => {
+export const ChatModeSelector: React.FC<ChatModeSelectorProps> = ({ 
+  currentMode, 
+  onModeChange,
+  detectedMode,
+  hybridModes = []
+}) => {
   return (
-    <div className="flex flex-wrap gap-2 p-3 bg-black/40 border border-primary/20 rounded-lg">
-      {modes.map(mode => {
-        const Icon = mode.icon;
-        const isActive = currentMode === mode.id;
-        
-        return (
-          <Button
-            key={mode.id}
-            variant={isActive ? "default" : "outline"}
-            size="sm"
-            onClick={() => onModeChange(mode.id)}
-            className={`gap-2 ${!isActive && 'hover:' + mode.color} ${isActive && mode.color}`}
-          >
-            <Icon className="w-4 h-4" />
-            {mode.label}
-            {isActive && (
-              <Badge variant="secondary" className="ml-1 text-xs px-1">
-                ACTIVE
-              </Badge>
-            )}
-          </Button>
-        );
-      })}
+    <div className="flex flex-col gap-2 p-3 bg-black/40 border border-primary/20 rounded-lg">
+      {/* Auto-detection indicator */}
+      {currentMode === 'chat' && detectedMode && detectedMode !== 'chat' && (
+        <div className="flex items-center gap-2 text-xs font-mono text-primary/80 px-2 py-1 bg-primary/10 rounded border border-primary/30">
+          <Brain className="w-3 h-3" />
+          <span>Auto-detecting: {detectedMode.toUpperCase()}</span>
+          {hybridModes.length > 0 && (
+            <span className="text-muted-foreground">+ {hybridModes.join(', ')}</span>
+          )}
+        </div>
+      )}
+      
+      <div className="flex flex-wrap gap-2">
+        {modes.map(mode => {
+          const Icon = mode.icon;
+          const isActive = currentMode === mode.id;
+          const isDetected = detectedMode === mode.id && currentMode === 'chat';
+          const isHybrid = hybridModes.includes(mode.id);
+          
+          return (
+            <Button
+              key={mode.id}
+              variant={isActive ? "default" : "outline"}
+              size="sm"
+              onClick={() => onModeChange(mode.id)}
+              className={`gap-2 ${!isActive && 'hover:' + mode.color} ${isActive && mode.color} ${isDetected && !isActive && 'ring-2 ring-primary/50'} ${isHybrid && !isActive && 'border-dashed'}`}
+            >
+              <Icon className="w-4 h-4" />
+              {mode.label}
+              {isActive && (
+                <Badge variant="secondary" className="ml-1 text-xs px-1">
+                  ACTIVE
+                </Badge>
+              )}
+              {isDetected && !isActive && (
+                <Badge variant="outline" className="ml-1 text-[8px] px-1 border-primary/50">
+                  AUTO
+                </Badge>
+              )}
+            </Button>
+          );
+        })}
+      </div>
     </div>
   );
 };

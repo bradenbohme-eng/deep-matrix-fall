@@ -462,6 +462,7 @@ export const CognitiveSwarmPanel: React.FC<CognitiveSwarmPanelProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState('swarm');
   const scrollRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   
   const activeAgents = agents.filter(a => a.status === 'active' || a.status === 'processing');
   const activeChain = reasoningChains.find(c => c.status === 'active');
@@ -476,9 +477,9 @@ export const CognitiveSwarmPanel: React.FC<CognitiveSwarmPanelProps> = ({
   }, [discordMessages, thinkingNodes]);
   
   return (
-    <Card className="bg-black/60 border-primary/20 backdrop-blur-sm overflow-hidden h-full">
+    <Card className="bg-black/60 border-primary/20 backdrop-blur-sm h-full flex flex-col">
       {/* Header */}
-      <div className="p-3 border-b border-primary/20 flex items-center justify-between bg-black/40">
+      <div className="p-3 border-b border-primary/20 flex items-center justify-between bg-black/40 flex-shrink-0">
         <div className="flex items-center gap-3">
           <Network className={`w-5 h-5 ${isActive ? 'text-green-400 animate-pulse' : 'text-primary/60'}`} />
           <div className="flex flex-col">
@@ -507,8 +508,8 @@ export const CognitiveSwarmPanel: React.FC<CognitiveSwarmPanelProps> = ({
         </div>
       </div>
       
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
-        <TabsList className="grid grid-cols-4 gap-1 p-1 m-2 bg-black/40 rounded-lg">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col overflow-hidden">
+        <TabsList className="grid grid-cols-4 gap-1 p-1 m-2 bg-black/40 rounded-lg flex-shrink-0">
           <TabsTrigger value="swarm" className="text-[10px] font-mono data-[state=active]:bg-primary/20">
             <Bot className="w-3 h-3 mr-1" />
             SWARM
@@ -527,7 +528,7 @@ export const CognitiveSwarmPanel: React.FC<CognitiveSwarmPanelProps> = ({
           </TabsTrigger>
         </TabsList>
         
-        <ScrollArea className="flex-1 px-2 pb-2" ref={scrollRef}>
+        <div ref={containerRef} className="flex-1 overflow-y-auto px-2 pb-2" style={{ maxHeight: 'calc(100% - 120px)' }}>
           {/* AGENT SWARM TAB */}
           <TabsContent value="swarm" className="mt-0 space-y-3">
             {/* Orchestrator Status */}
@@ -888,7 +889,7 @@ export const CognitiveSwarmPanel: React.FC<CognitiveSwarmPanelProps> = ({
               </div>
             </div>
           </TabsContent>
-        </ScrollArea>
+        </div>
       </Tabs>
     </Card>
   );
