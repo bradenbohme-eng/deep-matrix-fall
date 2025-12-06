@@ -35,14 +35,15 @@ import {
   Database,
   Terminal,
   Activity,
-  Sparkles
+  Sparkles,
+  ChevronLeft,
+  ChevronRight,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 import MatrixSettingsPanel from '@/components/matrix/MatrixSettingsPanel';
 import { RichMessageRenderer } from '@/components/matrix/RichMessageRenderer';
-import { DeepReasoningPanel } from '@/components/matrix/DeepReasoningPanel';
-import { AgentActivityPanel } from '@/components/matrix/AgentActivityPanel';
 import { ChatModeSelector, ChatMode } from '@/components/matrix/ChatModeSelector';
-import { useAIMOSReasoning } from '@/hooks/useAIMOSReasoning';
 import { CognitiveSwarmPanel } from '@/components/matrix/CognitiveSwarmPanel';
 import { useAdvancedAIMOS } from '@/hooks/useAdvancedAIMOS';
 
@@ -52,19 +53,6 @@ interface ChatMessage {
   type: 'user' | 'system' | 'neo' | 'hack' | 'news' | 'memory';
   timestamp: Date;
   category?: string;
-  thinking?: Array<{
-    step: number;
-    phase: 'analysis' | 'research' | 'synthesis' | 'validation' | 'audit';
-    thought: string;
-    confidence: number;
-    subSteps?: Array<{ action: string; result: string; confidence: number }>;
-    checks?: Array<{ type: string; passed: boolean; details: string }>;
-  }>;
-  aimosData?: {
-    reasoning?: Array<{ step: number; thought: string; confidence: number }>;
-    metrics?: { coherence?: number; reasoning_depth?: number; memory_utilization?: number };
-    memoryAtoms?: Array<{ content: string; confidence_score: number; tags: string[] }>;
-  };
 }
 
 interface Memory {
@@ -97,38 +85,15 @@ const AdvancedNeoChat: React.FC = () => {
   const [isVisible, setIsVisible] = useState(true);
   const [isMinimized, setIsMinimized] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState<'chat' | 'memory' | 'network' | 'team' | 'feeds' | 'map' | 'diagram' | 'ide' | 'agents' | 'apis' | 'cloud' | 'builder' | 'matrix' | 'database' | 'code' | 'cognitive'>('chat');
+  const [activeTab, setActiveTab] = useState<'chat' | 'memory' | 'network' | 'team' | 'feeds' | 'map' | 'diagram' | 'ide' | 'agents' | 'apis' | 'cloud' | 'builder' | 'matrix' | 'database' | 'code'>('chat');
   const [codeMode, setCodeMode] = useState(false);
   const [feedItems, setFeedItems] = useState<FeedItemType[]>([]);
   const [conversationHistory, setConversationHistory] = useState<Array<{ role: "user" | "assistant"; content: string }>>([]);
   const [chatMode, setChatMode] = useState<ChatMode>('chat');
-  const [showAgentPanel, setShowAgentPanel] = useState(true);
+  const [showCognitivePanel, setShowCognitivePanel] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   
-  // AIMOS Deep Reasoning Hook
-  const {
-    agents,
-    toolCalls,
-    agentMessages,
-    reasoningPhases,
-    goalHierarchy,
-    isReasoning,
-    finalConfidence,
-    totalTokens,
-    reasoningDepth,
-    activateAgent,
-    deactivateAgent,
-    addAgentMessage,
-    addToolCall,
-    completeToolCall,
-    startReasoning,
-    addThought,
-    advancePhase,
-    completeReasoning,
-    resetReasoning
-  } = useAIMOSReasoning();
-  
-  // Advanced AIMOS Cognitive System
+  // Advanced AIMOS Cognitive System - THE CORE
   const advancedAIMOS = useAdvancedAIMOS();
   
   const scrollToBottom = () => {
@@ -365,34 +330,23 @@ REALITY IS WHAT YOU MAKE IT, NEO.`, 'system');
     // Real AI conversation with mode-specific behavior
     setIsLoading(true);
     
-    // Start AIMOS reasoning for deep modes
-    const isDeepMode = ['deep-think', 'planning', 'research'].includes(chatMode);
-    let activePhaseId: string | undefined;
+    // CRITICAL: Start deep cognitive processing BEFORE the AI call
+    const isDeepMode = ['deep-think', 'planning', 'research', 'building', 'developing'].includes(chatMode);
+    let activeChainId: string | undefined;
     
-    if (isDeepMode) {
-      resetReasoning();
-      activePhaseId = startReasoning(userInput, chatMode);
-      
-      // Simulate agent activation based on mode
-      if (chatMode === 'deep-think') {
-        activateAgent('apoe-orchestrator', 'REASONING', `Analyzing: ${userInput.slice(0, 30)}...`);
-        setTimeout(() => activateAgent('research-agent', 'RESEARCH', 'Gathering evidence...'), 500);
-        setTimeout(() => activateAgent('memory-agent', 'REASONING', 'Searching CMC...'), 1000);
-      } else if (chatMode === 'planning') {
-        activateAgent('apoe-orchestrator', 'PLANNING', `Planning: ${userInput.slice(0, 30)}...`);
-        setTimeout(() => activateAgent('code-architect', 'PLANNING', 'Architecture design...'), 500);
-      }
-      
-      // Add initial tool call simulation
-      const toolCall = addToolCall('hhni_search', 'memory-agent', { query: userInput.slice(0, 50) });
-      setTimeout(() => completeToolCall(toolCall.id, { results: ['memory_atom_1', 'memory_atom_2'] }, true), 1500);
+    // Reset and initialize cognitive processing
+    advancedAIMOS.resetProcessing();
+    
+    if (isDeepMode || userInput.length > 50) {
+      // Start the cognitive swarm
+      activeChainId = await advancedAIMOS.startDeepProcessing(userInput, chatMode);
     }
     
     const newHistory = [...conversationHistory, { role: "user" as const, content: userInput }];
     
     let assistantResponse = "";
     const tempId = Date.now().toString();
-    let phaseIndex = 0;
+    let lastPhaseUpdate = Date.now();
     
     try {
       await streamNeoChat({
@@ -401,46 +355,16 @@ REALITY IS WHAT YOU MAKE IT, NEO.`, 'system');
         onDelta: (chunk) => {
           assistantResponse += chunk;
           
-          // Parse stream content for cognitive panel visualization
+          // CRITICAL: Parse stream content for cognitive panel visualization in real-time
           advancedAIMOS.parseStreamContent(assistantResponse);
           
-          // Parse thinking steps and update reasoning phases
-          if (isDeepMode && chunk.includes('THINKING:')) {
-            const thinkMatch = chunk.match(/THINKING:\s*\[([^\]]+)\]\s*([^\n]+)/);
-            if (thinkMatch && activePhaseId) {
-              const phaseName = thinkMatch[1].toUpperCase();
-              const thought = thinkMatch[2].trim();
-              
-              // Add thought to current phase
-              addThought(activePhaseId, {
-                type: 'inference',
-                content: thought,
-                confidence: 0.75 + Math.random() * 0.2,
-                agentName: phaseName === 'ANALYSIS' ? 'CodeArchitectAgent' : 
-                          phaseName === 'RESEARCH' ? 'ResearchAgent' : 
-                          phaseName === 'SYNTHESIS' ? 'APOE Orchestrator' : 
-                          phaseName === 'VALIDATION' ? 'QualityGateAgent' : 'MetaObserverAgent'
-              });
-              
-              // Add agent message
-              addAgentMessage('THOUGHT', 
-                phaseName === 'ANALYSIS' ? 'code-architect' : 
-                phaseName === 'RESEARCH' ? 'research-agent' : 
-                phaseName === 'VALIDATION' ? 'security-agent' : 'meta-observer',
-                thought,
-                { mode: phaseName, confidence: 0.8 }
-              );
-              
-              // Progress phases periodically
-              phaseIndex++;
-              if (phaseIndex % 3 === 0 && reasoningPhases.length > 0) {
-                const currentPhase = reasoningPhases.find(p => p.status === 'active');
-                if (currentPhase) {
-                  advancePhase(currentPhase.id, 0.75 + Math.random() * 0.2, [
-                    { id: `check-${phaseIndex}`, type: 'consistency', name: 'Logic Check', passed: true, details: 'No contradictions found', severity: 'info' }
-                  ]);
-                }
-              }
+          // Advance phases periodically for visual feedback
+          if (activeChainId && Date.now() - lastPhaseUpdate > 2000) {
+            const chains = advancedAIMOS.reasoningChains;
+            const activeChain = chains.find(c => c.status === 'active');
+            if (activeChain) {
+              advancedAIMOS.advanceToNextPhase(activeChain.id);
+              lastPhaseUpdate = Date.now();
             }
           }
           
@@ -465,24 +389,16 @@ REALITY IS WHAT YOU MAKE IT, NEO.`, 'system');
         onDone: () => {
           setIsLoading(false);
           
-          // Complete reasoning with final confidence
-          if (isDeepMode) {
-            const finalConf = 0.8 + Math.random() * 0.15;
-            completeReasoning(finalConf);
-            addAgentMessage('TASK_COMPLETE', 'apoe-orchestrator', 
-              `Response complete. Final κ=${(finalConf * 100).toFixed(1)}%`, 
-              { confidence: finalConf }
-            );
-          }
+          // Complete cognitive processing
+          const finalConf = 0.75 + Math.random() * 0.2;
+          advancedAIMOS.completeProcessing(finalConf);
           
           setConversationHistory([...newHistory, { role: "assistant", content: assistantResponse }]);
           addMemory(`${chatMode} conversation: ${userInput}`, isDeepMode ? 3 : 1, ['conversation', chatMode, 'aimos']);
         },
         onError: (error) => {
           setIsLoading(false);
-          if (isDeepMode) {
-            completeReasoning(0.3);
-          }
+          advancedAIMOS.completeProcessing(0.3);
           addMessage(`AI Error: ${error.message}`, 'system');
           toast({
             title: "AI Communication Error",
@@ -493,9 +409,7 @@ REALITY IS WHAT YOU MAKE IT, NEO.`, 'system');
       });
     } catch (error) {
       setIsLoading(false);
-      if (isDeepMode) {
-        completeReasoning(0.3);
-      }
+      advancedAIMOS.completeProcessing(0.3);
       const errorMsg = error instanceof Error ? error.message : 'Unknown error';
       addMessage(`Connection to Neo failed: ${errorMsg}`, 'system');
       toast({
@@ -508,7 +422,6 @@ REALITY IS WHAT YOU MAKE IT, NEO.`, 'system');
 
   const tabItems = [
     { id: 'chat', icon: MessageCircle, label: 'Chat' },
-    { id: 'cognitive', icon: Sparkles, label: 'Cognitive Swarm' },
     { id: 'memory', icon: Brain, label: 'Memory' },
     { id: 'network', icon: Network, label: 'Network' },
     { id: 'map', icon: Map, label: 'Intel Map' },
@@ -544,7 +457,7 @@ REALITY IS WHAT YOU MAKE IT, NEO.`, 'system');
             {/* Matrix Rain Background */}
             <MatrixSidebarRain />
             {/* Tab Buttons - Render on top of matrix rain */}
-            <div className="relative z-10 flex flex-col items-center space-y-2 w-full">
+            <div className="relative z-10 flex flex-col items-center space-y-2 w-full overflow-y-auto">
               {tabItems.map((item) => {
                 const IconComponent = item.icon;
                 return (
@@ -579,8 +492,28 @@ REALITY IS WHAT YOU MAKE IT, NEO.`, 'system');
                     <div className="w-2 h-2 bg-yellow-500 rounded-full animate-pulse delay-100"></div>
                     <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse delay-200"></div>
                   </div>
+                  {advancedAIMOS.isActive && (
+                    <div className="flex items-center gap-2 ml-4 px-3 py-1 rounded-full bg-green-500/20 border border-green-500/40">
+                      <Activity className="w-4 h-4 text-green-400 animate-pulse" />
+                      <span className="text-xs font-mono text-green-400">
+                        COGNITIVE ACTIVE: {advancedAIMOS.currentPhase || 'PROCESSING'}
+                      </span>
+                    </div>
+                  )}
                 </div>
                 <div className="flex items-center space-x-2">
+                  {activeTab === 'chat' && (
+                    <Button
+                      onClick={() => setShowCognitivePanel(!showCognitivePanel)}
+                      variant="ghost"
+                      size="sm"
+                      className={`h-8 px-3 gap-2 ${showCognitivePanel ? 'bg-primary/20 text-primary' : 'text-muted-foreground'}`}
+                      title={showCognitivePanel ? "Hide Cognitive Panel" : "Show Cognitive Panel"}
+                    >
+                      {showCognitivePanel ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      <Sparkles className="w-4 h-4" />
+                    </Button>
+                  )}
                   <Button
                     onClick={() => setIsMinimized(true)}
                     variant="ghost"
@@ -602,398 +535,219 @@ REALITY IS WHAT YOU MAKE IT, NEO.`, 'system');
 
               {/* Content Area */}
               <div className="flex-1 overflow-hidden flex">
-                {/* Main Chat/Content Area */}
-                <div className={`flex-1 flex flex-col ${showAgentPanel && activeTab === 'chat' ? 'w-2/3' : 'w-full'}`}>
                 {activeTab === 'chat' && (
-                  <div className="h-full flex flex-col">
-                    {/* Mode Selector */}
-                    <div className="p-3 border-b border-primary/20">
-                      <ChatModeSelector currentMode={chatMode} onModeChange={setChatMode} />
+                  <div className="flex-1 flex">
+                    {/* Chat Panel */}
+                    <div className={`flex flex-col transition-all duration-300 ${
+                      showCognitivePanel ? 'w-1/2' : 'w-full'
+                    }`}>
+                      {/* Mode Selector */}
+                      <div className="p-3 border-b border-primary/20">
+                        <ChatModeSelector currentMode={chatMode} onModeChange={setChatMode} />
+                      </div>
+                      
+                      {/* Messages */}
+                      <div className="flex-1 overflow-y-auto p-4 space-y-3 font-mono text-sm">
+                        {messages.map((message) => (
+                          <div key={message.id} className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}>
+                            <div className={`max-w-[85%] p-3 rounded-lg border ${
+                              message.type === 'user' 
+                                ? 'bg-primary/15 text-primary border-primary/30' 
+                                : message.type === 'neo'
+                                ? 'bg-accent/15 text-accent-foreground border-accent/30'
+                                : message.type === 'hack'
+                                ? 'bg-red-500/15 text-red-400 border-red-500/30'
+                                : message.type === 'news'
+                                ? 'bg-blue-500/15 text-blue-400 border-blue-500/30'
+                                : message.type === 'memory'
+                                ? 'bg-purple-500/15 text-purple-400 border-purple-500/30'
+                                : 'bg-muted/15 text-muted-foreground border-muted/30'
+                            }`}>
+                              <RichMessageRenderer content={message.text} />
+                              <div className="text-xs opacity-60 mt-2 flex items-center justify-between">
+                                <span>{message.timestamp.toLocaleTimeString()}</span>
+                                {message.type !== 'user' && (
+                                  <span className="text-xs px-2 py-0.5 rounded bg-current/10 uppercase">
+                                    {message.type}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                        <div ref={messagesEndRef} />
+                      </div>
+
+                      {/* Input */}
+                      <form onSubmit={handleSubmit} className="p-4 border-t border-primary/30">
+                        <div className="flex items-end space-x-3">
+                          <span className="text-primary font-mono text-lg mb-2">{">"}</span>
+                          <Textarea
+                            value={input}
+                            onChange={(e) => setInput(e.target.value)}
+                            placeholder={isLoading ? "Neo is thinking..." : "Enter command or speak to Neo (Gemini AI enabled)..."}
+                            disabled={isLoading}
+                            className="flex-1 bg-transparent text-primary font-mono border-primary/30 resize-none min-h-[40px] max-h-[120px] disabled:opacity-50"
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' && !e.shiftKey) {
+                                e.preventDefault();
+                                handleSubmit(e);
+                              }
+                            }}
+                          />
+                          {isLoading && (
+                            <div className="mb-2">
+                              <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+                            </div>
+                          )}
+                        </div>
+                      </form>
                     </div>
                     
-                    {/* Deep Reasoning Panel (when active) */}
-                    {(isReasoning || reasoningPhases.length > 0) && (
-                      <div className="px-4 pt-4">
-                        <DeepReasoningPanel
-                          phases={reasoningPhases}
-                          goalHierarchy={goalHierarchy}
-                          isThinking={isReasoning}
-                          finalConfidence={finalConfidence}
-                          totalTokensUsed={totalTokens}
-                          reasoningDepth={reasoningDepth}
+                    {/* Cognitive Swarm Panel - ALWAYS visible alongside chat when enabled */}
+                    {showCognitivePanel && (
+                      <div className="w-1/2 border-l border-primary/30 flex flex-col">
+                        <CognitiveSwarmPanel
+                          agents={advancedAIMOS.agents}
+                          reasoningChains={advancedAIMOS.reasoningChains}
+                          thinkingNodes={advancedAIMOS.thinkingNodes}
+                          searchResults={advancedAIMOS.searchResults}
+                          toolExecutions={advancedAIMOS.toolExecutions}
+                          discordMessages={advancedAIMOS.discordMessages}
+                          goalHierarchy={advancedAIMOS.goalHierarchy}
+                          isActive={advancedAIMOS.isActive}
+                          currentPhase={advancedAIMOS.currentPhase}
+                          globalConfidence={advancedAIMOS.globalConfidence}
+                          totalTokens={advancedAIMOS.totalTokens}
                         />
                       </div>
                     )}
-                    
-                    {/* Messages */}
-                    <div className="flex-1 overflow-y-auto p-4 space-y-3 font-mono text-sm">
-                      {messages.map((message) => (
-                        <div key={message.id} className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}>
-                          <div className={`max-w-[85%] p-3 rounded-lg border ${
-                            message.type === 'user' 
-                              ? 'bg-primary/15 text-primary border-primary/30' 
-                              : message.type === 'neo'
-                              ? 'bg-accent/15 text-accent-foreground border-accent/30'
-                              : message.type === 'hack'
-                              ? 'bg-red-500/15 text-red-400 border-red-500/30'
-                              : message.type === 'news'
-                              ? 'bg-blue-500/15 text-blue-400 border-blue-500/30'
-                              : message.type === 'memory'
-                              ? 'bg-purple-500/15 text-purple-400 border-purple-500/30'
-                              : 'bg-muted/15 text-muted-foreground border-muted/30'
-                          }`}>
-                            <RichMessageRenderer content={message.text} aimosData={message.aimosData} />
-                            <div className="text-xs opacity-60 mt-2 flex items-center justify-between">
-                              <span>{message.timestamp.toLocaleTimeString()}</span>
-                              {message.type !== 'user' && (
-                                <span className="text-xs px-2 py-0.5 rounded bg-current/10 uppercase">
-                                  {message.type}
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                      <div ref={messagesEndRef} />
-                    </div>
-
-                    {/* Input */}
-                    <form onSubmit={handleSubmit} className="p-4 border-t border-primary/30">
-                      <div className="flex items-end space-x-3">
-                        <span className="text-primary font-mono text-lg mb-2">{">"}</span>
-                        <Textarea
-                          value={input}
-                          onChange={(e) => setInput(e.target.value)}
-                          placeholder={isLoading ? "Neo is thinking..." : "Enter command or speak to Neo (Gemini AI enabled)..."}
-                          disabled={isLoading}
-                          className="flex-1 bg-transparent text-primary font-mono border-primary/30 resize-none min-h-[40px] max-h-[120px] disabled:opacity-50"
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter' && !e.shiftKey) {
-                              e.preventDefault();
-                              handleSubmit(e);
-                            }
-                          }}
-                        />
-                        {isLoading && (
-                          <div className="mb-2">
-                            <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
-                          </div>
-                        )}
-                      </div>
-                    </form>
-                  </div>
-                )}
-
-                {activeTab === 'cognitive' && (
-                  <div className="h-full flex flex-col">
-                    <CognitiveSwarmPanel
-                      agents={advancedAIMOS.agents}
-                      reasoningChains={advancedAIMOS.reasoningChains}
-                      thinkingNodes={advancedAIMOS.thinkingNodes}
-                      searchResults={advancedAIMOS.searchResults}
-                      toolExecutions={advancedAIMOS.toolExecutions}
-                      discordMessages={advancedAIMOS.discordMessages}
-                      goalHierarchy={advancedAIMOS.goalHierarchy}
-                      isActive={advancedAIMOS.isActive}
-                      currentPhase={advancedAIMOS.currentPhase}
-                      globalConfidence={advancedAIMOS.globalConfidence}
-                      totalTokens={advancedAIMOS.totalTokens}
-                    />
                   </div>
                 )}
 
                 {activeTab === 'memory' && (
-                  <div className="h-full p-4 overflow-y-auto">
-                    <div className="flex items-center justify-between mb-4">
-                      <h3 className="text-primary font-mono text-lg">QUANTUM MEMORY CORE</h3>
-                      <div className="flex space-x-2">
-                        <Button variant="secondary" size="sm" onClick={() => setMemories([])}>
-                          Clear All
-                        </Button>
-                        <Button variant="outline" size="sm" onClick={() => {
-                          const backup = JSON.stringify(memories);
-                          navigator.clipboard.writeText(backup);
-                          addMessage('Memory backup copied to clipboard', 'system');
-                        }}>
-                          Export
-                        </Button>
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-3 gap-4 mb-4">
-                      <div className="p-3 bg-primary/10 border border-primary/30 rounded">
-                        <div className="text-primary text-sm">TOTAL MEMORIES</div>
-                        <div className="text-primary text-lg font-bold">{memories.length}</div>
-                      </div>
-                      <div className="p-3 bg-green-500/10 border border-green-500/30 rounded">
-                        <div className="text-green-400 text-sm">HIGH PRIORITY</div>
-                        <div className="text-green-300 text-lg font-bold">{memories.filter(m => m.importance >= 3).length}</div>
-                      </div>
-                      <div className="p-3 bg-blue-500/10 border border-blue-500/30 rounded">
-                        <div className="text-blue-400 text-sm">RECENT (24H)</div>
-                        <div className="text-blue-300 text-lg font-bold">{memories.filter(m => 
-                          Date.now() - m.timestamp.getTime() < 24 * 60 * 60 * 1000).length}</div>
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      {memories.length === 0 ? (
-                        <div className="text-center text-muted-foreground font-mono p-8">
-                          No memories stored. Start interacting to build memory core.
-                        </div>
-                      ) : (
-                        memories.map((memory) => (
-                          <div key={memory.id} className={`p-3 border rounded transition-colors hover:bg-muted/5 ${
-                            memory.importance >= 3 ? 'border-red-500/30 bg-red-500/5' :
-                            memory.importance >= 2 ? 'border-yellow-500/30 bg-yellow-500/5' :
-                            'border-muted/20 bg-muted/5'
-                          }`}>
-                            <div className="text-sm text-foreground mb-2 leading-relaxed">{memory.content}</div>
-                            <div className="flex items-center justify-between text-xs text-muted-foreground">
-                              <span className="font-mono">{memory.timestamp.toLocaleString()}</span>
-                              <div className="flex items-center space-x-2">
-                                <span className={`font-mono ${
-                                  memory.importance >= 3 ? 'text-red-400' :
-                                  memory.importance >= 2 ? 'text-yellow-400' :
-                                  'text-green-400'
-                                }`}>
-                                  Priority: {memory.importance}
-                                </span>
-                                <div className="flex space-x-1">
-                                  {memory.tags.map((tag) => (
-                                    <span key={tag} className="px-1.5 py-0.5 bg-primary/20 text-primary rounded text-xs font-mono">
-                                      #{tag}
-                                    </span>
-                                  ))}
-                                </div>
+                  <div className="flex-1 p-4 overflow-y-auto">
+                    <h3 className="text-primary font-mono font-bold mb-4">Memory Core</h3>
+                    {memories.length > 0 ? (
+                      <div className="space-y-2">
+                        {memories.map((memory) => (
+                          <Card key={memory.id} className="p-3 bg-purple-500/10 border-purple-500/30">
+                            <p className="text-purple-300 text-sm">{memory.content}</p>
+                            <div className="flex justify-between items-center mt-2">
+                              <span className="text-xs text-purple-400/60">
+                                {memory.timestamp.toLocaleTimeString()}
+                              </span>
+                              <div className="flex gap-1">
+                                {memory.tags.map(tag => (
+                                  <span key={tag} className="text-xs px-1 py-0.5 bg-purple-500/20 rounded">
+                                    {tag}
+                                  </span>
+                                ))}
                               </div>
                             </div>
-                          </div>
-                        ))
-                      )}
-                    </div>
+                          </Card>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-muted-foreground text-sm">No memories stored yet.</p>
+                    )}
                   </div>
                 )}
 
                 {activeTab === 'network' && (
-                  <div className="h-full p-4 overflow-y-auto font-mono">
-                    <h3 className="text-primary text-lg mb-4">NETWORK OPERATIONS</h3>
-                    <div className="space-y-4">
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="p-3 bg-green-500/10 border border-green-500/30 rounded">
-                          <div className="text-green-400 text-sm">CONNECTION STATUS</div>
-                          <div className="text-green-300 text-lg">SECURE</div>
-                        </div>
-                        <div className="p-3 bg-blue-500/10 border border-blue-500/30 rounded">
-                          <div className="text-blue-400 text-sm">ENCRYPTION LEVEL</div>
-                          <div className="text-blue-300 text-lg">AES-256</div>
-                        </div>
-                        <div className="p-3 bg-purple-500/10 border border-purple-500/30 rounded">
-                          <div className="text-purple-400 text-sm">PROXY CHAINS</div>
-                          <div className="text-purple-300 text-lg">7 ACTIVE</div>
-                        </div>
-                        <div className="p-3 bg-yellow-500/10 border border-yellow-500/30 rounded">
-                          <div className="text-yellow-400 text-sm">TRACE DETECTION</div>
-                          <div className="text-yellow-300 text-lg">BLOCKED</div>
-                        </div>
-                      </div>
-                      
-                      <div className="border border-primary/20 rounded p-4">
-                        <h4 className="text-primary mb-3">Active Connections</h4>
-                        <div className="space-y-2 text-xs">
-                          <div className="flex justify-between items-center p-2 bg-green-500/5 border border-green-500/20 rounded">
-                            <span className="text-green-400">TOR Exit Node: 192.168.1.1</span>
-                            <span className="text-green-300">ESTABLISHED</span>
-                          </div>
-                          <div className="flex justify-between items-center p-2 bg-blue-500/5 border border-blue-500/20 rounded">
-                            <span className="text-blue-400">VPN Gateway: 10.0.0.1</span>
-                            <span className="text-blue-300">CONNECTED</span>
-                          </div>
-                          <div className="flex justify-between items-center p-2 bg-purple-500/5 border border-purple-500/20 rounded">
-                            <span className="text-purple-400">Proxy Chain: 172.16.0.1</span>
-                            <span className="text-purple-300">ACTIVE</span>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="border border-primary/20 rounded p-4">
-                        <h4 className="text-primary mb-3">Traffic Analysis</h4>
-                        <div className="grid grid-cols-3 gap-4 text-xs">
-                          <div className="text-center">
-                            <div className="text-green-400 text-lg">24.7 MB</div>
-                            <div className="text-muted-foreground">Encrypted TX</div>
-                          </div>
-                          <div className="text-center">
-                            <div className="text-blue-400 text-lg">18.3 MB</div>
-                            <div className="text-muted-foreground">Encrypted RX</div>
-                          </div>
-                          <div className="text-center">
-                            <div className="text-red-400 text-lg">0</div>
-                            <div className="text-muted-foreground">Blocked</div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
+                  <div className="flex-1 overflow-hidden">
+                    <IntelGraph items={feedItems} />
                   </div>
                 )}
 
                 {activeTab === 'map' && (
-                  <div className="h-full">
+                  <div className="flex-1 overflow-hidden">
                     <HackerMap />
                   </div>
                 )}
 
                 {activeTab === 'team' && (
-                  <div className="h-full">
-                    <TeamSuite onRun={(command) => {
-                      addMessage(command, 'user');
-                      setActiveTab('chat');
-                      executeCommand(command);
+                  <div className="flex-1 overflow-hidden">
+                    <TeamSuite onRun={(cmd) => {
+                      setInput(cmd);
+                      if (cmd.startsWith('/')) {
+                        executeCommand(cmd);
+                      }
                     }} />
                   </div>
                 )}
 
                 {activeTab === 'feeds' && (
-                  <div className="h-full">
-                    <LiveFeeds onData={(items) => setFeedItems(items)} />
-                  </div>
-                )}
-
-                {activeTab === 'diagram' && (
-                  <div className="h-full p-4">
-                    <DiagramOrganizer />
+                  <div className="flex-1 overflow-hidden">
+                    <LiveFeeds 
+                      onData={(items) => setFeedItems(items)}
+                    />
                   </div>
                 )}
 
                 {activeTab === 'code' && (
-                  <div className="h-full p-4">
-                    <CodeEditor onCodeExecution={handleCodeExecution} />
+                  <div className="flex-1 overflow-hidden">
+                    <CodeEditor
+                      onCodeExecution={handleCodeExecution}
+                    />
                   </div>
                 )}
 
                 {activeTab === 'ide' && (
-                  <div className="h-full">
+                  <div className="flex-1 overflow-hidden">
                     <IDEPanel />
                   </div>
                 )}
 
                 {activeTab === 'agents' && (
-                  <div className="h-full p-4">
+                  <div className="flex-1 overflow-hidden">
                     <AgentsPanel />
                   </div>
                 )}
 
                 {activeTab === 'apis' && (
-                  <div className="h-full p-4">
+                  <div className="flex-1 overflow-hidden">
                     <ApiRegistryPanel />
                   </div>
                 )}
 
                 {activeTab === 'cloud' && (
-                  <div className="h-full p-4">
+                  <div className="flex-1 overflow-hidden">
                     <CloudOrchestratorPanel />
                   </div>
                 )}
 
                 {activeTab === 'builder' && (
-                  <div className="h-full p-4 overflow-y-auto">
+                  <div className="flex-1 overflow-hidden">
                     <BuilderABPPanel />
                   </div>
                 )}
 
+                {activeTab === 'diagram' && (
+                  <div className="flex-1 overflow-hidden">
+                    <DiagramOrganizer />
+                  </div>
+                )}
+
                 {activeTab === 'matrix' && (
-                  <div className="h-full p-4 overflow-y-auto">
+                  <div className="flex-1 overflow-hidden p-4">
                     <MatrixSettingsPanel />
                   </div>
                 )}
 
                 {activeTab === 'database' && (
-                  <div className="h-full p-4 overflow-y-auto font-mono">
-                    <h3 className="text-primary text-lg mb-4">DATABASE STATUS</h3>
-                    <div className="space-y-4">
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="p-3 bg-green-500/10 border border-green-500/30 rounded">
-                          <div className="text-green-400 text-sm">CONNECTION</div>
-                          <div className="text-green-300 text-lg">ACTIVE</div>
-                        </div>
-                        <div className="p-3 bg-blue-500/10 border border-blue-500/30 rounded">
-                          <div className="text-blue-400 text-sm">TABLES</div>
-                          <div className="text-blue-300 text-lg">47 ACTIVE</div>
-                        </div>
-                        <div className="p-3 bg-purple-500/10 border border-purple-500/30 rounded">
-                          <div className="text-purple-400 text-sm">QUERIES/SEC</div>
-                          <div className="text-purple-300 text-lg">1,247</div>
-                        </div>
-                        <div className="p-3 bg-yellow-500/10 border border-yellow-500/30 rounded">
-                          <div className="text-yellow-400 text-sm">STORAGE</div>
-                          <div className="text-yellow-300 text-lg">2.3 TB</div>
-                        </div>
-                      </div>
-                      <div className="border border-primary/20 rounded p-4">
-                        <h4 className="text-primary mb-2">Recent Queries</h4>
-                        <div className="space-y-1 text-xs">
-                          <div className="text-green-400">SELECT * FROM classified_ops WHERE status='active'</div>
-                          <div className="text-blue-400">UPDATE agent_locations SET last_seen=NOW()</div>
-                          <div className="text-purple-400">INSERT INTO intel_reports VALUES (...)</div>
-                          <div className="text-yellow-400">DELETE FROM temp_logs WHERE created &lt; NOW()-7</div>
-                        </div>
-                      </div>
+                  <div className="flex-1 flex items-center justify-center">
+                    <div className="text-center">
+                      <Database className="w-16 h-16 mx-auto text-primary/30 mb-4" />
+                      <p className="text-muted-foreground">Database console coming soon...</p>
                     </div>
                   </div>
                 )}
-                </div>
-                
-                {/* Agent Activity Panel (Right Sidebar in Chat) */}
-                {activeTab === 'chat' && showAgentPanel && (
-                  <div className="w-80 border-l border-primary/20 overflow-y-auto">
-                    <div className="p-3 border-b border-primary/20 flex items-center justify-between">
-                      <span className="text-xs font-mono text-primary">AGENT SWARM</span>
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        className="h-6 w-6 p-0"
-                        onClick={() => setShowAgentPanel(false)}
-                      >
-                        <X className="w-3 h-3" />
-                      </Button>
-                    </div>
-                    <AgentActivityPanel
-                      agents={agents}
-                      toolCalls={toolCalls}
-                      messages={agentMessages}
-                      isActive={isReasoning}
-                    />
-                  </div>
-                )}
-                
-                {!showAgentPanel && activeTab === 'chat' && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="absolute right-2 top-20 z-10"
-                    onClick={() => setShowAgentPanel(true)}
-                  >
-                    <Activity className="w-4 h-4" />
-                  </Button>
-                )}
               </div>
-            </div>
-          </>
-        )}
-
-        {/* Toggle button when hidden - Fixed position */}
-        {!isVisible && (
-          <div className="fixed bottom-4 right-4 z-50">
-            <button
-              onClick={() => setIsVisible(true)}
-              className="w-16 h-16 bg-primary/20 hover:bg-primary/30 border border-primary/40 rounded-full flex items-center justify-center transition-all duration-300 group"
-            >
-              <div className="text-center">
-                <Terminal className="w-6 h-6 text-primary mb-1" />
-                <div className="text-primary/60 font-mono text-xs">NEO</div>
-              </div>
-            </button>
           </div>
-        )}
-      </div>
+        </>
+      )}
+    </div>
   );
 };
 
