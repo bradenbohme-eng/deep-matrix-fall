@@ -14,6 +14,134 @@ const CONFIDENCE_THRESHOLDS = {
   REJECT: 0.40
 };
 
+// ============ AUTOMATIC MODE DETECTION ============
+
+type ChatMode = 'chat' | 'planning' | 'developing' | 'building' | 'hacking' | 'deep-think' | 'research';
+
+interface ModeDetectionResult {
+  primaryMode: ChatMode;
+  hybridModes: ChatMode[];
+  confidence: number;
+  reasoning: string;
+}
+
+const detectOptimalMode = (query: string, conversationHistory: any[] = []): ModeDetectionResult => {
+  const queryLower = query.toLowerCase();
+  const words = query.split(/\s+/).length;
+  
+  // Mode detection patterns
+  const modeSignals: Record<ChatMode, { patterns: RegExp[]; weight: number }> = {
+    'planning': {
+      patterns: [
+        /plan|strategy|roadmap|approach|architecture|design|structure|organize|prioritize/i,
+        /how should we|what's the best way|steps to|phases|milestones/i,
+        /consider|evaluate|assess|compare|analyze options/i
+      ],
+      weight: 0
+    },
+    'developing': {
+      patterns: [
+        /document|spec|specification|requirement|define|describe|outline/i,
+        /api\s*design|schema|interface|contract|protocol/i,
+        /write\s*(the|a)?\s*(docs|documentation|readme)/i
+      ],
+      weight: 0
+    },
+    'building': {
+      patterns: [
+        /build|create|implement|code|develop|make|construct|add feature/i,
+        /function|component|class|module|service|endpoint|route/i,
+        /fix|update|modify|refactor|optimize|improve\s*code/i
+      ],
+      weight: 0
+    },
+    'hacking': {
+      patterns: [
+        /security|vulnerability|exploit|penetration|audit|attack|defend/i,
+        /bypass|crack|breach|secure|encrypt|decrypt|authentication/i,
+        /pentest|hack|injection|xss|csrf|sql\s*injection/i
+      ],
+      weight: 0
+    },
+    'deep-think': {
+      patterns: [
+        /think\s*(deeply|through)|reason|philosophi|fundamental|first\s*principles/i,
+        /why\s*(does|is|do)|understand|comprehend|meaning|implication/i,
+        /thoroughly|comprehensive|complete\s*analysis|in-depth|exhaustive/i,
+        /what\s*if|hypothetically|consider\s*all|edge\s*cases/i
+      ],
+      weight: 0
+    },
+    'research': {
+      patterns: [
+        /research|find|search|look\s*up|investigate|discover|explore/i,
+        /what\s*(is|are)|who|when|where|latest|current|news|trend/i,
+        /gather\s*info|learn\s*about|tell\s*me\s*about/i
+      ],
+      weight: 0
+    },
+    'chat': {
+      patterns: [
+        /hi|hello|hey|how\s*are\s*you|thanks|thank\s*you/i,
+        /^what$|^yes$|^no$|^ok$/i
+      ],
+      weight: 0
+    }
+  };
+  
+  // Calculate weights for each mode
+  for (const [mode, config] of Object.entries(modeSignals)) {
+    for (const pattern of config.patterns) {
+      if (pattern.test(queryLower)) {
+        (modeSignals[mode as ChatMode]).weight += 2;
+      }
+    }
+  }
+  
+  // Additional context signals
+  if (words > 50) modeSignals['deep-think'].weight += 1;
+  if (query.includes('\n') && query.includes('```')) modeSignals['building'].weight += 2;
+  if (query.includes('?') && words > 20) modeSignals['research'].weight += 1;
+  if (/step\s*\d|phase\s*\d|1\.|2\.|3\./i.test(query)) modeSignals['planning'].weight += 2;
+  
+  // Check conversation history for context
+  const recentUserMessages = conversationHistory
+    .filter((m: any) => m.role === 'user')
+    .slice(-3)
+    .map((m: any) => m.content?.toLowerCase() || '');
+  
+  for (const prevMsg of recentUserMessages) {
+    if (/continue|go on|next|more|proceed/i.test(queryLower)) {
+      // Inherit mode from context
+      for (const [mode, config] of Object.entries(modeSignals)) {
+        for (const pattern of config.patterns) {
+          if (pattern.test(prevMsg)) {
+            (modeSignals[mode as ChatMode]).weight += 1;
+          }
+        }
+      }
+    }
+  }
+  
+  // Find primary and hybrid modes
+  const sortedModes = Object.entries(modeSignals)
+    .sort((a, b) => b[1].weight - a[1].weight)
+    .filter(([_, config]) => config.weight > 0);
+  
+  const primaryMode: ChatMode = sortedModes.length > 0 ? sortedModes[0][0] as ChatMode : 'chat';
+  const hybridModes: ChatMode[] = sortedModes
+    .slice(1, 3)
+    .filter(([_, config]) => config.weight >= 2)
+    .map(([mode]) => mode as ChatMode);
+  
+  const maxWeight = sortedModes.length > 0 ? sortedModes[0][1].weight : 0;
+  const confidence = Math.min(0.95, 0.5 + (maxWeight * 0.1));
+  
+  const reasoning = `Detected ${primaryMode} mode (κ=${Math.round(confidence * 100)}%)${hybridModes.length > 0 ? ` with hybrid ${hybridModes.join('+')}` : ''}`;
+  
+  return { primaryMode, hybridModes, confidence, reasoning };
+};
+
 // ============ DYNAMIC REASONING DEPTH ANALYSIS ============
 
 interface ReasoningConfig {
@@ -22,20 +150,28 @@ interface ReasoningConfig {
   agents: string[];
   tokenBudget: number;
   model: string;
+  detectedMode: ChatMode;
+  hybridModes: ChatMode[];
 }
 
-const analyzeQueryComplexity = (query: string, memoryCount: number, mode: string): ReasoningConfig => {
+const analyzeQueryComplexity = (query: string, memoryCount: number, mode: string, conversationHistory: any[] = []): ReasoningConfig => {
   const queryLower = query.toLowerCase();
   const words = query.split(/\s+/).length;
   
+  // Auto-detect mode if not explicitly set or is 'chat'
+  const modeDetection = detectOptimalMode(query, conversationHistory);
+  const effectiveMode = mode === 'chat' ? modeDetection.primaryMode : mode as ChatMode;
+  
   // If mode is deep-think, always go maximum
-  if (mode === 'deep-think') {
+  if (effectiveMode === 'deep-think') {
     return {
       depth: 'maximum',
       phases: ['ANALYSIS', 'DECOMPOSITION', 'RESEARCH', 'SYNTHESIS', 'VALIDATION', 'AUDIT', 'INTEGRATION'],
       agents: ['apoe-orchestrator', 'code-architect', 'research-agent', 'memory-agent', 'security-agent', 'meta-observer', 'quality-gate', 'ethics-agent'],
       tokenBudget: 16000,
-      model: 'google/gemini-2.5-pro'
+      model: 'google/gemini-2.5-pro',
+      detectedMode: effectiveMode,
+      hybridModes: modeDetection.hybridModes
     };
   }
   
@@ -67,9 +203,13 @@ const analyzeQueryComplexity = (query: string, memoryCount: number, mode: string
   if (signals.simple) complexity -= 3;
   
   // Mode bonuses
-  if (mode === 'planning') complexity += 2;
-  if (mode === 'research') complexity += 2;
-  if (mode === 'building') complexity += 1;
+  if (effectiveMode === 'planning') complexity += 2;
+  if (effectiveMode === 'research') complexity += 2;
+  if (effectiveMode === 'building') complexity += 1;
+  if (effectiveMode === 'hacking') complexity += 2;
+  
+  // Hybrid mode complexity boost
+  if (modeDetection.hybridModes.length > 0) complexity += 1;
   
   // Determine configuration
   if (complexity <= 0) {
@@ -78,7 +218,9 @@ const analyzeQueryComplexity = (query: string, memoryCount: number, mode: string
       phases: ['SYNTHESIS'],
       agents: ['apoe-orchestrator'],
       tokenBudget: 2000,
-      model: 'google/gemini-2.5-flash'
+      model: 'google/gemini-2.5-flash',
+      detectedMode: effectiveMode,
+      hybridModes: modeDetection.hybridModes
     };
   } else if (complexity <= 3) {
     return {
@@ -86,7 +228,9 @@ const analyzeQueryComplexity = (query: string, memoryCount: number, mode: string
       phases: ['ANALYSIS', 'SYNTHESIS', 'VALIDATION'],
       agents: ['apoe-orchestrator', 'memory-agent'],
       tokenBudget: 4000,
-      model: 'google/gemini-2.5-flash'
+      model: 'google/gemini-2.5-flash',
+      detectedMode: effectiveMode,
+      hybridModes: modeDetection.hybridModes
     };
   } else if (complexity <= 6) {
     return {
@@ -94,7 +238,9 @@ const analyzeQueryComplexity = (query: string, memoryCount: number, mode: string
       phases: ['ANALYSIS', 'DECOMPOSITION', 'RESEARCH', 'SYNTHESIS', 'VALIDATION'],
       agents: ['apoe-orchestrator', 'code-architect', 'research-agent', 'memory-agent'],
       tokenBudget: 8000,
-      model: 'google/gemini-2.5-flash'
+      model: 'google/gemini-2.5-flash',
+      detectedMode: effectiveMode,
+      hybridModes: modeDetection.hybridModes
     };
   } else {
     return {
@@ -102,7 +248,9 @@ const analyzeQueryComplexity = (query: string, memoryCount: number, mode: string
       phases: ['ANALYSIS', 'DECOMPOSITION', 'RESEARCH', 'SYNTHESIS', 'VALIDATION', 'AUDIT', 'INTEGRATION'],
       agents: ['apoe-orchestrator', 'code-architect', 'research-agent', 'memory-agent', 'meta-observer', 'quality-gate'],
       tokenBudget: 12000,
-      model: 'google/gemini-2.5-pro'
+      model: 'google/gemini-2.5-pro',
+      detectedMode: effectiveMode,
+      hybridModes: modeDetection.hybridModes
     };
   }
 };
@@ -752,10 +900,16 @@ serve(async (req) => {
       memoryAtomCount = count || 0;
     }
 
-    // Analyze query complexity and determine reasoning depth
-    const reasoningConfig = analyzeQueryComplexity(userQuery, memoryAtomCount, mode);
+    // Analyze query complexity and determine reasoning depth (with auto-mode detection)
+    const reasoningConfig = analyzeQueryComplexity(userQuery, memoryAtomCount, mode, messages);
     
-    console.log(`[NEO-CHAT] Query analysis: depth=${reasoningConfig.depth}, phases=${reasoningConfig.phases.length}, model=${reasoningConfig.model}`);
+    // Use the detected mode for tools and prompts
+    const effectiveMode = reasoningConfig.detectedMode;
+    const hybridInfo = reasoningConfig.hybridModes.length > 0 
+      ? ` + hybrid: ${reasoningConfig.hybridModes.join(', ')}` 
+      : '';
+    
+    console.log(`[NEO-CHAT] AUTO-MODE: ${effectiveMode}${hybridInfo} | depth=${reasoningConfig.depth}, phases=${reasoningConfig.phases.length}, model=${reasoningConfig.model}`);
 
     // Retrieve hierarchical memory
     if (conversationId && userId) {
@@ -764,11 +918,11 @@ serve(async (req) => {
       console.log(`[NEO-CHAT] Loaded ${memoryResult.atomCount} memory atoms`);
     }
 
-    // Get mode-specific tools and prompt
-    const modeTools = getModeTools(mode, reasoningConfig);
-    const systemPrompt = getSystemPrompt(mode, memoryContext, reasoningConfig);
+    // Get mode-specific tools and prompt using EFFECTIVE mode
+    const modeTools = getModeTools(effectiveMode, reasoningConfig);
+    const systemPrompt = getSystemPrompt(effectiveMode, memoryContext, reasoningConfig);
     
-    console.log(`[NEO-CHAT] Mode: ${mode}, Tools: ${modeTools.length}, Model: ${reasoningConfig.model}`);
+    console.log(`[NEO-CHAT] Final config: mode=${effectiveMode}, tools=${modeTools.length}, model=${reasoningConfig.model}`);
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
