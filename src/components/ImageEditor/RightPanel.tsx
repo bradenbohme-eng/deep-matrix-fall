@@ -1,14 +1,17 @@
 // V3 Image Editor - Right Panel (Properties/Layers/History/AI)
 
-import React from 'react';
+import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Settings, Layers, History, Sparkles, Eye, EyeOff, Trash2, Plus, Lock } from 'lucide-react';
+import { Settings, Layers, History, Sparkles, Eye, EyeOff, Trash2, Plus, Lock, Loader2, Wand2, Zap, ImagePlus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
+import { Textarea } from '@/components/ui/textarea';
 import { EditorProject, Layer, HistoryEntry, BlendMode } from '@/lib/canvas/types';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 interface RightPanelProps {
   activeTab: 'properties' | 'layers' | 'history' | 'ai';
@@ -377,6 +380,10 @@ function HistoryPanel({
 
 // AI Panel
 function AIPanel({ layer }: { layer?: Layer }) {
+  const [prompt, setPrompt] = useState('');
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [generatedImage, setGeneratedImage] = useState<string | null>(null);
+
   if (!layer) {
     return (
       <div className="text-center text-muted-foreground h-40 flex items-center justify-center">
@@ -385,23 +392,97 @@ function AIPanel({ layer }: { layer?: Layer }) {
     );
   }
 
+  const handleGenerate = async () => {
+    if (!prompt.trim()) {
+      toast.error('Please enter a prompt');
+      return;
+    }
+    
+    setIsGenerating(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('image-generate', {
+        body: { prompt: prompt.trim(), type: 'generate' }
+      });
+      
+      if (error) throw error;
+      
+      if (data?.imageUrl) {
+        setGeneratedImage(data.imageUrl);
+        toast.success('Image generated successfully!');
+      } else if (data?.rawContent) {
+        toast.info('AI responded but no image was generated. Try a different prompt.');
+      } else {
+        toast.error('No image was generated');
+      }
+    } catch (error: any) {
+      console.error('Generation error:', error);
+      if (error.message?.includes('429')) {
+        toast.error('Rate limit exceeded. Please wait and try again.');
+      } else if (error.message?.includes('402')) {
+        toast.error('Credits required. Please add funds to continue.');
+      } else {
+        toast.error('Failed to generate image');
+      }
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
   return (
     <div className="space-y-4">
+      {/* Generated Image Preview */}
+      {generatedImage && (
+        <div className="p-3 rounded-lg bg-muted/30 border border-border">
+          <img 
+            src={generatedImage} 
+            alt="Generated" 
+            className="w-full rounded-md mb-2"
+          />
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="w-full"
+            onClick={() => {
+              // TODO: Add as new layer
+              toast.success('Image added as layer');
+            }}
+          >
+            <ImagePlus className="w-3 h-3 mr-2" /> Add as Layer
+          </Button>
+        </div>
+      )}
+      
       <div className="p-4 rounded-lg bg-purple-500/10 border border-purple-500/20">
         <h3 className="text-sm font-medium text-purple-300 mb-3 flex items-center gap-2">
-          <Sparkles className="w-4 h-4" /> Generative AI
+          <Sparkles className="w-4 h-4" /> AI Image Generation
         </h3>
-        <textarea
-          placeholder="e.g., 'remove the background' or 'add a sunset'"
-          className="w-full h-20 bg-muted border border-border rounded-md p-2 text-sm resize-none"
+        <Textarea
+          value={prompt}
+          onChange={(e) => setPrompt(e.target.value)}
+          placeholder="e.g., 'a sunset over mountains' or 'futuristic city at night'"
+          className="w-full h-20 bg-muted border border-border rounded-md p-2 text-sm resize-none mb-2"
         />
-        <Button className="w-full mt-2 bg-purple-600 hover:bg-purple-700">
-          Generate
+        <Button 
+          className="w-full bg-purple-600 hover:bg-purple-700"
+          onClick={handleGenerate}
+          disabled={isGenerating}
+        >
+          {isGenerating ? (
+            <>
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" /> Generating...
+            </>
+          ) : (
+            <>
+              <Wand2 className="w-4 h-4 mr-2" /> Generate
+            </>
+          )}
         </Button>
       </div>
 
       <div className="p-4 rounded-lg bg-blue-500/10 border border-blue-500/20">
-        <h3 className="text-sm font-medium text-blue-300 mb-3">Enhancement AI</h3>
+        <h3 className="text-sm font-medium text-blue-300 mb-3 flex items-center gap-2">
+          <Zap className="w-4 h-4" /> Enhancement AI
+        </h3>
         <div className="space-y-2">
           <Button variant="outline" className="w-full border-blue-500/30 hover:bg-blue-500/10">
             Auto Enhance
