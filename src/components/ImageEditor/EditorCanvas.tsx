@@ -2,10 +2,13 @@
 // Rule 14: Dual Canvas Architecture
 
 import React, { useRef, useEffect, useCallback, useState } from 'react';
-import { EditorProject, Layer, ToolType, WorldPoint, SelectionMask } from '@/lib/canvas/types';
+import { EditorProject, Layer, ToolType, WorldPoint, SelectionMask, Bounds } from '@/lib/canvas/types';
 import { CANVAS_WIDTH, CANVAS_HEIGHT, CANVAS_BG, CHECKERBOARD_SIZE, CHECKERBOARD_LIGHT, CHECKERBOARD_DARK } from '@/lib/canvas/constants';
 import { CoordinateSystem } from '@/lib/canvas/CoordinateSystem';
 import { previewWaveEngine } from '@/lib/canvas/preview';
+import { BrushTool } from '@/lib/canvas/tools/BrushTool';
+import { EraserTool } from '@/lib/canvas/tools/EraserTool';
+import { CropTool } from '@/lib/canvas/tools/CropTool';
 
 interface EditorCanvasProps {
   project: EditorProject;
@@ -13,23 +16,37 @@ interface EditorCanvasProps {
   zoom: number;
   isProcessing: boolean;
   onUpdateLayer: (layerId: string, updates: Partial<Layer>) => void;
+  onUpdateSelection?: (selection: SelectionMask | null) => void;
+  onCrop?: (bounds: Bounds) => void;
 }
 
-export function EditorCanvas({ project, activeTool, zoom, isProcessing, onUpdateLayer }: EditorCanvasProps) {
+export function EditorCanvas({ project, activeTool, zoom, isProcessing, onUpdateLayer, onUpdateSelection, onCrop }: EditorCanvasProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mainCanvasRef = useRef<HTMLCanvasElement>(null);
   const previewCanvasRef = useRef<HTMLCanvasElement>(null);
+  const drawCanvasRef = useRef<HTMLCanvasElement>(null); // For brush/eraser strokes
   const coordSystemRef = useRef<CoordinateSystem>(new CoordinateSystem());
+  
+  // Tool instances
+  const brushToolRef = useRef<BrushTool>(new BrushTool());
+  const eraserToolRef = useRef<EraserTool>(new EraserTool());
+  const cropToolRef = useRef<CropTool>(new CropTool());
   
   const [previewMask, setPreviewMask] = useState<Uint8ClampedArray | null>(null);
   const [hoverPoint, setHoverPoint] = useState<WorldPoint | null>(null);
   const [isPanning, setIsPanning] = useState(false);
   const [panStart, setPanStart] = useState({ x: 0, y: 0 });
+  const [isDrawing, setIsDrawing] = useState(false);
 
-  // Update coordinate system when zoom changes
+  // Activate crop tool when selected
   useEffect(() => {
-    coordSystemRef.current.setZoom(zoom);
-  }, [zoom]);
+    if (activeTool === 'crop' && project.layers.length > 0) {
+      const layer = project.layers[0];
+      cropToolRef.current.activate(layer.bounds);
+    } else if (activeTool !== 'crop') {
+      cropToolRef.current.deactivate();
+    }
+  }, [activeTool, project.layers]);
 
   // Initialize canvas dimensions
   useEffect(() => {
@@ -47,7 +64,7 @@ export function EditorCanvas({ project, activeTool, zoom, isProcessing, onUpdate
       });
 
       // Set canvas dimensions
-      [mainCanvasRef, previewCanvasRef].forEach(ref => {
+      [mainCanvasRef, previewCanvasRef, drawCanvasRef].forEach(ref => {
         const canvas = ref.current;
         if (canvas) {
           canvas.width = rect.width * dpr;
@@ -157,10 +174,25 @@ export function EditorCanvas({ project, activeTool, zoom, isProcessing, onUpdate
         drawPreviewMask(ctx, previewMask, CANVAS_WIDTH, CANVAS_HEIGHT);
       }
       
-      // Draw cursor indicator
+      // Draw cursor indicator for magic wand
       if (hoverPoint && activeTool === 'magic-wand') {
         ctx.fillStyle = 'rgba(0, 255, 255, 0.5)';
         ctx.fillRect(Math.floor(hoverPoint.x) - 1, Math.floor(hoverPoint.y) - 1, 3, 3);
+      }
+      
+      // Draw brush cursor
+      if (hoverPoint && activeTool === 'brush') {
+        brushToolRef.current.drawCursor(ctx, hoverPoint);
+      }
+      
+      // Draw eraser cursor
+      if (hoverPoint && activeTool === 'eraser') {
+        eraserToolRef.current.drawCursor(ctx, hoverPoint);
+      }
+      
+      // Draw crop overlay
+      if (activeTool === 'crop') {
+        cropToolRef.current.drawOverlay(ctx, CANVAS_WIDTH, CANVAS_HEIGHT);
       }
       
       ctx.restore();
@@ -239,6 +271,23 @@ export function EditorCanvas({ project, activeTool, zoom, isProcessing, onUpdate
 
     setHoverPoint(worldPoint);
 
+    // Handle drawing tools
+    if (isDrawing) {
+      const drawCtx = drawCanvasRef.current?.getContext('2d');
+      if (drawCtx) {
+        if (activeTool === 'brush') {
+          brushToolRef.current.continueStroke(worldPoint, drawCtx);
+        } else if (activeTool === 'eraser') {
+          eraserToolRef.current.continueErase(worldPoint, drawCtx);
+        }
+      }
+    }
+    
+    // Handle crop tool dragging
+    if (activeTool === 'crop' && cropToolRef.current.getState().isDragging) {
+      cropToolRef.current.continueDrag(worldPoint);
+    }
+
     // Start progressive preview for magic wand
     if (activeTool === 'magic-wand') {
       const imageData = getCompositeImageData();
@@ -257,33 +306,101 @@ export function EditorCanvas({ project, activeTool, zoom, isProcessing, onUpdate
         );
       }
     }
-  }, [activeTool, isPanning, panStart, getCompositeImageData]);
+  }, [activeTool, isPanning, panStart, getCompositeImageData, isDrawing]);
 
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
-    // Middle mouse or space+left for panning
+    const rect = containerRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    
+    const screenX = e.clientX - rect.left;
+    const screenY = e.clientY - rect.top;
+    const worldPoint = coordSystemRef.current.screenToWorld(screenX, screenY);
+    
+    // Middle mouse or alt+left for panning
     if (e.button === 1 || (e.button === 0 && e.altKey)) {
-      const rect = containerRef.current?.getBoundingClientRect();
-      if (!rect) return;
-      
       setIsPanning(true);
-      setPanStart({
-        x: e.clientX - rect.left,
-        y: e.clientY - rect.top,
-      });
+      setPanStart({ x: screenX, y: screenY });
       e.preventDefault();
+      return;
     }
-  }, []);
+    
+    // Left click - tool actions
+    if (e.button === 0) {
+      if (!coordSystemRef.current.isInBounds(worldPoint.x, worldPoint.y)) return;
+      
+      // Magic wand click-to-select
+      if (activeTool === 'magic-wand' && previewMask) {
+        // Convert preview mask to selection
+        const bounds = calculateMaskBounds(previewMask, CANVAS_WIDTH, CANVAS_HEIGHT);
+        if (bounds && onUpdateSelection) {
+          const selection: SelectionMask = {
+            data: previewMask,
+            width: CANVAS_WIDTH,
+            height: CANVAS_HEIGHT,
+            bounds,
+          };
+          onUpdateSelection(selection);
+        }
+        return;
+      }
+      
+      // Brush tool
+      if (activeTool === 'brush') {
+        setIsDrawing(true);
+        brushToolRef.current.startStroke(worldPoint);
+        return;
+      }
+      
+      // Eraser tool
+      if (activeTool === 'eraser') {
+        setIsDrawing(true);
+        eraserToolRef.current.startErase(worldPoint);
+        return;
+      }
+      
+      // Crop tool
+      if (activeTool === 'crop') {
+        cropToolRef.current.startDrag(worldPoint);
+        return;
+      }
+    }
+  }, [activeTool, previewMask, onUpdateSelection]);
 
-  const handleMouseUp = useCallback(() => {
+  const handleMouseUp = useCallback((e: React.MouseEvent) => {
     setIsPanning(false);
-  }, []);
+    
+    // End brush stroke
+    if (isDrawing && activeTool === 'brush') {
+      brushToolRef.current.endStroke();
+      setIsDrawing(false);
+    }
+    
+    // End eraser stroke
+    if (isDrawing && activeTool === 'eraser') {
+      eraserToolRef.current.endErase();
+      setIsDrawing(false);
+    }
+    
+    // End crop drag
+    if (activeTool === 'crop') {
+      cropToolRef.current.endDrag();
+    }
+  }, [isDrawing, activeTool]);
 
   const handleMouseLeave = useCallback(() => {
     setHoverPoint(null);
     setPreviewMask(null);
     setIsPanning(false);
+    setIsDrawing(false);
     previewWaveEngine.cancel();
-  }, []);
+    
+    if (activeTool === 'brush') {
+      brushToolRef.current.endStroke();
+    }
+    if (activeTool === 'eraser') {
+      eraserToolRef.current.endErase();
+    }
+  }, [activeTool]);
 
   const handleWheel = useCallback((e: React.WheelEvent) => {
     e.preventDefault();
@@ -378,4 +495,32 @@ function drawPreviewMask(ctx: CanvasRenderingContext2D, mask: Uint8ClampedArray,
       }
     }
   }
+}
+
+// Helper: Calculate mask bounds for selection
+function calculateMaskBounds(mask: Uint8ClampedArray, width: number, height: number): Bounds | null {
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  let hasPixels = false;
+  
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const index = y * width + x;
+      if (mask[index] > 0) {
+        hasPixels = true;
+        minX = Math.min(minX, x);
+        minY = Math.min(minY, y);
+        maxX = Math.max(maxX, x);
+        maxY = Math.max(maxY, y);
+      }
+    }
+  }
+  
+  if (!hasPixels) return null;
+  
+  return {
+    x: minX,
+    y: minY,
+    width: maxX - minX + 1,
+    height: maxY - minY + 1,
+  };
 }
