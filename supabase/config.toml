@@ -20,3 +20,12 @@ verify_jwt = false
 
 [functions.aimos-core]
 verify_jwt = false
+
+[functions.self-evolution]
+verify_jwt = false
+
+[functions.image-generate]
+verify_jwt = false
+
+[functions.narrative-engine]
+verify_jwt = false
