@@ -1,7 +1,7 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Settings, Shield, Cpu, X, Code2, FileText, Map } from 'lucide-react';
+import { Settings, Shield, Cpu, X, Code2, FileText, Map, Brain } from 'lucide-react';
 import MatrixSettingsPanel from './MatrixSettingsPanel';
 import AgentsPanel from './AgentsPanel';
 import CloudOrchestratorPanel from './CloudOrchestratorPanel';
@@ -9,6 +9,7 @@ import EnhancedIDEPanel from './EnhancedIDEPanel';
 import { DocumentManager } from '@/components/document/DocumentManager';
 import { HackerMap } from '../warfare/HackerMap';
 import SurveillancePanel from './SurveillancePanel';
+import SelfEvolutionPanel from './SelfEvolutionPanel';
 
 interface RightDrawerProps {
   open: boolean;
@@ -36,39 +37,47 @@ const RightDrawer: React.FC<RightDrawerProps> = ({ open, onOpenChange }) => {
       </div>
       
       <Tabs defaultValue="documents" className="flex-1 flex flex-col overflow-hidden">
-        <TabsList className="flex-shrink-0 grid w-full grid-cols-7 bg-muted/50 mx-4 mt-2">
+        <TabsList className="flex-shrink-0 grid w-full grid-cols-8 bg-muted/50 mx-4 mt-2">
           <TabsTrigger value="documents" className="font-mono text-xs">
-            <FileText className="w-4 h-4 mr-2" />
-            AI-MOS DOCS
+            <FileText className="w-4 h-4 mr-1" />
+            DOCS
+          </TabsTrigger>
+          <TabsTrigger value="evolution" className="font-mono text-xs">
+            <Brain className="w-4 h-4 mr-1" />
+            EVOLVE
           </TabsTrigger>
           <TabsTrigger value="surveillance" className="font-mono text-xs">
-            <Shield className="w-4 h-4 mr-2" />
-            SURVEILLANCE
+            <Shield className="w-4 h-4 mr-1" />
+            SURVEIL
           </TabsTrigger>
           <TabsTrigger value="map" className="font-mono text-xs">
-            <Map className="w-4 h-4 mr-2" />
-            GLOBAL MAP
+            <Map className="w-4 h-4 mr-1" />
+            MAP
           </TabsTrigger>
           <TabsTrigger value="ide" className="font-mono text-xs">
-            <Code2 className="w-4 h-4 mr-2" />
+            <Code2 className="w-4 h-4 mr-1" />
             IDE
           </TabsTrigger>
           <TabsTrigger value="agents" className="font-mono text-xs">
-            <Shield className="w-4 h-4 mr-2" />
+            <Shield className="w-4 h-4 mr-1" />
             AGENTS
           </TabsTrigger>
           <TabsTrigger value="orchestrator" className="font-mono text-xs">
-            <Cpu className="w-4 h-4 mr-2" />
+            <Cpu className="w-4 h-4 mr-1" />
             CLOUD
           </TabsTrigger>
           <TabsTrigger value="settings" className="font-mono text-xs">
-            <Settings className="w-4 h-4 mr-2" />
-            SETTINGS
+            <Settings className="w-4 h-4 mr-1" />
+            CONFIG
           </TabsTrigger>
         </TabsList>
 
         <TabsContent value="documents" className="flex-1 overflow-y-auto mt-2">
           <DocumentManager />
+        </TabsContent>
+
+        <TabsContent value="evolution" className="flex-1 overflow-hidden mt-2">
+          <SelfEvolutionPanel />
         </TabsContent>
 
         <TabsContent value="surveillance" className="flex-1 overflow-hidden mt-2">
