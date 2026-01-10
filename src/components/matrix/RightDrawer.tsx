@@ -5,7 +5,7 @@ import { Settings, Shield, Cpu, X, Code2, FileText, Map, Brain } from 'lucide-re
 import MatrixSettingsPanel from './MatrixSettingsPanel';
 import AgentsPanel from './AgentsPanel';
 import CloudOrchestratorPanel from './CloudOrchestratorPanel';
-import EnhancedIDEPanel from './EnhancedIDEPanel';
+import { ProductionIDE } from '@/components/ide';
 import { DocumentManager } from '@/components/document/DocumentManager';
 import { HackerMap } from '../warfare/HackerMap';
 import SurveillancePanel from './SurveillancePanel';
@@ -93,7 +93,7 @@ const RightDrawer: React.FC<RightDrawerProps> = ({ open, onOpenChange }) => {
         </TabsContent>
 
         <TabsContent value="ide" className="flex-1 overflow-hidden mt-2">
-          <EnhancedIDEPanel />
+          <ProductionIDE />
         </TabsContent>
 
         <TabsContent value="agents" className="flex-1 overflow-y-auto mt-2">
