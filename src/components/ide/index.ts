@@ -4,5 +4,6 @@ export { GitPanel } from './GitPanel';
 export { TerminalPanel } from './TerminalPanel';
 export { PreviewPanel } from './PreviewPanel';
 export { AgentToolsPanel } from './AgentToolsPanel';
+export { AIAssistantPanel } from './AIAssistantPanel';
 export { useIDEStore } from './useIDEStore';
 export * from './types';
