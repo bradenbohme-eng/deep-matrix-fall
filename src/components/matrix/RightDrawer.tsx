@@ -6,7 +6,7 @@ import MatrixSettingsPanel from './MatrixSettingsPanel';
 import AgentsPanel from './AgentsPanel';
 import CloudOrchestratorPanel from './CloudOrchestratorPanel';
 import { ProductionIDE } from '@/components/ide';
-import { DocumentManager } from '@/components/document/DocumentManager';
+import { ProductionDocIDE } from '@/components/docide';
 import { HackerMap } from '../warfare/HackerMap';
 import SurveillancePanel from './SurveillancePanel';
 import SelfEvolutionPanel from './SelfEvolutionPanel';
@@ -72,8 +72,8 @@ const RightDrawer: React.FC<RightDrawerProps> = ({ open, onOpenChange }) => {
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="documents" className="flex-1 overflow-y-auto mt-2">
-          <DocumentManager />
+        <TabsContent value="documents" className="flex-1 overflow-hidden mt-2">
+          <ProductionDocIDE />
         </TabsContent>
 
         <TabsContent value="evolution" className="flex-1 overflow-hidden mt-2">
