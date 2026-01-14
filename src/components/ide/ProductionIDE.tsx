@@ -1,17 +1,18 @@
-import React, { useState } from 'react';
-import Editor from '@monaco-editor/react';
+import React, { useState, useRef } from 'react';
+import Editor, { OnMount } from '@monaco-editor/react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/components/ui/resizable';
 import {
   Code2, Terminal as TerminalIcon, GitBranch, Bot, Eye, Save,
-  Play, Settings, FolderTree, X, Maximize2, Minimize2
+  Play, Settings, FolderTree, X, Maximize2, Minimize2, Sparkles
 } from 'lucide-react';
 import { FileExplorer } from './FileExplorer';
 import { GitPanel } from './GitPanel';
 import { TerminalPanel } from './TerminalPanel';
 import { PreviewPanel } from './PreviewPanel';
 import { AgentToolsPanel } from './AgentToolsPanel';
+import { AIAssistantPanel } from './AIAssistantPanel';
 import { useIDEStore } from './useIDEStore';
 import { EditorTab } from './types';
 import { cn } from '@/lib/utils';
@@ -20,10 +21,32 @@ import { toast } from 'sonner';
 export const ProductionIDE: React.FC = () => {
   const store = useIDEStore();
   const [selectedPath, setSelectedPath] = useState<string | undefined>();
-  const [rightPanel, setRightPanel] = useState<'preview' | 'git' | 'agent'>('preview');
+  const [rightPanel, setRightPanel] = useState<'preview' | 'git' | 'agent' | 'ai'>('preview');
   const [showTerminal, setShowTerminal] = useState(true);
+  const editorRef = useRef<any>(null);
 
   const activeTab = store.openTabs.find(t => t.id === store.activeTabId);
+
+  const handleEditorMount: OnMount = (editor) => {
+    editorRef.current = editor;
+  };
+
+  const handleInsertCode = (code: string) => {
+    if (editorRef.current && activeTab) {
+      const position = editorRef.current.getPosition();
+      if (position) {
+        editorRef.current.executeEdits('ai-insert', [{
+          range: {
+            startLineNumber: position.lineNumber,
+            startColumn: position.column,
+            endLineNumber: position.lineNumber,
+            endColumn: position.column,
+          },
+          text: '\n' + code + '\n',
+        }]);
+      }
+    }
+  };
 
   const handleSave = () => {
     if (store.activeTabId) {
@@ -176,6 +199,14 @@ export const ProductionIDE: React.FC = () => {
                   <Eye className="w-3 h-3 mr-1" /> Preview
                 </Button>
                 <Button
+                  variant={rightPanel === 'ai' ? 'secondary' : 'ghost'}
+                  size="sm"
+                  onClick={() => setRightPanel('ai')}
+                  className="flex-1 rounded-none h-8 text-xs"
+                >
+                  <Sparkles className="w-3 h-3 mr-1" /> AI
+                </Button>
+                <Button
                   variant={rightPanel === 'git' ? 'secondary' : 'ghost'}
                   size="sm"
                   onClick={() => setRightPanel('git')}
@@ -195,6 +226,17 @@ export const ProductionIDE: React.FC = () => {
               <div className="flex-1 overflow-hidden">
                 {rightPanel === 'preview' && (
                   <PreviewPanel files={store.files} activeFilePath={activeTab?.path} />
+                )}
+                {rightPanel === 'ai' && (
+                  <AIAssistantPanel
+                    files={store.files}
+                    activeFileContent={activeTab?.content}
+                    activeFileLanguage={activeTab?.language}
+                    activeFilePath={activeTab?.path}
+                    onInsertCode={handleInsertCode}
+                    onCreateFile={(path, content) => store.createFile('/', path, 'file')}
+                  />
+                )}
                 )}
                 {rightPanel === 'git' && (
                   <GitPanel
