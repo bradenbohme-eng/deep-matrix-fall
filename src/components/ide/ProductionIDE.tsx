@@ -237,7 +237,6 @@ export const ProductionIDE: React.FC = () => {
                     onCreateFile={(path, content) => store.createFile('/', path, 'file')}
                   />
                 )}
-                )}
                 {rightPanel === 'git' && (
                   <GitPanel
                     status={store.gitStatus}
