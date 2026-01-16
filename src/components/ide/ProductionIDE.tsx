@@ -5,7 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/components/ui/resizable';
 import {
   Code2, Terminal as TerminalIcon, GitBranch, Bot, Eye, Save,
-  Play, Settings, FolderTree, X, Maximize2, Minimize2, Sparkles
+  Play, Settings, FolderTree, X, Maximize2, Minimize2, Sparkles, Brain
 } from 'lucide-react';
 import { FileExplorer } from './FileExplorer';
 import { GitPanel } from './GitPanel';
@@ -13,6 +13,7 @@ import { TerminalPanel } from './TerminalPanel';
 import { PreviewPanel } from './PreviewPanel';
 import { AgentToolsPanel } from './AgentToolsPanel';
 import { AIAssistantPanel } from './AIAssistantPanel';
+import { SAMPanel } from './SAMPanel';
 import { useIDEStore } from './useIDEStore';
 import { EditorTab } from './types';
 import { cn } from '@/lib/utils';
@@ -21,7 +22,7 @@ import { toast } from 'sonner';
 export const ProductionIDE: React.FC = () => {
   const store = useIDEStore();
   const [selectedPath, setSelectedPath] = useState<string | undefined>();
-  const [rightPanel, setRightPanel] = useState<'preview' | 'git' | 'agent' | 'ai'>('preview');
+  const [rightPanel, setRightPanel] = useState<'preview' | 'git' | 'agent' | 'ai' | 'sam'>('preview');
   const [showTerminal, setShowTerminal] = useState(true);
   const editorRef = useRef<any>(null);
 
