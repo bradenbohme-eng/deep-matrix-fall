@@ -7,7 +7,7 @@ import {
   Code2, Terminal as TerminalIcon, GitBranch, Bot, Eye, Save,
   Play, Settings, FolderTree, X, Maximize2, Minimize2, Sparkles, Brain
 } from 'lucide-react';
-import { FileExplorer } from './FileExplorer';
+import { EnhancedFileExplorer } from './EnhancedFileExplorer';
 import { GitPanel } from './GitPanel';
 import { TerminalPanel } from './TerminalPanel';
 import { PreviewPanel } from './PreviewPanel';
@@ -89,7 +89,7 @@ export const ProductionIDE: React.FC = () => {
         <ResizablePanelGroup direction="horizontal">
           {/* File Explorer */}
           <ResizablePanel defaultSize={15} minSize={10} maxSize={25}>
-            <FileExplorer
+            <EnhancedFileExplorer
               files={store.files}
               selectedPath={selectedPath}
               onSelect={(node) => setSelectedPath(node.path)}
@@ -100,6 +100,7 @@ export const ProductionIDE: React.FC = () => {
               onCopy={store.copyNodes}
               onCut={store.cutNodes}
               onPaste={store.pasteNodes}
+              onBulkCreate={store.bulkCreate}
               clipboardHasContent={!!store.clipboard}
             />
           </ResizablePanel>
