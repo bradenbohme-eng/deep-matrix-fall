@@ -468,6 +468,62 @@ export const useIDEStore = () => {
     return newBranch;
   }, []);
 
+  // Bulk create files/folders from ingestion
+  const bulkCreate = useCallback((items: Array<{ path: string; name: string; content: string; type: 'file' | 'folder' }>) => {
+    setFiles(prev => {
+      let newFiles = [...prev];
+      const createdPaths = new Set<string>();
+
+      for (const item of items) {
+        if (createdPaths.has(item.path)) continue;
+        createdPaths.add(item.path);
+
+        const parentPath = item.path.split('/').slice(0, -1).join('/') || '/workspace';
+        const newNode: FileNode = {
+          id: generateId(),
+          name: item.name,
+          type: item.type,
+          path: item.type === 'folder' ? item.path : item.path,
+          content: item.type === 'file' ? item.content : undefined,
+          children: item.type === 'folder' ? [] : undefined,
+          language: item.type === 'file' ? getLanguageFromPath(item.name) : undefined,
+          modified: false,
+          lastModified: new Date(),
+        };
+
+        const addToParent = (nodes: FileNode[]): FileNode[] => {
+          return nodes.map(node => {
+            if (node.path === parentPath && node.children) {
+              const exists = node.children.some(c => c.path === item.path);
+              if (!exists) {
+                return { ...node, children: [...node.children, newNode] };
+              }
+            }
+            if (node.children) {
+              return { ...node, children: addToParent(node.children) };
+            }
+            return node;
+          });
+        };
+
+        // If parent is root, add to workspace
+        if (parentPath === '' || parentPath === '/') {
+          const workspace = newFiles.find(n => n.name === 'workspace');
+          if (workspace && workspace.children) {
+            const exists = workspace.children.some(c => c.path === item.path);
+            if (!exists) {
+              workspace.children = [...workspace.children, newNode];
+            }
+          }
+        } else {
+          newFiles = addToParent(newFiles);
+        }
+      }
+
+      return newFiles;
+    });
+  }, []);
+
   // Agent tasks
   const addAgentTask = useCallback((task: Omit<AgentTask, 'id'>) => {
     const newTask: AgentTask = { ...task, id: generateId() };
@@ -527,6 +583,9 @@ export const useIDEStore = () => {
     // Agent tasks
     addAgentTask,
     updateAgentTask,
+
+    // Bulk operations
+    bulkCreate,
 
     // Persist
     saveState,
