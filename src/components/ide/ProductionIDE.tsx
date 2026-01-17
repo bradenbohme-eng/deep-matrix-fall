@@ -200,6 +200,14 @@ export const ProductionIDE: React.FC = () => {
                   <Eye className="w-3 h-3 mr-1" /> Preview
                 </Button>
                 <Button
+                  variant={rightPanel === 'sam' ? 'secondary' : 'ghost'}
+                  size="sm"
+                  onClick={() => setRightPanel('sam')}
+                  className="flex-1 rounded-none h-8 text-xs"
+                >
+                  <Brain className="w-3 h-3 mr-1" /> S.A.M.
+                </Button>
+                <Button
                   variant={rightPanel === 'ai' ? 'secondary' : 'ghost'}
                   size="sm"
                   onClick={() => setRightPanel('ai')}
@@ -258,6 +266,15 @@ export const ProductionIDE: React.FC = () => {
                     onUpdateTask={store.updateAgentTask}
                     onExecuteCommand={(cmd) => store.addTerminalLine(store.activeTerminalId, { type: 'input', content: `$ ${cmd}` })}
                     onCreateFile={store.createFile}
+                  />
+                )}
+                {rightPanel === 'sam' && (
+                  <SAMPanel
+                    files={store.files}
+                    onGenerateDocument={(content, filename) => {
+                      store.createFile('/', filename, 'file');
+                      toast.success(`Generated ${filename}`);
+                    }}
                   />
                 )}
               </div>
