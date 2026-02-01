@@ -1,9 +1,10 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { 
   FileNode, IDEState, EditorTab, Terminal, TerminalLine, 
   GitStatus, GitCommit, GitBranch, Clipboard, AgentTask,
   generateId, getLanguageFromPath 
 } from './types';
+import { DocumentIndexer, MasterIndex } from '@/lib/docIndex';
 
 const STORAGE_KEY = 'aimos-production-ide';
 
@@ -159,6 +160,9 @@ export const useIDEStore = () => {
   ]);
   const [clipboard, setClipboard] = useState<Clipboard | null>(null);
   const [agentTasks, setAgentTasks] = useState<AgentTask[]>([]);
+  const [masterIndex, setMasterIndex] = useState<MasterIndex | null>(null);
+  const [isIndexing, setIsIndexing] = useState(false);
+  const indexerRef = useRef<DocumentIndexer>(new DocumentIndexer());
 
   // Save state
   const saveState = useCallback(() => {
@@ -524,6 +528,40 @@ export const useIDEStore = () => {
     });
   }, []);
 
+  // Document indexing
+  const indexAllFiles = useCallback(async () => {
+    setIsIndexing(true);
+    try {
+      const allFiles: Array<{ path: string; content: string }> = [];
+      
+      const collectFiles = (nodes: FileNode[]) => {
+        for (const node of nodes) {
+          if (node.type === 'file' && node.content) {
+            allFiles.push({ path: node.path, content: node.content });
+          }
+          if (node.children) {
+            collectFiles(node.children);
+          }
+        }
+      };
+      
+      collectFiles(files);
+      
+      if (allFiles.length > 0) {
+        const index = await indexerRef.current.indexFiles(allFiles);
+        setMasterIndex(index);
+        return index;
+      }
+    } catch (error) {
+      console.error('Indexing failed:', error);
+    } finally {
+      setIsIndexing(false);
+    }
+    return null;
+  }, [files]);
+
+  const getIndexer = useCallback(() => indexerRef.current, []);
+
   // Agent tasks
   const addAgentTask = useCallback((task: Omit<AgentTask, 'id'>) => {
     const newTask: AgentTask = { ...task, id: generateId() };
@@ -549,6 +587,8 @@ export const useIDEStore = () => {
     gitBranches,
     clipboard,
     agentTasks,
+    masterIndex,
+    isIndexing,
 
     // File operations
     findNode,
@@ -586,6 +626,10 @@ export const useIDEStore = () => {
 
     // Bulk operations
     bulkCreate,
+
+    // Document indexing
+    indexAllFiles,
+    getIndexer,
 
     // Persist
     saveState,

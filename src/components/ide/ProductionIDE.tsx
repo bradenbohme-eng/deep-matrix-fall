@@ -272,6 +272,9 @@ export const ProductionIDE: React.FC = () => {
                 {rightPanel === 'sam' && (
                   <SAMPanel
                     files={store.files}
+                    masterIndex={store.masterIndex}
+                    isIndexing={store.isIndexing}
+                    onIndexFiles={store.indexAllFiles}
                     onGenerateDocument={(content, filename) => {
                       store.createFile('/', filename, 'file');
                       toast.success(`Generated ${filename}`);
