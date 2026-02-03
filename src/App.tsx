@@ -7,6 +7,7 @@ import { MatrixSettingsProvider } from "./contexts/MatrixSettingsContext";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import Architecture from "./pages/Architecture";
+import HQ from "./pages/HQ";
 import { ImageEditor } from "./components/ImageEditor";
 
 const queryClient = new QueryClient();
@@ -18,8 +19,9 @@ const App = () => (
         <Toaster />
         <Sonner />
         <BrowserRouter>
-  <Routes>
-            <Route path="/" element={<Index />} />
+          <Routes>
+            <Route path="/" element={<HQ />} />
+            <Route path="/chat" element={<Index />} />
             <Route path="/architecture" element={<Architecture />} />
             <Route path="/editor" element={<ImageEditor />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
