@@ -22,14 +22,16 @@ export type CentralPanelMode =
   | 'code'        // Monaco code editor
   | 'preview'     // Live preview
   | 'diagram'     // Diagram/flowchart
-  | 'map';        // Intel map
+  | 'map'         // Intel map
+  | 'orchestration'; // Orchestration dashboard
 
 export type BottomPanelTab =
   | 'terminal'    // Terminal
   | 'problems'    // Problems/errors
   | 'output'      // Output logs
   | 'diagnostics' // System diagnostics
-  | 'debug';      // Debug console
+  | 'debug'       // Debug console
+  | 'tests';      // Test Harness
 
 export interface HQLayoutState {
   leftDrawerOpen: boolean;

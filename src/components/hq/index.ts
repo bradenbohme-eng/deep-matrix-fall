@@ -10,5 +10,7 @@ export { default as CentralPanel } from './CentralPanel';
 export { default as BottomPanel } from './BottomPanel';
 export { default as RedTeamPanel } from './RedTeamPanel';
 export { default as BlueTeamPanel } from './BlueTeamPanel';
+export { default as OrchestrationDashboard } from './OrchestrationDashboard';
+export { default as TestHarnessPanel } from './TestHarnessPanel';
 export { useHQStore } from './useHQStore';
 export * from './types';

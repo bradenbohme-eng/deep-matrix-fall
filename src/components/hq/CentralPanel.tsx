@@ -1,4 +1,4 @@
-// Central Panel - Code Editor, Preview, Diagram, Map
+// Central Panel - Code Editor, Preview, Diagram, Map, Orchestration
 
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
@@ -6,6 +6,7 @@ import Editor from '@monaco-editor/react';
 import { useIDEStore } from '@/components/ide/useIDEStore';
 import { HackerMap } from '@/components/warfare/HackerMap';
 import DiagramOrganizer from '@/components/matrix/DiagramOrganizer';
+import OrchestrationDashboard from './OrchestrationDashboard';
 import { 
   Code, 
   Eye, 
@@ -13,7 +14,8 @@ import {
   Map, 
   X, 
   Maximize2,
-  Split
+  Split,
+  Activity
 } from 'lucide-react';
 import type { CentralPanelMode } from './types';
 
@@ -97,6 +99,15 @@ const CentralPanel: React.FC<CentralPanelProps> = ({ mode, onModeChange }) => {
             >
               <Map className="w-3 h-3 mr-1" />
               Map
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => onModeChange('orchestration')}
+              className={`h-8 px-3 text-xs ${mode === 'orchestration' ? 'bg-primary/20 text-primary' : ''}`}
+            >
+              <Activity className="w-3 h-3 mr-1" />
+              Orchestration
             </Button>
           </div>
           
@@ -209,6 +220,12 @@ const CentralPanel: React.FC<CentralPanelProps> = ({ mode, onModeChange }) => {
         {mode === 'map' && (
           <div className="h-full">
             <HackerMap />
+          </div>
+        )}
+
+        {mode === 'orchestration' && (
+          <div className="h-full">
+            <OrchestrationDashboard />
           </div>
         )}
       </div>

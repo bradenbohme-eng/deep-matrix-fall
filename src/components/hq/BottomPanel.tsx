@@ -1,4 +1,4 @@
-// Bottom Panel - Terminal, Problems, Output, Diagnostics
+// Bottom Panel - Terminal, Problems, Output, Diagnostics, Tests
 
 import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
@@ -12,9 +12,10 @@ import {
   X,
   Minus,
   Maximize2,
-  ChevronDown
+  FlaskConical
 } from 'lucide-react';
 import type { BottomPanelTab } from './types';
+import TestHarnessPanel from './TestHarnessPanel';
 
 interface BottomPanelProps {
   activeTab: BottomPanelTab;
@@ -38,6 +39,7 @@ const tabs: { id: BottomPanelTab; icon: React.ElementType; label: string }[] = [
   { id: 'output', icon: FileOutput, label: 'Output' },
   { id: 'diagnostics', icon: Activity, label: 'Diagnostics' },
   { id: 'debug', icon: Bug, label: 'Debug' },
+  { id: 'tests', icon: FlaskConical, label: 'Tests' },
 ];
 
 const BottomPanel: React.FC<BottomPanelProps> = ({
@@ -304,6 +306,12 @@ const BottomPanel: React.FC<BottomPanelProps> = ({
           <ScrollArea className="h-full p-2 font-mono text-xs">
             <div className="text-muted-foreground">Debug console ready. Set breakpoints in code to begin debugging.</div>
           </ScrollArea>
+        )}
+
+        {activeTab === 'tests' && (
+          <div className="h-full">
+            <TestHarnessPanel />
+          </div>
         )}
       </div>
     </div>
