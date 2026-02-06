@@ -24,3 +24,17 @@ export { OrchestrationKernel, createKernel } from './kernel';
 
 // Test Harness (DSL + Runner + Scoring)
 export { TestRunner, getTestRunner } from './testHarness';
+
+// Test Log Store (Persistent test results with reasoning traces)
+export {
+  TestLogStore,
+  getTestLogStore,
+  type TestRun,
+  type TestSession,
+  type ReasoningStep,
+  type ImprovementSuggestion,
+  type BudgetSnapshot,
+  type InternalStateEntry,
+  type CrossTestInsight,
+  type AggregateStats,
+} from './testLogStore';

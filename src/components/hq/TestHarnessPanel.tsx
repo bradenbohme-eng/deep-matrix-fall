@@ -1,6 +1,6 @@
 // Test Harness Panel - Run and visualize orchestration tests
 
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -14,7 +14,7 @@ import {
   ChevronRight,
   ChevronDown,
 } from 'lucide-react';
-import { getTestRunner, type TestResult, type TestSpec } from '@/lib/orchestration';
+import { getTestRunner, getTestLogStore, type TestResult, type TestSpec } from '@/lib/orchestration';
 
 interface TestHarnessPanelProps {
   className?: string;
@@ -39,6 +39,8 @@ const TestHarnessPanel: React.FC<TestHarnessPanelProps> = ({ className }) => {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
 
   const testRunner = useMemo(() => getTestRunner(), []);
+  const logStore = useMemo(() => getTestLogStore(), []);
+  
   const testSpecs: DisplayTestSpec[] = useMemo(() => {
     const specs = testRunner.listTests();
     return specs.map(spec => ({
@@ -66,20 +68,34 @@ const TestHarnessPanel: React.FC<TestHarnessPanelProps> = ({ className }) => {
   const runAllTests = useCallback(async () => {
     setIsRunning(true);
     setTestResults([]);
+    logStore.startSession();
     
     for (const spec of testSpecs) {
       setCurrentTest(spec.test_id);
+      const run = logStore.startTestRun(spec.test_id);
       
-      // Simulate test execution delay
+      // Add reasoning trace
+      logStore.addReasoningStep(run.run_id, {
+        phase: 'planning',
+        thought: `Executing test: ${spec.test_id}`,
+        reasoning: `Testing ${spec.category} category with ${spec.must_do.length} must-do conditions`,
+        confidence: 0.9,
+        alternatives_considered: [],
+        decision_made: 'Proceed with test execution',
+        evidence: spec.must_do,
+      });
+      
       await new Promise(resolve => setTimeout(resolve, 500 + Math.random() * 1000));
       
       const result = await testRunner.runTest(spec.test_id);
+      logStore.completeTestRun(run.run_id, result);
       setTestResults(prev => [...prev, result]);
     }
     
+    logStore.endSession();
     setCurrentTest(null);
     setIsRunning(false);
-  }, [testRunner, testSpecs]);
+  }, [testRunner, testSpecs, logStore]);
 
   const runSingleTest = useCallback(async (testId: string) => {
     setIsRunning(true);

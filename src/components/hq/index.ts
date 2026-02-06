@@ -12,5 +12,7 @@ export { default as RedTeamPanel } from './RedTeamPanel';
 export { default as BlueTeamPanel } from './BlueTeamPanel';
 export { default as OrchestrationDashboard } from './OrchestrationDashboard';
 export { default as TestHarnessPanel } from './TestHarnessPanel';
+export { default as DAGVisualization } from './DAGVisualization';
+export { default as TestResultsViewer } from './TestResultsViewer';
 export { useHQStore } from './useHQStore';
 export * from './types';

@@ -1,6 +1,6 @@
 // Orchestration Dashboard - Task Queue, Event Log, DAG View, Budget Meters
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -20,6 +20,7 @@ import {
   Upload,
   ChevronRight,
   ChevronDown,
+  BarChart3,
 } from 'lucide-react';
 import {
   getEventStore,
@@ -30,7 +31,10 @@ import {
   type Event,
   type Task,
   type Budgets,
+  type DAGState,
 } from '@/lib/orchestration';
+import DAGVisualization from './DAGVisualization';
+import TestResultsViewer from './TestResultsViewer';
 
 interface OrchestrationDashboardProps {
   className?: string;
@@ -39,6 +43,7 @@ interface OrchestrationDashboardProps {
 const OrchestrationDashboard: React.FC<OrchestrationDashboardProps> = ({ className }) => {
   const [events, setEvents] = useState<Event[]>([]);
   const [tasks, setTasks] = useState<Map<string, Task>>(new Map());
+  const [dagState, setDagState] = useState<DAGState>({ nodes: [], edges: [], roots: [], leaves: [], ready: [] });
   const [isRunning, setIsRunning] = useState(false);
   const [expandedEvents, setExpandedEvents] = useState<Set<string>>(new Set());
   const [budgets] = useState<Budgets>({
@@ -90,6 +95,7 @@ const OrchestrationDashboard: React.FC<OrchestrationDashboardProps> = ({ classNa
     const store = getEventStore();
     const queue = new TaskQueue(store);
     
+    // Task 1: No dependencies
     queue.createTask({
       title: 'Initialize Project Structure',
       prompt: 'Set up the base project structure with folders and config files',
@@ -97,25 +103,46 @@ const OrchestrationDashboard: React.FC<OrchestrationDashboardProps> = ({ classNa
       acceptance_criteria: [],
     });
     
+    // Task 2: Depends on Task 1
     queue.createTask({
       title: 'Implement Core Module',
       prompt: 'Build the core functionality module with proper error handling',
       priority: 80,
       acceptance_criteria: [],
+      dependencies: ['Initialize Project Structure'],
     });
     
+    // Task 3: Depends on Task 2
     queue.createTask({
       title: 'Write Unit Tests',
       prompt: 'Create comprehensive unit tests for all core functions',
       priority: 70,
       acceptance_criteria: [],
-      dependencies: [],
+      dependencies: ['Implement Core Module'],
+    });
+
+    // Task 4: Independent branch
+    queue.createTask({
+      title: 'Setup CI/CD Pipeline',
+      prompt: 'Configure continuous integration and deployment pipelines',
+      priority: 60,
+      acceptance_criteria: [],
+    });
+
+    // Task 5: Depends on Tasks 3 and 4
+    queue.createTask({
+      title: 'Deploy to Staging',
+      prompt: 'Deploy the application to staging environment',
+      priority: 50,
+      acceptance_criteria: [],
+      dependencies: ['Write Unit Tests', 'Setup CI/CD Pipeline'],
     });
     
     setEvents(store.getEvents());
     const materializer = new StateMaterializer();
     const state = materializer.materialize(store.getEvents());
     setTasks(state.tasks);
+    setDagState(queue.getDAGState());
   }, [budgets]);
 
   const handleStart = () => {
@@ -298,6 +325,10 @@ const OrchestrationDashboard: React.FC<OrchestrationDashboardProps> = ({ classNa
             <GitBranch className="w-3 h-3 mr-1" />
             DAG View
           </TabsTrigger>
+          <TabsTrigger value="results" className="text-xs h-7">
+            <BarChart3 className="w-3 h-3 mr-1" />
+            Test Results
+          </TabsTrigger>
         </TabsList>
 
         {/* Task Queue */}
@@ -387,14 +418,17 @@ const OrchestrationDashboard: React.FC<OrchestrationDashboardProps> = ({ classNa
         </TabsContent>
 
         {/* DAG View */}
-        <TabsContent value="dag" className="flex-1 m-0">
-          <div className="h-full flex items-center justify-center">
-            <div className="text-center text-muted-foreground">
-              <GitBranch className="w-12 h-12 mx-auto mb-4 opacity-30" />
-              <div className="text-sm">DAG Visualization</div>
-              <div className="text-xs mt-1">Task dependencies graph (coming soon)</div>
-            </div>
-          </div>
+        <TabsContent value="dag" className="flex-1 m-0 overflow-hidden">
+          <DAGVisualization
+            tasks={tasks}
+            dagState={dagState}
+            onTaskSelect={(taskId) => console.log('Selected task:', taskId)}
+          />
+        </TabsContent>
+
+        {/* Test Results */}
+        <TabsContent value="results" className="flex-1 m-0 overflow-hidden">
+          <TestResultsViewer />
         </TabsContent>
       </Tabs>
     </div>
