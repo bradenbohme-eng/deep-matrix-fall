@@ -94,8 +94,6 @@ const OrchestrationCenter: React.FC<{ subPage: SubPage }> = ({ subPage }) => {
       leaves: [ids[ids.length - 1]],
       ready: ids.filter(id => demoTasks.get(id)!.status === 'queued' && 
         demoTasks.get(id)!.dependencies.every(d => demoTasks.get(d)?.status === 'done')),
-      criticalPath: ids,
-      maxDepth: ids.length - 1,
     };
   }, [demoTasks]);
 
