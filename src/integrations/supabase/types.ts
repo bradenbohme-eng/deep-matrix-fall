@@ -497,6 +497,92 @@ export type Database = {
           },
         ]
       }
+      aimos_project_files: {
+        Row: {
+          content: string | null
+          created_at: string | null
+          id: string
+          is_directory: boolean | null
+          language: string | null
+          metadata: Json | null
+          name: string
+          parent_path: string | null
+          path: string
+          project_id: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          content?: string | null
+          created_at?: string | null
+          id?: string
+          is_directory?: boolean | null
+          language?: string | null
+          metadata?: Json | null
+          name: string
+          parent_path?: string | null
+          path: string
+          project_id: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          content?: string | null
+          created_at?: string | null
+          id?: string
+          is_directory?: boolean | null
+          language?: string | null
+          metadata?: Json | null
+          name?: string
+          parent_path?: string | null
+          path?: string
+          project_id?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "aimos_project_files_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "aimos_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      aimos_projects: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          name: string
+          settings: Json | null
+          tags: string[] | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          name?: string
+          settings?: Json | null
+          tags?: string[] | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          name?: string
+          settings?: Json | null
+          tags?: string[] | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       aimos_reasoning_chains: {
         Row: {
           coherence_score: number | null
@@ -781,6 +867,77 @@ export type Database = {
           summary?: string
           updated_at?: string | null
           user_id?: string | null
+        }
+        Relationships: []
+      }
+      chat_messages: {
+        Row: {
+          content: string
+          created_at: string | null
+          id: string
+          metadata: Json | null
+          role: string
+          thread_id: string
+          user_id: string
+        }
+        Insert: {
+          content?: string
+          created_at?: string | null
+          id?: string
+          metadata?: Json | null
+          role?: string
+          thread_id: string
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string | null
+          id?: string
+          metadata?: Json | null
+          role?: string
+          thread_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_messages_thread_id_fkey"
+            columns: ["thread_id"]
+            isOneToOne: false
+            referencedRelation: "chat_threads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      chat_threads: {
+        Row: {
+          context_file: string | null
+          created_at: string | null
+          id: string
+          is_archived: boolean | null
+          mode: string | null
+          title: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          context_file?: string | null
+          created_at?: string | null
+          id?: string
+          is_archived?: boolean | null
+          mode?: string | null
+          title?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          context_file?: string | null
+          created_at?: string | null
+          id?: string
+          is_archived?: boolean | null
+          mode?: string | null
+          title?: string | null
+          updated_at?: string | null
+          user_id?: string
         }
         Relationships: []
       }
@@ -3108,6 +3265,59 @@ export type Database = {
         }
         Relationships: []
       }
+      project_files: {
+        Row: {
+          content: string | null
+          created_at: string | null
+          id: string
+          is_directory: boolean | null
+          language: string | null
+          metadata: Json | null
+          name: string
+          parent_path: string | null
+          path: string
+          project_id: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          content?: string | null
+          created_at?: string | null
+          id?: string
+          is_directory?: boolean | null
+          language?: string | null
+          metadata?: Json | null
+          name: string
+          parent_path?: string | null
+          path: string
+          project_id?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          content?: string | null
+          created_at?: string | null
+          id?: string
+          is_directory?: boolean | null
+          language?: string | null
+          metadata?: Json | null
+          name?: string
+          parent_path?: string | null
+          path?: string
+          project_id?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_files_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       project_versions: {
         Row: {
           created_at: string | null
@@ -5160,6 +5370,39 @@ export type Database = {
           is_public?: boolean | null
           name?: string
           thumbnail_url?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_settings: {
+        Row: {
+          ai_config: Json | null
+          created_at: string | null
+          editor_config: Json | null
+          id: string
+          layout_config: Json | null
+          theme: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          ai_config?: Json | null
+          created_at?: string | null
+          editor_config?: Json | null
+          id?: string
+          layout_config?: Json | null
+          theme?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          ai_config?: Json | null
+          created_at?: string | null
+          editor_config?: Json | null
+          id?: string
+          layout_config?: Json | null
+          theme?: string | null
           updated_at?: string | null
           user_id?: string
         }
