@@ -48,27 +48,56 @@ const CenterWorkspace: React.FC<CenterWorkspaceProps> = ({ activeWorld, activeSu
 
 // ─── Orchestration World ───
 const OrchestrationCenter: React.FC<{ subPage: SubPage }> = ({ subPage }) => {
-  // Demo data for DAG
   const demoTasks = useMemo(() => {
     const tasks = new Map<string, Task>();
-    const baseTask = {
-      prompt: '', context_refs: [], history: [],
-      acceptance_criteria: [{ id: 'ac1', description: 'Complete', type: 'deterministic' as const, check: () => true }],
-    };
-    tasks.set('t1', { ...baseTask, task_id: 't1', title: 'Analyze constraints', dependencies: [], priority: 80, status: 'done' });
-    tasks.set('t2', { ...baseTask, task_id: 't2', title: 'Generate draft', dependencies: ['t1'], priority: 90, status: 'active' });
-    tasks.set('t3', { ...baseTask, task_id: 't3', title: 'Verify output', dependencies: ['t2'], priority: 70, status: 'queued' });
-    tasks.set('t4', { ...baseTask, task_id: 't4', title: 'Run checks', dependencies: ['t3'], priority: 60, status: 'queued' });
-    tasks.set('t5', { ...baseTask, task_id: 't5', title: 'Emit checkpoint', dependencies: ['t4'], priority: 50, status: 'queued' });
+    const ids = ['t1', 't2', 't3', 't4', 't5'];
+    const titles = ['Analyze constraints', 'Generate draft', 'Verify output', 'Run checks', 'Emit checkpoint'];
+    const statuses: Array<Task['status']> = ['done', 'active', 'queued', 'queued', 'queued'];
+    const priorities = [80, 90, 70, 60, 50];
+
+    ids.forEach((id, i) => {
+      tasks.set(id, {
+        task_id: id,
+        title: titles[i],
+        prompt: '',
+        acceptance_criteria: [],
+        dependencies: i > 0 ? [ids[i - 1]] : [],
+        priority: priorities[i],
+        status: statuses[i],
+        context_refs: [],
+        history: [],
+        created_at: Date.now(),
+        subtask_ids: [],
+        retry_count: 0,
+        max_retries: 3,
+        metadata: {},
+      });
+    });
     return tasks;
   }, []);
 
-  const demoDag: DAGState = useMemo(() => ({
-    nodes: Array.from(demoTasks.keys()).map((id, i) => ({ id, depth: i, dependsOn: i > 0 ? [Array.from(demoTasks.keys())[i - 1]] : [], blocks: i < 4 ? [Array.from(demoTasks.keys())[i + 1]] : [] })),
-    edges: Array.from(demoTasks.keys()).slice(1).map((id, i) => ({ from: Array.from(demoTasks.keys())[i], to: id, type: 'dependency' as const })),
-    criticalPath: Array.from(demoTasks.keys()),
-    maxDepth: 4,
-  }), [demoTasks]);
+  const demoDag = useMemo((): DAGState => {
+    const ids = Array.from(demoTasks.keys());
+    return {
+      nodes: ids.map((id, i) => ({
+        task_id: id,
+        status: demoTasks.get(id)!.status,
+        priority: demoTasks.get(id)!.priority,
+        depth: i,
+      })),
+      edges: ids.slice(1).map((id, i) => ({
+        from: ids[i],
+        to: id,
+        type: 'requires' as const,
+      })),
+      roots: [ids[0]],
+      leaves: [ids[ids.length - 1]],
+      ready: ids.filter(id => demoTasks.get(id)!.status === 'queued' && 
+        demoTasks.get(id)!.dependencies.every(d => demoTasks.get(d)?.status === 'done')),
+      criticalPath: ids,
+      maxDepth: ids.length - 1,
+    };
+  }, [demoTasks]);
 
   switch (subPage) {
     case 'command':
