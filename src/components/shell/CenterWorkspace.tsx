@@ -1,13 +1,14 @@
 // CenterWorkspace — Canon §9: The Thing Itself
 // "The center is sacred. It must show the thing the user is actually working on."
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import type { WorldPage, SubPage } from './types';
 import OrchestrationDashboard from '@/components/hq/OrchestrationDashboard';
 import DAGVisualization from '@/components/hq/DAGVisualization';
 import TestHarnessPanel from '@/components/hq/TestHarnessPanel';
 import Editor from '@monaco-editor/react';
 import { useIDEStore } from '@/components/ide/useIDEStore';
+import type { Task, DAGState } from '@/lib/orchestration/types';
 import {
   Activity,
   Workflow,
