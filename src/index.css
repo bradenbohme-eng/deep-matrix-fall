@@ -2,109 +2,121 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
-All colors MUST be HSL.
-*/
+/* ═══════════════════════════════════════════════════════════
+   DESIGN SYSTEM — Canon-Grade Matrix Hacker Environment
+   All colors MUST be HSL.
+   ═══════════════════════════════════════════════════════════ */
 
 @layer base {
   :root {
-    /* Cyberpunk Matrix Theme */
-    --background: 0 0% 2%;
-    --foreground: 120 100% 85%;
+    /* ─── Core Palette ─── */
+    --background: 0 0% 3%;
+    --foreground: 120 60% 82%;
 
-    --card: 0 0% 8%;
-    --card-foreground: 120 100% 85%;
+    --card: 0 0% 6%;
+    --card-foreground: 120 60% 82%;
 
-    --popover: 0 0% 6%;
-    --popover-foreground: 120 100% 85%;
+    --popover: 0 0% 5%;
+    --popover-foreground: 120 60% 82%;
 
-    --primary: 120 100% 50%;
+    --primary: 120 100% 44%;
     --primary-foreground: 0 0% 0%;
-    --primary-glow: 120 100% 70%;
+    --primary-glow: 120 100% 62%;
 
-    --secondary: 155 100% 25%;
-    --secondary-foreground: 120 100% 85%;
+    --secondary: 155 80% 22%;
+    --secondary-foreground: 120 60% 82%;
 
-    --muted: 0 0% 15%;
-    --muted-foreground: 120 50% 60%;
+    --muted: 0 0% 10%;
+    --muted-foreground: 120 30% 50%;
 
-    --accent: 155 100% 40%;
+    --accent: 155 90% 34%;
     --accent-foreground: 0 0% 0%;
 
-    --destructive: 0 84% 60%;
+    --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 98%;
 
-    --border: 120 20% 20%;
-    --input: 120 20% 15%;
-    --ring: 120 100% 50%;
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 0%;
 
-    --radius: 0.75rem;
+    --info: 199 89% 48%;
+    --info-foreground: 0 0% 0%;
 
-    /* Matrix Colors */
-    --matrix-green: 120 100% 50%;
-    --matrix-lead: 120 100% 85%;
-    --matrix-dim: 120 80% 30%;
-    --matrix-background: 0 0% 2%;
+    --success: 142 76% 36%;
+    --success-foreground: 0 0% 100%;
 
-    /* Cyberpunk Gradients */
-    --gradient-matrix: linear-gradient(135deg, hsl(120 100% 50% / 0.1), hsl(155 100% 40% / 0.1));
-    --gradient-glow: radial-gradient(circle, hsl(120 100% 50% / 0.3), transparent 70%);
-    --gradient-cyber: linear-gradient(45deg, hsl(180 100% 50%), hsl(120 100% 50%), hsl(300 100% 50%));
+    --border: 120 12% 14%;
+    --input: 120 12% 10%;
+    --ring: 120 100% 44%;
 
-    /* Shadows */
-    --shadow-matrix: 0 0 20px hsl(120 100% 50% / 0.5);
-    --shadow-cyber: 0 0 40px hsl(120 100% 50% / 0.3), 0 0 80px hsl(155 100% 40% / 0.2);
+    --radius: 0.5rem;
 
-    /* Animations */
-    --transition-cyber: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    --transition-matrix: all 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    /* ─── Matrix Core ─── */
+    --matrix-green: 120 100% 44%;
+    --matrix-bright: 120 100% 62%;
+    --matrix-dim: 120 60% 22%;
+    --matrix-bg: 0 0% 3%;
+    --matrix-gutter: 0 0% 5%;
 
-    --sidebar-background: 0 0% 8%;
-    --sidebar-foreground: 120 100% 85%;
-    --sidebar-primary: 120 100% 50%;
+    /* ─── Surface Hierarchy (Canon §21A - Height-First UI) ─── */
+    --surface-0: 0 0% 3%;       /* deepest bg */
+    --surface-1: 0 0% 5%;       /* shell bg */
+    --surface-2: 0 0% 7%;       /* drawer bg */
+    --surface-3: 0 0% 9%;       /* card / panel */
+    --surface-4: 0 0% 12%;      /* elevated / floating */
+    --surface-5: 0 0% 15%;      /* modal / overlay */
+
+    /* ─── Material System (Canon §21A) ─── */
+    --glass-tint: 120 100% 44%;
+    --glass-opacity: 0.04;
+    --frost-blur: 12px;
+    --frost-saturation: 1.2;
+
+    /* ─── Shadow Rig (Canon §21A.7 - Contact vs Cast) ─── */
+    --shadow-contact: 0 2px 4px hsl(0 0% 0% / 0.6);
+    --shadow-cast: 0 8px 24px hsl(0 0% 0% / 0.4);
+    --shadow-elevated: 0 12px 40px hsl(0 0% 0% / 0.5);
+    --shadow-glow: 0 0px 20px hsl(120 100% 44% / 0.15);
+    --shadow-glow-strong: 0 0px 40px hsl(120 100% 44% / 0.25);
+    --shadow-inset: inset 0 1px 3px hsl(0 0% 0% / 0.5);
+    --shadow-inset-deep: inset 0 2px 8px hsl(0 0% 0% / 0.6);
+
+    /* ─── Gradients ─── */
+    --gradient-shell: linear-gradient(180deg, hsl(0 0% 5%), hsl(0 0% 3%));
+    --gradient-glass: linear-gradient(135deg, hsl(120 100% 44% / 0.06), hsl(120 100% 44% / 0.02));
+    --gradient-topbar: linear-gradient(180deg, hsl(0 0% 8%), hsl(0 0% 5%));
+    --gradient-active: linear-gradient(135deg, hsl(120 100% 44% / 0.15), hsl(120 100% 44% / 0.05));
+    --gradient-danger: linear-gradient(135deg, hsl(0 72% 51% / 0.15), hsl(0 72% 51% / 0.05));
+
+    /* ─── Typography Scale ─── */
+    --font-mono: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'SF Mono', monospace;
+    --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    --font-display: 'Orbitron', 'Rajdhani', 'Inter', sans-serif;
+
+    /* ─── Spacing / Sizing ─── */
+    --rail-width: 48px;
+    --topbar-height: 40px;
+    --subpage-height: 32px;
+    --statusbar-height: 24px;
+    --drawer-width: 280px;
+    --right-panel-width: 360px;
+    --bottom-dock-height: 220px;
+
+    /* ─── Motion (Canon §19) ─── */
+    --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+    --ease-in-out-quart: cubic-bezier(0.76, 0, 0.24, 1);
+    --duration-fast: 150ms;
+    --duration-normal: 250ms;
+    --duration-slow: 400ms;
+
+    /* ─── Sidebar ─── */
+    --sidebar-background: 0 0% 5%;
+    --sidebar-foreground: 120 60% 82%;
+    --sidebar-primary: 120 100% 44%;
     --sidebar-primary-foreground: 0 0% 0%;
-    --sidebar-accent: 120 20% 15%;
-    --sidebar-accent-foreground: 120 100% 85%;
-    --sidebar-border: 120 20% 20%;
-    --sidebar-ring: 120 100% 50%;
-  }
-
-  .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
-
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 11.2%;
-
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
-
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --sidebar-accent: 120 12% 12%;
+    --sidebar-accent-foreground: 120 60% 82%;
+    --sidebar-border: 120 12% 14%;
+    --sidebar-ring: 120 100% 44%;
   }
 }
 
@@ -115,5 +127,244 @@ All colors MUST be HSL.
 
   body {
     @apply bg-background text-foreground;
+    font-family: var(--font-sans);
+  }
+
+  /* Import display font */
+  @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700&family=JetBrains+Mono:wght@300;400;500;600&family=Inter:wght@300;400;500;600;700&display=swap');
+}
+
+/* ═══════════════════════════════════════════════════════════
+   MATERIAL SURFACES (Canon §21A - Tier 1: CSS Composition)
+   ═══════════════════════════════════════════════════════════ */
+
+@layer components {
+  /* Frosted glass surface */
+  .surface-glass {
+    background: linear-gradient(
+      135deg,
+      hsl(120 100% 44% / 0.04),
+      hsl(0 0% 0% / 0.3)
+    );
+    backdrop-filter: blur(var(--frost-blur)) saturate(var(--frost-saturation));
+    border: 1px solid hsl(120 100% 44% / 0.08);
+  }
+
+  /* Machined metal inset */
+  .surface-inset {
+    background: hsl(var(--surface-1));
+    box-shadow: var(--shadow-inset), 0 1px 0 hsl(0 0% 100% / 0.03);
+  }
+
+  /* Raised panel */
+  .surface-raised {
+    background: hsl(var(--surface-3));
+    box-shadow: var(--shadow-contact), 0 -1px 0 hsl(0 0% 100% / 0.04) inset;
+  }
+
+  /* Elevated floating card */
+  .surface-elevated {
+    background: hsl(var(--surface-4));
+    box-shadow: var(--shadow-cast), var(--shadow-glow);
+  }
+
+  /* Active/selected surface with matrix glow */
+  .surface-active {
+    background: var(--gradient-active);
+    box-shadow: var(--shadow-glow), var(--shadow-inset);
+    border: 1px solid hsl(120 100% 44% / 0.2);
+  }
+
+  /* Shell topbar surface */
+  .surface-topbar {
+    background: var(--gradient-topbar);
+    border-bottom: 1px solid hsl(120 100% 44% / 0.08);
+    box-shadow: 0 1px 0 hsl(0 0% 100% / 0.02) inset;
+  }
+
+  /* Rail surface */
+  .surface-rail {
+    background: hsl(var(--surface-1));
+    box-shadow: 0 0 1px hsl(0 0% 100% / 0.03) inset;
+  }
+
+  /* Bottom dock surface */
+  .surface-dock {
+    background: linear-gradient(0deg, hsl(0 0% 4%), hsl(0 0% 6%));
+    border-top: 1px solid hsl(120 100% 44% / 0.06);
+    box-shadow: 0 -2px 12px hsl(0 0% 0% / 0.3);
+  }
+
+  /* ─── Interactive States ─── */
+  .interactive-ghost {
+    @apply transition-all;
+    transition-duration: var(--duration-fast);
+  }
+  .interactive-ghost:hover {
+    background: hsl(120 100% 44% / 0.06);
+  }
+  .interactive-ghost:active {
+    background: hsl(120 100% 44% / 0.1);
+    transform: scale(0.97);
+  }
+
+  /* Rail icon button */
+  .rail-icon {
+    @apply relative flex items-center justify-center transition-all;
+    width: 36px;
+    height: 36px;
+    border-radius: 6px;
+    color: hsl(var(--muted-foreground));
+    transition-duration: var(--duration-fast);
+  }
+  .rail-icon:hover {
+    color: hsl(var(--primary));
+    background: hsl(120 100% 44% / 0.08);
+  }
+  .rail-icon.active {
+    color: hsl(var(--primary));
+    background: hsl(120 100% 44% / 0.12);
+    box-shadow: var(--shadow-glow);
+  }
+  .rail-icon.active::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 25%;
+    bottom: 25%;
+    width: 2px;
+    background: hsl(var(--primary));
+    border-radius: 0 2px 2px 0;
+    box-shadow: 0 0 8px hsl(120 100% 44% / 0.5);
+  }
+  .rail-icon.right-active::before {
+    left: auto;
+    right: 0;
+    border-radius: 2px 0 0 2px;
+  }
+
+  /* Tab button */
+  .tab-button {
+    @apply relative flex items-center gap-1.5 px-3 py-1 text-xs font-mono transition-all;
+    color: hsl(var(--muted-foreground));
+    border-radius: 4px;
+    transition-duration: var(--duration-fast);
+  }
+  .tab-button:hover {
+    color: hsl(var(--foreground));
+    background: hsl(0 0% 100% / 0.03);
+  }
+  .tab-button.active {
+    color: hsl(var(--primary));
+    background: hsl(120 100% 44% / 0.1);
+  }
+  .tab-button.active::after {
+    content: '';
+    position: absolute;
+    bottom: -1px;
+    left: 8px;
+    right: 8px;
+    height: 1px;
+    background: hsl(var(--primary));
+    box-shadow: 0 0 6px hsl(120 100% 44% / 0.4);
+  }
+
+  /* ─── Scrollbar ─── */
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: hsl(120 100% 44% / 0.15);
+    border-radius: 3px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: hsl(120 100% 44% / 0.25);
+  }
+
+  /* ─── Glow Effects ─── */
+  .glow-text {
+    text-shadow: 0 0 10px hsl(120 100% 44% / 0.4);
+  }
+  .glow-border {
+    box-shadow: 0 0 0 1px hsl(120 100% 44% / 0.15), var(--shadow-glow);
+  }
+
+  /* ─── Typography ─── */
+  .font-display {
+    font-family: var(--font-display);
+    letter-spacing: 0.05em;
+  }
+  .font-mono {
+    font-family: var(--font-mono);
+  }
+
+  /* ─── Dividers ─── */
+  .divider-h {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, hsl(120 100% 44% / 0.1), transparent);
+  }
+  .divider-v {
+    width: 1px;
+    background: linear-gradient(180deg, transparent, hsl(120 100% 44% / 0.1), transparent);
+  }
+
+  /* ─── Badge ─── */
+  .badge-live {
+    @apply inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-mono rounded;
+    background: hsl(120 100% 44% / 0.12);
+    color: hsl(var(--primary));
+    border: 1px solid hsl(120 100% 44% / 0.2);
+  }
+  .badge-danger {
+    @apply inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-mono rounded;
+    background: hsl(0 72% 51% / 0.12);
+    color: hsl(var(--destructive));
+    border: 1px solid hsl(0 72% 51% / 0.2);
+  }
+  .badge-warn {
+    @apply inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-mono rounded;
+    background: hsl(38 92% 50% / 0.12);
+    color: hsl(var(--warning));
+    border: 1px solid hsl(38 92% 50% / 0.2);
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   ANIMATIONS (Canon §19 - Motion Must Explain Structure)
+   ═══════════════════════════════════════════════════════════ */
+
+@layer utilities {
+  .animate-drawer-open {
+    animation: drawer-open var(--duration-normal) var(--ease-out-expo) forwards;
+  }
+  .animate-drawer-close {
+    animation: drawer-close var(--duration-fast) var(--ease-in-out-quart) forwards;
+  }
+  .animate-dock-open {
+    animation: dock-open var(--duration-normal) var(--ease-out-expo) forwards;
+  }
+  .animate-fade-up {
+    animation: fade-up var(--duration-normal) var(--ease-out-expo) forwards;
+  }
+
+  @keyframes drawer-open {
+    from { width: 0; opacity: 0; }
+    to { width: var(--drawer-width); opacity: 1; }
+  }
+  @keyframes drawer-close {
+    from { width: var(--drawer-width); opacity: 1; }
+    to { width: 0; opacity: 0; }
+  }
+  @keyframes dock-open {
+    from { height: 0; opacity: 0; }
+    to { height: var(--bottom-dock-height); opacity: 1; }
+  }
+  @keyframes fade-up {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
   }
 }

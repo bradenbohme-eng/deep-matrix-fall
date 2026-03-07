@@ -1,13 +1,13 @@
-// HQ Page - The new Cursor-like IDE interface
+// HQ Page — Canon-grade Persistent Cognitive Shell
 
 import React from 'react';
-import { HQLayout } from '@/components/hq';
+import { AppShell } from '@/components/shell';
 import { MatrixSettingsProvider } from '@/contexts/MatrixSettingsContext';
 
 const HQ: React.FC = () => {
   return (
     <MatrixSettingsProvider>
-      <HQLayout />
+      <AppShell />
     </MatrixSettingsProvider>
   );
 };
