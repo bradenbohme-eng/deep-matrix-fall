@@ -48,11 +48,33 @@ const CenterWorkspace: React.FC<CenterWorkspaceProps> = ({ activeWorld, activeSu
 
 // ─── Orchestration World ───
 const OrchestrationCenter: React.FC<{ subPage: SubPage }> = ({ subPage }) => {
+  // Demo data for DAG
+  const demoTasks = useMemo(() => {
+    const tasks = new Map<string, Task>();
+    const baseTask = {
+      prompt: '', context_refs: [], history: [],
+      acceptance_criteria: [{ id: 'ac1', description: 'Complete', type: 'deterministic' as const, check: () => true }],
+    };
+    tasks.set('t1', { ...baseTask, task_id: 't1', title: 'Analyze constraints', dependencies: [], priority: 80, status: 'done' });
+    tasks.set('t2', { ...baseTask, task_id: 't2', title: 'Generate draft', dependencies: ['t1'], priority: 90, status: 'active' });
+    tasks.set('t3', { ...baseTask, task_id: 't3', title: 'Verify output', dependencies: ['t2'], priority: 70, status: 'queued' });
+    tasks.set('t4', { ...baseTask, task_id: 't4', title: 'Run checks', dependencies: ['t3'], priority: 60, status: 'queued' });
+    tasks.set('t5', { ...baseTask, task_id: 't5', title: 'Emit checkpoint', dependencies: ['t4'], priority: 50, status: 'queued' });
+    return tasks;
+  }, []);
+
+  const demoDag: DAGState = useMemo(() => ({
+    nodes: Array.from(demoTasks.keys()).map((id, i) => ({ id, depth: i, dependsOn: i > 0 ? [Array.from(demoTasks.keys())[i - 1]] : [], blocks: i < 4 ? [Array.from(demoTasks.keys())[i + 1]] : [] })),
+    edges: Array.from(demoTasks.keys()).slice(1).map((id, i) => ({ from: Array.from(demoTasks.keys())[i], to: id, type: 'dependency' as const })),
+    criticalPath: Array.from(demoTasks.keys()),
+    maxDepth: 4,
+  }), [demoTasks]);
+
   switch (subPage) {
     case 'command':
       return <OrchestrationDashboard />;
     case 'pipeline':
-      return <DAGVisualization />;
+      return <DAGVisualization tasks={demoTasks} dagState={demoDag} />;
     case 'events':
       return <EventLogCenter />;
     case 'tests':
