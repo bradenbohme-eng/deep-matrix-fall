@@ -24,6 +24,8 @@ serve(async (req) => {
     const { action } = body;
 
     switch (action) {
+      case "health_check":
+        return json({ status: "ok", engine: "cmc", timestamp: new Date().toISOString(), actions: ["ingest", "retrieve", "decay", "compress", "promote", "stats"] });
       case "ingest":
         return await handleIngest(supabase, body);
       case "retrieve":
@@ -37,7 +39,7 @@ serve(async (req) => {
       case "stats":
         return await handleStats(supabase);
       default:
-        return json({ error: "Unknown action", actions: ["ingest", "retrieve", "decay", "compress", "promote", "stats"] }, 400);
+        return json({ error: "Unknown action", actions: ["health_check", "ingest", "retrieve", "decay", "compress", "promote", "stats"] }, 400);
     }
   } catch (e) {
     console.error("[CMC] Error:", e);

@@ -85,6 +85,14 @@ serve(async (req) => {
 
     switch (body.action) {
       // ═══════════════════════════════════════════════════════════════
+      // HEALTH CHECK
+      // ═══════════════════════════════════════════════════════════════
+      case "health_check":
+        return new Response(JSON.stringify({ status: "ok", engine: "self-evolution", timestamp: new Date().toISOString() }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+
+      // ═══════════════════════════════════════════════════════════════
       // INTROSPECTION ACTIONS
       // ═══════════════════════════════════════════════════════════════
       

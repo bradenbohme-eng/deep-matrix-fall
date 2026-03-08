@@ -33,6 +33,8 @@ serve(async (req) => {
     const body = await req.json();
 
     switch (body.action) {
+      case "health_check":
+        return json({ status: "ok", engine: "apoe", timestamp: new Date().toISOString(), agents: AGENT_ROLES.length, actions: ["decompose", "discord_log", "queue_status", "execute_next", "agents"] });
       case "decompose":
         return await handleDecompose(supabase, lovableKey, body);
       case "discord_log":
@@ -44,7 +46,7 @@ serve(async (req) => {
       case "agents":
         return json({ success: true, agents: AGENT_ROLES });
       default:
-        return json({ error: "Unknown action", actions: ["decompose", "discord_log", "queue_status", "execute_next", "agents"] }, 400);
+        return json({ error: "Unknown action", actions: ["health_check", "decompose", "discord_log", "queue_status", "execute_next", "agents"] }, 400);
     }
   } catch (e) {
     console.error("[APOE] Error:", e);

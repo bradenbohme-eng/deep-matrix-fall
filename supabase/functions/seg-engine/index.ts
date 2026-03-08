@@ -24,6 +24,8 @@ serve(async (req) => {
     const body = await req.json();
 
     switch (body.action) {
+      case "health_check":
+        return json({ status: "ok", engine: "seg", timestamp: new Date().toISOString(), actions: ["extract", "neighbors", "stats"] });
       case "extract":
         return await handleExtract(supabase, lovableKey, body);
       case "neighbors":
@@ -31,7 +33,7 @@ serve(async (req) => {
       case "stats":
         return await handleStats(supabase);
       default:
-        return json({ error: "Unknown action", actions: ["extract", "neighbors", "stats"] }, 400);
+        return json({ error: "Unknown action", actions: ["health_check", "extract", "neighbors", "stats"] }, 400);
     }
   } catch (e) {
     console.error("[SEG] Error:", e);
