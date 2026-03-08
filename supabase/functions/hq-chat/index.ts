@@ -1161,6 +1161,17 @@ You are currently executing **Step ${currentStep + 1}/${steps.length}** of plan 
     prompt += `\n\n## Retrieved Memory Context\n${cmcContext.contextBlock}`;
   }
 
+  // ── BCI Context Sync — Structured boundary views ──
+  if (bciManifest && bciManifest.manifest && bciManifest.manifest.length > 0) {
+    prompt += `\n\n## 🔗 BCI Contextual Sync (${bciManifest.entity_count} entities, ${bciManifest.total_tokens} tokens)\n`;
+    for (const item of bciManifest.manifest.slice(0, 15)) {
+      prompt += `- **${item.entity_id}** [${item.kind}|${item.level}|U=${item.utility}]: ${(item.content || "").slice(0, 200)}\n`;
+    }
+    if (bciManifest.dropped?.length > 0) {
+      prompt += `\n_${bciManifest.dropped.length} entities dropped (budget: ${bciManifest.budget_remaining} tokens remaining)_`;
+    }
+  }
+
   if (pregate.shouldHedge) {
     prompt += `\n\n## ⚠ VIF Pre-Gate Warning\nContext quality: ${pregate.quality} (${pregate.atomCount} atoms, κ=${(pregate.avgConfidence * 100).toFixed(0)}%). Hedge appropriately and note what you're uncertain about.`;
   }
