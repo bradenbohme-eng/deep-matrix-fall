@@ -9,7 +9,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import {
   MessageCircle, Search as SearchIcon, BarChart3, Brain,
   Send, Sparkles, Bot, Cpu, CheckCircle2, AlertTriangle,
-  Database, Network, ArrowRight, Loader2,
+  Database, Network, ArrowRight, Loader2, Layers,
 } from 'lucide-react';
 import type { RightPanelMode } from './types';
 
