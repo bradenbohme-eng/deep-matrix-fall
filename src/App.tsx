@@ -8,6 +8,7 @@ import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import Architecture from "./pages/Architecture";
 import HQ from "./pages/HQ";
+import ContextLab from "./pages/ContextLab";
 import { ImageEditor } from "./components/ImageEditor";
 
 const queryClient = new QueryClient();
