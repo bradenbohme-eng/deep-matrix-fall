@@ -76,6 +76,12 @@ const EvolutionCenter: React.FC<EvolutionCenterProps> = ({ subPage }) => {
       return <AuditPanel />;
     case 'engines':
       return <EngineTestPanel />;
+    case 'scenarios':
+      return <ScenariosPanel />;
+    case 'connections':
+      return <ConnectionsPanel />;
+    case 'metrics':
+      return <MetricsPanel />;
     case 'sandbox':
       return <SandboxPanel />;
     case 'proposals':
