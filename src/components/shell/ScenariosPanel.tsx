@@ -373,7 +373,7 @@ async function runSelfEvolution(onUpdate: (steps: ScenarioStep[]) => void): Prom
   steps[0] = { ...steps[0], status: 'running', engine: 'self-evolution' };
   onUpdate([...steps]);
   const { data: d1, error: e1, latency: l1 } = await runStep('self-evolution', {
-    action: 'audit', auditType: 'full',
+    action: 'self_audit',
   });
   steps[0] = { name: steps[0].name, engine: 'self-evolution', status: e1 ? 'fail' : 'pass', latency: l1, details: e1 ? e1.message : `Health: ${((d1?.healthScore || 0) * 100).toFixed(0)}%, ${d1?.findings?.length || 0} findings`, output: d1 };
   onUpdate([...steps]);
@@ -382,7 +382,7 @@ async function runSelfEvolution(onUpdate: (steps: ScenarioStep[]) => void): Prom
   steps[1] = { ...steps[1], status: 'running', engine: 'self-evolution' };
   onUpdate([...steps]);
   const { data: d2, error: e2, latency: l2 } = await runStep('self-evolution', {
-    action: 'suggest_evolutions',
+    action: 'suggest_evolution',
   });
   steps[1] = { name: steps[1].name, engine: 'self-evolution', status: e2 ? 'fail' : 'pass', latency: l2, details: e2 ? e2.message : `${d2?.suggestions?.length || 0} proposals generated`, output: d2 };
   onUpdate([...steps]);
@@ -414,9 +414,9 @@ async function runSelfEvolution(onUpdate: (steps: ScenarioStep[]) => void): Prom
   steps[4] = { ...steps[4], status: 'running', engine: 'self-evolution' };
   onUpdate([...steps]);
   const { data: d5, error: e5, latency: l5 } = await runStep('self-evolution', {
-    action: 'diagnostics',
+    action: 'run_diagnostics',
   });
-  steps[4] = { name: steps[4].name, engine: 'self-evolution', status: e5 ? 'fail' : 'pass', latency: l5, details: e5 ? e5.message : `${d5?.diagnostics?.length || 0} components checked`, output: d5 };
+  steps[4] = { name: steps[4].name, engine: 'self-evolution', status: e5 ? 'fail' : 'pass', latency: l5, details: e5 ? e5.message : `Diagnostics complete: ${d5?.diagnostics?.length || 0} components checked`, output: d5 };
   onUpdate([...steps]);
 
   return steps;
