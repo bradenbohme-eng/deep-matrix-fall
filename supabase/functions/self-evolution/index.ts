@@ -187,6 +187,9 @@ serve(async (req) => {
         
       case "get_audit_history":
         return await handleGetAuditHistory(supabase, body);
+
+      case "prune_context_banks":
+        return await handlePruneContextBanks(supabase);
         
       default:
         return new Response(
