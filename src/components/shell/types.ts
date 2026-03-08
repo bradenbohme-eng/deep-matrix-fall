@@ -57,6 +57,7 @@ export const WORLD_SUBPAGES: Record<WorldPage, { id: SubPage; label: string }[]>
     { id: 'pipeline', label: 'Pipeline' },
     { id: 'events', label: 'Events' },
     { id: 'tests', label: 'Tests' },
+    { id: 'genomes', label: 'Agent Genomes' },
   ],
   code: [
     { id: 'editor', label: 'Editor' },

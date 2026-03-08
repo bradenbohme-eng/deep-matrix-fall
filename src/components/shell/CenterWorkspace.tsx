@@ -111,6 +111,8 @@ const OrchestrationCenter: React.FC<{ subPage: SubPage }> = ({ subPage }) => {
       return <EventLogCenter />;
     case 'tests':
       return <TestHarnessPanel />;
+    case 'genomes':
+      return <AgentGenomesPanel />;
     default:
       return null;
   }
