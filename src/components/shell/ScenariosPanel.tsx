@@ -1,7 +1,7 @@
 // ScenariosPanel — Advanced multi-step cognitive test scenarios
 // Phase A: Research Chain, Multi-Agent, Memory Lifecycle, Claim Verification, Self-Evolution
 
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
