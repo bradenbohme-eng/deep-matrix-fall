@@ -73,6 +73,12 @@ export const WORLD_SUBPAGES: Record<WorldPage, { id: SubPage; label: string }[]>
     { id: 'outline', label: 'Outline' },
     { id: 'versions', label: 'Versions' },
   ],
+  evolve: [
+    { id: 'audit', label: 'Self-Audit' },
+    { id: 'engines', label: 'Engine Tests' },
+    { id: 'sandbox', label: 'Sandbox' },
+    { id: 'proposals', label: 'Proposals' },
+  ],
 };
 
 // ─── Default sub-pages when switching worlds ───
