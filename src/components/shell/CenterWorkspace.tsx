@@ -32,6 +32,9 @@ const CenterWorkspace: React.FC<CenterWorkspaceProps> = ({ activeWorld, activeSu
   if (activeWorld === 'code') {
     return <CodeCenter subPage={activeSubPage} />;
   }
+  if (activeWorld === 'evolve') {
+    return <EvolutionCenter subPage={activeSubPage} />;
+  }
 
   // Placeholder for other worlds
   return (
