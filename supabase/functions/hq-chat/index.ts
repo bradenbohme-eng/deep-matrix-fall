@@ -39,6 +39,27 @@ serve(async (req) => {
     const expandedTags = await expandTagsViaHHNI(supabase, queryTags);
     const cmcContext = await retrieveFromCMC(supabase, lastUserMsg, expandedTags, dynamicConfig);
 
+    // ── STEP 3b: Context Sync — BCI-powered context resolution ──
+    let bciManifest: any = null;
+    try {
+      const csResp = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/context-sync`, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          action: "resolve_context",
+          prompt: lastUserMsg,
+          token_budget: 3000,
+          policy_name: "default",
+        }),
+      });
+      if (csResp.ok) bciManifest = await csResp.json();
+    } catch (e) {
+      console.error("[hq-chat] Context-sync resolve failed (non-blocking):", e);
+    }
+
     // ── STEP 4: VIF Pre-Gate — assess context quality ──
     const pregate = assessPregate(cmcContext.atoms);
     
@@ -48,8 +69,8 @@ serve(async (req) => {
     // ── STEP 5b: Load agent genomes for swarm context ──
     const agentGenomes = await loadAgentGenomes(supabase);
     
-    // ── STEP 6: Build enriched system prompt (now includes active plan directive) ──
-    const systemPrompt = buildSystemPrompt(liveState, cmcContext, pregate, expandedTags, dynamicPrompts, agentGenomes);
+    // ── STEP 6: Build enriched system prompt (now includes BCI context) ──
+    const systemPrompt = buildSystemPrompt(liveState, cmcContext, pregate, expandedTags, dynamicPrompts, agentGenomes, bciManifest);
 
     // ── STEP 7: Create reasoning chain record ──
     const chainId = crypto.randomUUID();
