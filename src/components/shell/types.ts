@@ -8,8 +8,9 @@ export type OrchestrationSubPage = 'command' | 'pipeline' | 'events' | 'tests';
 export type CodeSubPage = 'editor' | 'preview' | 'diff';
 export type IntelSubPage = 'feeds' | 'network' | 'threats';
 export type DocsSubPage = 'edit' | 'outline' | 'versions';
+export type EvolveSubPage = 'audit' | 'engines' | 'sandbox' | 'proposals';
 
-export type SubPage = OrchestrationSubPage | CodeSubPage | IntelSubPage | DocsSubPage;
+export type SubPage = OrchestrationSubPage | CodeSubPage | IntelSubPage | DocsSubPage | EvolveSubPage;
 
 // ─── Left Rail (Canon §8 - Page Ontology) ───
 export type OrchestrationLeftTab = 'tasks' | 'agents' | 'context' | 'budgets' | 'policies';
