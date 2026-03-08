@@ -915,9 +915,16 @@ const ProposalsPanel: React.FC = () => {
   const [evolutions, setEvolutions] = useState<any[]>([]);
 
   const loadProposals = useCallback(async () => {
-    const result = await evolution.getProposals('pending');
-    if (result) setProposals(result.proposals || []);
-  }, [evolution]);
+    const { data } = await supabase
+      .from('evolution_proposals')
+      .select('*')
+      .eq('status', 'pending')
+      .order('created_at', { ascending: false });
+    setProposals(data || []);
+  }, []);
+
+  // Auto-load on mount
+  React.useEffect(() => { loadProposals(); }, [loadProposals]);
 
   const loadHistory = useCallback(async () => {
     const result = await evolution.getAuditHistory();
