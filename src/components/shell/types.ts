@@ -87,6 +87,7 @@ export const WORLD_DEFAULT_SUBPAGE: Record<WorldPage, SubPage> = {
   code: 'editor',
   intel: 'feeds',
   docs: 'edit',
+  evolve: 'audit',
 };
 
 // ─── Left rail tabs per world ───
