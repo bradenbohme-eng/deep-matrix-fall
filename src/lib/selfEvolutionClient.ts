@@ -249,39 +249,46 @@ export class SelfEvolutionClient {
   // EVOLUTION METHODS
   // ═══════════════════════════════════════════════════════════════
 
-  /**
-   * Get AI-generated evolution suggestions
-   */
   async suggestEvolutions(): Promise<{ suggestions: EvolutionSuggestion[]; systemState: any }> {
     const result = await this.invoke('suggest_evolution');
-    return {
-      suggestions: result.evolutionSuggestions,
-      systemState: result.systemState
-    };
+    return { suggestions: result.evolutionSuggestions, systemState: result.systemState };
   }
 
-  /**
-   * Apply an evolution (records the change)
-   */
   async applyEvolution(evolutionId: string, parameters: Record<string, any>): Promise<any> {
-    const result = await this.invoke('apply_evolution', { evolutionId, parameters });
-    return result;
+    return await this.invoke('apply_evolution', { evolutionId, parameters });
   }
 
-  /**
-   * Rollback an evolution
-   */
   async rollbackEvolution(evolutionId: string): Promise<any> {
-    const result = await this.invoke('rollback_evolution', { evolutionId });
-    return result;
+    return await this.invoke('rollback_evolution', { evolutionId });
   }
 
-  /**
-   * Get evolution history
-   */
   async getEvolutionHistory(): Promise<any[]> {
     const result = await this.invoke('get_evolution_history');
     return result.evolutionHistory;
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // SELF-AUDIT & PROPOSAL METHODS (APPROVAL-GATED)
+  // ═══════════════════════════════════════════════════════════════
+
+  async selfAudit(auditType: string = 'full'): Promise<any> {
+    return await this.invoke('self_audit', { auditType });
+  }
+
+  async getProposals(status?: string): Promise<any> {
+    return await this.invoke('get_proposals', status ? { status } : {});
+  }
+
+  async approveProposal(proposalId: string, notes?: string): Promise<any> {
+    return await this.invoke('approve_proposal', { proposalId, notes });
+  }
+
+  async rejectProposal(proposalId: string, reason?: string): Promise<any> {
+    return await this.invoke('reject_proposal', { proposalId, reason });
+  }
+
+  async getAuditHistory(): Promise<any> {
+    return await this.invoke('get_audit_history');
   }
 }
 
@@ -359,6 +366,13 @@ export function useSelfEvolution(userId?: string) {
     applyEvolution: useCallback((id: string, params: Record<string, any>) => 
       execute(() => clientRef.current!.applyEvolution(id, params)), [execute]),
     rollbackEvolution: useCallback((id: string) => execute(() => clientRef.current!.rollbackEvolution(id)), [execute]),
-    getEvolutionHistory: useCallback(() => execute(() => clientRef.current!.getEvolutionHistory()), [execute])
+    getEvolutionHistory: useCallback(() => execute(() => clientRef.current!.getEvolutionHistory()), [execute]),
+    
+    // Self-Audit & Proposals (Approval-Gated)
+    selfAudit: useCallback((auditType?: string) => execute(() => clientRef.current!.selfAudit(auditType)), [execute]),
+    getProposals: useCallback((status?: string) => execute(() => clientRef.current!.getProposals(status)), [execute]),
+    approveProposal: useCallback((id: string, notes?: string) => execute(() => clientRef.current!.approveProposal(id, notes)), [execute]),
+    rejectProposal: useCallback((id: string, reason?: string) => execute(() => clientRef.current!.rejectProposal(id, reason)), [execute]),
+    getAuditHistory: useCallback(() => execute(() => clientRef.current!.getAuditHistory()), [execute])
   };
 }

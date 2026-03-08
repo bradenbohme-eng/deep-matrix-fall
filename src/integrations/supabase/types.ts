@@ -1915,6 +1915,66 @@ export type Database = {
         }
         Relationships: []
       }
+      evolution_proposals: {
+        Row: {
+          applied_at: string | null
+          applied_changes: Json | null
+          created_at: string
+          description: string
+          expected_impact: string | null
+          id: string
+          implementation_plan: Json
+          priority: string
+          proposal_type: string
+          review_notes: string | null
+          reviewed_at: string | null
+          rollback_plan: Json | null
+          rolled_back_at: string | null
+          source_audit_id: string | null
+          status: string
+          system_state_snapshot: Json | null
+          title: string
+        }
+        Insert: {
+          applied_at?: string | null
+          applied_changes?: Json | null
+          created_at?: string
+          description: string
+          expected_impact?: string | null
+          id?: string
+          implementation_plan?: Json
+          priority?: string
+          proposal_type?: string
+          review_notes?: string | null
+          reviewed_at?: string | null
+          rollback_plan?: Json | null
+          rolled_back_at?: string | null
+          source_audit_id?: string | null
+          status?: string
+          system_state_snapshot?: Json | null
+          title: string
+        }
+        Update: {
+          applied_at?: string | null
+          applied_changes?: Json | null
+          created_at?: string
+          description?: string
+          expected_impact?: string | null
+          id?: string
+          implementation_plan?: Json
+          priority?: string
+          proposal_type?: string
+          review_notes?: string | null
+          reviewed_at?: string | null
+          rollback_plan?: Json | null
+          rolled_back_at?: string | null
+          source_audit_id?: string | null
+          status?: string
+          system_state_snapshot?: Json | null
+          title?: string
+        }
+        Relationships: []
+      }
       factions: {
         Row: {
           ai_personality: Json
@@ -3954,6 +4014,42 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      self_audit_log: {
+        Row: {
+          audit_type: string
+          completed_at: string | null
+          duration_ms: number | null
+          findings: Json
+          id: string
+          metadata: Json | null
+          proposals_generated: number | null
+          started_at: string
+          system_health_score: number | null
+        }
+        Insert: {
+          audit_type?: string
+          completed_at?: string | null
+          duration_ms?: number | null
+          findings?: Json
+          id?: string
+          metadata?: Json | null
+          proposals_generated?: number | null
+          started_at?: string
+          system_health_score?: number | null
+        }
+        Update: {
+          audit_type?: string
+          completed_at?: string | null
+          duration_ms?: number | null
+          findings?: Json
+          id?: string
+          metadata?: Json | null
+          proposals_generated?: number | null
+          started_at?: string
+          system_health_score?: number | null
+        }
+        Relationships: []
       }
       semantic_clusters: {
         Row: {

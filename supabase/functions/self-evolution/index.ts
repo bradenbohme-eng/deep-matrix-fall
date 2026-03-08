@@ -157,6 +157,25 @@ serve(async (req) => {
         
       case "get_evolution_history":
         return await handleGetEvolutionHistory(supabase, body);
+
+      // ═══════════════════════════════════════════════════════════════
+      // PROPOSAL-BASED EVOLUTION (APPROVAL GATED)
+      // ═══════════════════════════════════════════════════════════════
+      
+      case "self_audit":
+        return await handleSelfAudit(supabase, lovableApiKey, body);
+        
+      case "get_proposals":
+        return await handleGetProposals(supabase, body);
+      
+      case "approve_proposal":
+        return await handleApproveProposal(supabase, lovableApiKey, body);
+        
+      case "reject_proposal":
+        return await handleRejectProposal(supabase, body);
+        
+      case "get_audit_history":
+        return await handleGetAuditHistory(supabase, body);
         
       default:
         return new Response(
@@ -1021,6 +1040,212 @@ async function handleGetEvolutionHistory(supabase: any, body: SelfEvolutionReque
 }
 
 // ═══════════════════════════════════════════════════════════════════
+// SELF-AUDIT & PROPOSAL HANDLERS (APPROVAL-GATED EVOLUTION)
+// ═══════════════════════════════════════════════════════════════════
+
+async function handleSelfAudit(supabase: any, lovableApiKey: string | undefined, body: SelfEvolutionRequest): Promise<Response> {
+  const auditStart = performance.now();
+  const auditId = crypto.randomUUID();
+  
+  // 1. Run full diagnostics
+  const [memStats, reasonStats, perfStats] = await Promise.all([
+    getMemoryStats(supabase),
+    getReasoningStats(supabase),
+    getPerformanceStats(supabase)
+  ]);
+  
+  const diagnostics = await runComponentDiagnostics(supabase);
+  const bottlenecks = await detectBottlenecks(supabase, perfStats);
+  
+  // 2. Use AI to analyze and generate proposals
+  const findings: any[] = [];
+  const proposals: any[] = [];
+  
+  // Memory health finding
+  if (memStats.atomCount > 5000) {
+    findings.push({ area: 'memory', severity: 'warning', detail: `${memStats.atomCount} memory atoms - consider pruning` });
+  }
+  if (reasonStats.avgCoherence < 0.65) {
+    findings.push({ area: 'reasoning', severity: 'high', detail: `Average coherence ${(reasonStats.avgCoherence * 100).toFixed(1)}% is below target 65%` });
+  }
+  if (reasonStats.avgDepth < 3) {
+    findings.push({ area: 'reasoning', severity: 'medium', detail: `Shallow reasoning depth: ${reasonStats.avgDepth.toFixed(1)} avg` });
+  }
+  
+  for (const diag of diagnostics) {
+    if (diag.status !== 'healthy') {
+      findings.push({ area: diag.component, severity: diag.status === 'critical' ? 'critical' : 'warning', detail: diag.details });
+    }
+  }
+  
+  // 3. Ask AI to generate structured proposals if we have the key
+  if (lovableApiKey && findings.length > 0) {
+    try {
+      const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${lovableApiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "google/gemini-3-flash-preview",
+          messages: [{ 
+            role: "user", 
+            content: `You are AIMOS self-evolution engine. Given these system audit findings, generate 1-3 concrete evolution proposals. Each must be safe, reversible, and measurable.
+
+FINDINGS:
+${JSON.stringify(findings, null, 2)}
+
+SYSTEM STATE:
+- Memory atoms: ${memStats.atomCount}, Chains: ${memStats.chainCount}, Plans: ${memStats.planCount}
+- Avg reasoning depth: ${reasonStats.avgDepth.toFixed(2)}, Avg coherence: ${reasonStats.avgCoherence.toFixed(2)}
+- Bottlenecks: ${bottlenecks.join(', ') || 'none detected'}
+
+Return ONLY a JSON array of proposals with this schema:
+[{"title": "...", "description": "...", "priority": "high|medium|low", "implementation_plan": {"steps": ["..."], "affected_components": ["..."], "rollback_steps": ["..."]}, "expected_impact": "..."}]`
+          }],
+          max_tokens: 1500
+        }),
+      });
+      
+      const aiData = await aiResponse.json();
+      const content = aiData.choices?.[0]?.message?.content || '';
+      
+      // Extract JSON from response
+      const jsonMatch = content.match(/\[[\s\S]*\]/);
+      if (jsonMatch) {
+        const parsed = JSON.parse(jsonMatch[0]);
+        for (const p of parsed) {
+          // Insert each proposal into the proposals table
+          const { data: inserted } = await supabase.from('evolution_proposals').insert({
+            title: p.title,
+            description: p.description,
+            priority: p.priority || 'medium',
+            implementation_plan: p.implementation_plan || {},
+            expected_impact: p.expected_impact || '',
+            source_audit_id: auditId,
+            system_state_snapshot: { memStats, reasonStats, bottlenecks },
+            rollback_plan: { steps: p.implementation_plan?.rollback_steps || [] }
+          }).select().single();
+          
+          if (inserted) proposals.push(inserted);
+        }
+      }
+    } catch (e) {
+      console.error("[SELF-AUDIT] AI proposal generation failed:", e);
+    }
+  }
+  
+  const duration = performance.now() - auditStart;
+  const healthScore = diagnostics.filter(d => d.status === 'healthy').length / diagnostics.length;
+  
+  // 4. Log the audit
+  await supabase.from('self_audit_log').insert({
+    id: auditId,
+    audit_type: body.payload?.auditType || 'full',
+    completed_at: new Date().toISOString(),
+    duration_ms: duration,
+    findings,
+    system_health_score: healthScore,
+    proposals_generated: proposals.length,
+    metadata: { memStats, reasonStats, bottlenecks }
+  });
+  
+  return jsonResponse({
+    success: true,
+    auditId,
+    healthScore,
+    findings,
+    proposalsGenerated: proposals.length,
+    proposals,
+    duration_ms: duration
+  });
+}
+
+async function handleGetProposals(supabase: any, body: SelfEvolutionRequest): Promise<Response> {
+  const status = body.payload?.status; // optional filter
+  
+  let query = supabase.from('evolution_proposals')
+    .select('*')
+    .order('created_at', { ascending: false })
+    .limit(50);
+  
+  if (status) {
+    query = query.eq('status', status);
+  }
+  
+  const { data, error } = await query;
+  
+  return jsonResponse({
+    success: !error,
+    proposals: data || [],
+    error: error?.message
+  });
+}
+
+async function handleApproveProposal(supabase: any, lovableApiKey: string | undefined, body: SelfEvolutionRequest): Promise<Response> {
+  const { proposalId, notes } = body.payload || {};
+  
+  if (!proposalId) return jsonResponse({ error: "proposalId required" }, 400);
+  
+  // Get the proposal
+  const { data: proposal } = await supabase.from('evolution_proposals')
+    .select('*')
+    .eq('id', proposalId)
+    .single();
+  
+  if (!proposal) return jsonResponse({ error: "Proposal not found" }, 404);
+  if (proposal.status !== 'pending') return jsonResponse({ error: `Proposal is ${proposal.status}, not pending` }, 400);
+  
+  // Mark as approved
+  const { error } = await supabase.from('evolution_proposals')
+    .update({ 
+      status: 'approved', 
+      reviewed_at: new Date().toISOString(),
+      review_notes: notes || 'Approved by user'
+    })
+    .eq('id', proposalId);
+  
+  // Record in consciousness metrics
+  await supabase.from('aimos_consciousness_metrics').insert({
+    metric_type: 'evolution_approved',
+    coherence_score: 1.0,
+    metadata: { proposalId, title: proposal.title, priority: proposal.priority }
+  });
+  
+  return jsonResponse({
+    success: !error,
+    message: `Proposal "${proposal.title}" approved. Implementation plan ready.`,
+    proposal: { ...proposal, status: 'approved' }
+  });
+}
+
+async function handleRejectProposal(supabase: any, body: SelfEvolutionRequest): Promise<Response> {
+  const { proposalId, reason } = body.payload || {};
+  
+  if (!proposalId) return jsonResponse({ error: "proposalId required" }, 400);
+  
+  const { error } = await supabase.from('evolution_proposals')
+    .update({ 
+      status: 'rejected', 
+      reviewed_at: new Date().toISOString(),
+      review_notes: reason || 'Rejected by user'
+    })
+    .eq('id', proposalId);
+  
+  return jsonResponse({ success: !error, message: 'Proposal rejected' });
+}
+
+async function handleGetAuditHistory(supabase: any, body: SelfEvolutionRequest): Promise<Response> {
+  const { data, error } = await supabase.from('self_audit_log')
+    .select('*')
+    .order('started_at', { ascending: false })
+    .limit(20);
+  
+  return jsonResponse({ success: !error, audits: data || [] });
+}
+
+
 // HELPER FUNCTIONS
 // ═══════════════════════════════════════════════════════════════════
 
@@ -1037,7 +1262,8 @@ function getAvailableActions(): string[] {
     'execute_sandbox', 'test_json_schema', 'test_prompt_chain',
     'calibrate_reasoning', 'calibrate_memory', 'calibrate_confidence', 'optimize_prompts',
     'run_diagnostics', 'benchmark_system', 'analyze_performance',
-    'suggest_evolution', 'apply_evolution', 'rollback_evolution', 'get_evolution_history'
+    'suggest_evolution', 'apply_evolution', 'rollback_evolution', 'get_evolution_history',
+    'self_audit', 'get_proposals', 'approve_proposal', 'reject_proposal', 'get_audit_history'
   ];
 }
 
