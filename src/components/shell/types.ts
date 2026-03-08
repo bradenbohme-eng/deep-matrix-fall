@@ -123,5 +123,6 @@ export const WORLD_LEFT_TABS: Record<WorldPage, { id: LeftTab; label: string; ic
     { id: 'status', label: 'Status', icon: 'activity' },
     { id: 'history', label: 'History', icon: 'history' },
     { id: 'config', label: 'Config', icon: 'settings' },
+    { id: 'connections', label: 'Connections', icon: 'plug' },
   ],
 };
