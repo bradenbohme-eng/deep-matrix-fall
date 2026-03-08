@@ -8,7 +8,7 @@ const corsHeaders = {
 };
 
 // ═══════════════════════════════════════════════════════════
-// HQ-CHAT — Full Cognitive Pipeline
+// HQ-CHAT — Full Cognitive Pipeline with Post-Processing
 // CMC Retrieve → HHNI Expand → VIF Pre-Gate → AI Generate → VIF Post-Gate → SEG Extract → CMC Store
 // ═══════════════════════════════════════════════════════════
 
@@ -23,21 +23,27 @@ serve(async (req) => {
     const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
     const lastUserMsg = messages?.[messages.length - 1]?.content || "";
 
-    // ── STEP 1: Gather live system state ──
+    // ── STEP 1: Load dynamic config ──
+    const dynamicConfig = await loadDynamicConfig(supabase);
+
+    // ── STEP 2: Gather live system state ──
     const liveState = await gatherLiveState(supabase);
 
-    // ── STEP 2: CMC Retrieval with HHNI tag expansion ──
+    // ── STEP 3: CMC Retrieval with HHNI tag expansion ──
     const queryTags = extractTags(lastUserMsg);
     const expandedTags = await expandTagsViaHHNI(supabase, queryTags);
-    const cmcContext = await retrieveFromCMC(supabase, lastUserMsg, expandedTags);
+    const cmcContext = await retrieveFromCMC(supabase, lastUserMsg, expandedTags, dynamicConfig);
 
-    // ── STEP 3: VIF Pre-Gate — assess context quality ──
+    // ── STEP 4: VIF Pre-Gate — assess context quality ──
     const pregate = assessPregate(cmcContext.atoms);
     
-    // ── STEP 4: Build enriched system prompt ──
-    const systemPrompt = buildSystemPrompt(liveState, cmcContext, pregate, expandedTags);
+    // ── STEP 5: Load dynamic system prompts ──
+    const dynamicPrompts = await loadDynamicPrompts(supabase);
+    
+    // ── STEP 6: Build enriched system prompt ──
+    const systemPrompt = buildSystemPrompt(liveState, cmcContext, pregate, expandedTags, dynamicPrompts);
 
-    // ── STEP 5: Create reasoning chain record ──
+    // ── STEP 7: Create reasoning chain record ──
     const chainId = crypto.randomUUID();
     const conversationId = crypto.randomUUID();
     
@@ -48,7 +54,7 @@ serve(async (req) => {
         user_query: lastUserMsg.slice(0, 500),
         reasoning_steps: [
           { phase: "CMC_RETRIEVE", detail: `${cmcContext.atoms.length} atoms retrieved`, tags: expandedTags },
-          { phase: "VIF_PREGATE", detail: `Quality: ${pregate.quality}, Atoms: ${pregate.atomCount}` },
+          { phase: "VIF_PREGATE", detail: `Quality: ${pregate.quality}, Confidence: ${((pregate.avgConfidence || 0) * 100).toFixed(1)}%` },
           { phase: "AI_GENERATE", detail: "Streaming response" },
         ],
         final_answer: "[streaming]",
@@ -60,7 +66,7 @@ serve(async (req) => {
       });
     }
 
-    // ── STEP 6: Stream AI response ──
+    // ── STEP 8: Stream AI response via tee ──
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -92,12 +98,13 @@ serve(async (req) => {
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    // ── STEP 7: Background post-processing (non-blocking) ──
-    // After streaming completes, run SEG extraction + VIF scoring
-    // We do this as fire-and-forget since streaming is the priority
-    schedulePostProcessing(supabase, LOVABLE_API_KEY, chainId, lastUserMsg, cmcContext.atoms);
+    // ── STEP 9: Tee stream — one for client, one for post-processing ──
+    const [clientStream, captureStream] = response.body!.tee();
 
-    // ── STEP 8: Update atom access counts ──
+    // ── STEP 10: Background post-processing with FULL response capture ──
+    collectAndPostProcess(supabase, captureStream, chainId, lastUserMsg, cmcContext.atoms, dynamicConfig);
+
+    // ── STEP 11: Update atom access counts ──
     for (const atom of cmcContext.atoms) {
       supabase.from("aimos_memory_atoms")
         .update({ access_count: (atom.access_count || 0) + 1, last_accessed_at: new Date().toISOString() })
@@ -105,7 +112,7 @@ serve(async (req) => {
         .then(() => {});
     }
 
-    return new Response(response.body, {
+    return new Response(clientStream, {
       headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
     });
   } catch (e) {
@@ -114,6 +121,215 @@ serve(async (req) => {
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   }
 });
+
+// ═══════════════════════════════════════════════════════════
+// DYNAMIC CONFIG & PROMPTS (Phase 4)
+// ═══════════════════════════════════════════════════════════
+
+async function loadDynamicConfig(supabase: any): Promise<Record<string, any>> {
+  try {
+    const { data } = await supabase.from("aimos_config").select("config_key, config_value");
+    const config: Record<string, any> = {};
+    for (const row of data || []) {
+      config[row.config_key] = row.config_value?.value ?? row.config_value;
+    }
+    return config;
+  } catch (e) {
+    console.error("[hq-chat] Failed to load dynamic config:", e);
+    return {};
+  }
+}
+
+async function loadDynamicPrompts(supabase: any): Promise<string[]> {
+  try {
+    const { data } = await supabase
+      .from("system_prompts")
+      .select("prompt_text, priority")
+      .eq("is_active", true)
+      .order("priority", { ascending: false });
+    return (data || []).map((p: any) => p.prompt_text);
+  } catch (e) {
+    console.error("[hq-chat] Failed to load dynamic prompts:", e);
+    return [];
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+// POST-PROCESSING: Collect full response, run VIF + SEG
+// ═══════════════════════════════════════════════════════════
+
+async function collectAndPostProcess(
+  supabase: any,
+  stream: ReadableStream,
+  chainId: string,
+  query: string,
+  atoms: any[],
+  config: Record<string, any>
+) {
+  try {
+    const reader = stream.getReader();
+    const decoder = new TextDecoder();
+    let fullResponse = "";
+
+    // Collect all SSE chunks
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      const chunk = decoder.decode(value, { stream: true });
+      // Parse SSE data lines to extract content
+      for (const line of chunk.split("\n")) {
+        if (line.startsWith("data: ") && line !== "data: [DONE]") {
+          try {
+            const json = JSON.parse(line.slice(6));
+            const delta = json.choices?.[0]?.delta?.content;
+            if (delta) fullResponse += delta;
+          } catch {}
+        }
+      }
+    }
+
+    if (fullResponse.length < 10) return;
+
+    console.log(`[hq-chat] Post-processing ${fullResponse.length} chars for chain ${chainId}`);
+
+    // ── VIF: Score the response ──
+    const vifScore = computeLocalVIFScore(fullResponse, query, atoms);
+
+    // ── SEG: Extract entities from response ──
+    const entities = extractLocalEntities(fullResponse);
+
+    // ── Update reasoning chain with final answer + κ ──
+    await supabase.from("aimos_reasoning_chains").update({
+      final_answer: fullResponse.slice(0, 2000),
+      confidence_kappa: vifScore.kappa,
+      quality_tier: vifScore.kappa > 0.8 ? "green" : vifScore.kappa > 0.5 ? "yellow" : "red",
+      reasoning_steps: [
+        { phase: "CMC_RETRIEVE", detail: `${atoms.length} atoms retrieved` },
+        { phase: "VIF_PREGATE", detail: `Pre-gate passed` },
+        { phase: "AI_GENERATE", detail: `${fullResponse.length} chars generated` },
+        { phase: "VIF_POSTGATE", detail: `κ=${vifScore.kappa.toFixed(3)} (${vifScore.tier})` },
+        { phase: "SEG_EXTRACT", detail: `${entities.length} entities found` },
+      ],
+    }).eq("id", chainId);
+
+    // ── Store high-confidence response as memory atom ──
+    if (vifScore.kappa > (config.vif_kappa_threshold || 0.6) && fullResponse.length > 50) {
+      await supabase.from("aimos_memory_atoms").insert({
+        content: `AI Response (κ=${vifScore.kappa.toFixed(2)}): ${fullResponse.slice(0, 1000)}`,
+        content_type: "ai_response",
+        tags: extractTags(query),
+        memory_level: "warm",
+        access_count: 0,
+        confidence_score: vifScore.kappa,
+        quality_score: vifScore.kappa,
+        metadata: { chain_id: chainId, source: "hq_chat_response", entities_extracted: entities.length },
+      });
+    }
+
+    // ── Store entities in SEG ──
+    for (const entity of entities.slice(0, 10)) {
+      await supabase.from("aimos_entities").upsert({
+        name: entity.name,
+        entity_type: entity.type,
+        description: entity.context,
+        confidence: vifScore.kappa * 0.9,
+        metadata: { source_chain: chainId },
+      }, { onConflict: "name" }).then(() => {});
+    }
+
+    // ── Log to Agent Discord ──
+    await supabase.from("aimos_agent_discord").insert({
+      agent_role: "meta_observer",
+      message_type: "SUMMARY",
+      content: `Response post-processed: ${fullResponse.length} chars, κ=${vifScore.kappa.toFixed(3)}, ${entities.length} entities extracted. Chain: ${chainId.slice(0, 8)}`,
+      metadata: { chainId, kappa: vifScore.kappa, entities: entities.length, responseLength: fullResponse.length },
+      confidence: vifScore.kappa,
+    });
+
+  } catch (e) {
+    console.error("[hq-chat] Post-processing error:", e);
+    // Non-blocking — don't crash the response
+  }
+}
+
+function computeLocalVIFScore(response: string, query: string, atoms: any[]): { kappa: number; tier: string } {
+  // Factual accuracy: check if response references retrieved atoms
+  const atomContents = atoms.map(a => a.content?.toLowerCase() || "");
+  const responseLower = response.toLowerCase();
+  let evidenceOverlap = 0;
+  for (const ac of atomContents) {
+    const words = ac.split(/\s+/).filter((w: string) => w.length > 4);
+    const matched = words.filter((w: string) => responseLower.includes(w)).length;
+    evidenceOverlap += words.length > 0 ? matched / words.length : 0;
+  }
+  const factualAccuracy = atomContents.length > 0 ? Math.min(1, evidenceOverlap / atomContents.length) : 0.5;
+
+  // Consistency: check for contradictions (hedging markers)
+  const hedgeCount = (response.match(/\b(however|but|although|on the other hand|conversely)\b/gi) || []).length;
+  const consistency = Math.max(0.3, 1 - hedgeCount * 0.1);
+
+  // Completeness: response length relative to query complexity
+  const queryWords = query.split(/\s+/).length;
+  const responseWords = response.split(/\s+/).length;
+  const completeness = Math.min(1, responseWords / (queryWords * 5));
+
+  // Relevance: keyword overlap with query
+  const queryKeywords = query.toLowerCase().split(/\s+/).filter((w: string) => w.length > 3);
+  const relevantHits = queryKeywords.filter((k: string) => responseLower.includes(k)).length;
+  const relevance = queryKeywords.length > 0 ? relevantHits / queryKeywords.length : 0.5;
+
+  // Freshness: always fresh for new responses
+  const freshness = 0.95;
+
+  // Weighted kappa
+  const kappa = factualAccuracy * 0.30 + consistency * 0.20 + completeness * 0.20 + relevance * 0.20 + freshness * 0.10;
+  const tier = kappa > 0.8 ? "green" : kappa > 0.5 ? "yellow" : "red";
+
+  return { kappa, tier };
+}
+
+function extractLocalEntities(text: string): { name: string; type: string; context: string }[] {
+  const entities: { name: string; type: string; context: string }[] = [];
+  
+  // Extract capitalized noun phrases (simple NER)
+  const capitalizedPattern = /\b([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)\b/g;
+  const seen = new Set<string>();
+  let match;
+  while ((match = capitalizedPattern.exec(text)) !== null) {
+    const name = match[1];
+    if (name.length > 2 && !seen.has(name.toLowerCase()) && !["The", "This", "That", "These", "Those", "Here", "There"].includes(name)) {
+      seen.add(name.toLowerCase());
+      // Get surrounding context
+      const start = Math.max(0, match.index - 50);
+      const end = Math.min(text.length, match.index + name.length + 50);
+      entities.push({
+        name,
+        type: inferEntityType(name, text),
+        context: text.slice(start, end).replace(/\n/g, " ").trim(),
+      });
+    }
+  }
+
+  // Extract technical terms (UPPERCASE acronyms)
+  const acronymPattern = /\b([A-Z]{2,6})\b/g;
+  while ((match = acronymPattern.exec(text)) !== null) {
+    const name = match[1];
+    if (!seen.has(name.toLowerCase()) && !["API", "URL", "CSS", "HTML", "JSON", "HTTP"].includes(name)) {
+      seen.add(name.toLowerCase());
+      entities.push({ name, type: "system", context: text.slice(Math.max(0, match.index - 30), match.index + name.length + 30).trim() });
+    }
+  }
+
+  return entities.slice(0, 15);
+}
+
+function inferEntityType(name: string, context: string): string {
+  const ctx = context.toLowerCase();
+  if (ctx.includes("engine") || ctx.includes("system") || ctx.includes("framework")) return "system";
+  if (ctx.includes("protocol") || ctx.includes("algorithm")) return "concept";
+  if (ctx.includes("person") || ctx.includes("user") || ctx.includes("agent")) return "agent";
+  return "entity";
+}
 
 // ═══════════════════════════════════════════════════════════
 // PIPELINE FUNCTIONS
@@ -131,7 +347,6 @@ async function gatherLiveState(supabase: any): Promise<Record<string, any>> {
       supabase.from("self_audit_log").select("system_health_score").order("started_at", { ascending: false }).limit(1),
     ]);
 
-    // Get recent κ scores
     const { data: recentChains } = await supabase
       .from("aimos_reasoning_chains")
       .select("confidence_kappa, quality_tier")
@@ -141,7 +356,6 @@ async function gatherLiveState(supabase: any): Promise<Record<string, any>> {
     const kappaScores = (recentChains || []).filter((c: any) => c.confidence_kappa != null).map((c: any) => c.confidence_kappa);
     const avgKappa = kappaScores.length > 0 ? kappaScores.reduce((a: number, b: number) => a + b, 0) / kappaScores.length : 0;
 
-    // Memory level distribution
     const levelCounts: Record<string, number> = {};
     for (const level of ["hot", "warm", "cold", "frozen"]) {
       const { count } = await supabase.from("aimos_memory_atoms").select("*", { count: "exact", head: true }).eq("memory_level", level);
@@ -189,7 +403,6 @@ async function expandTagsViaHHNI(supabase: any, tags: string[]): Promise<string[
   if (tags.length === 0) return tags;
   const expanded = new Set(tags);
 
-  // Get parent and child tags from hierarchy
   const { data: hierarchy } = await supabase
     .from("aimos_tag_hierarchy")
     .select("tag_name, parent_tag")
@@ -200,7 +413,6 @@ async function expandTagsViaHHNI(supabase: any, tags: string[]): Promise<string[
     if (h.parent_tag) expanded.add(h.parent_tag);
   }
 
-  // Get cooccurrence tags
   const { data: cooc } = await supabase
     .from("aimos_tag_cooccurrence")
     .select("tag_b, strength")
@@ -216,10 +428,11 @@ async function expandTagsViaHHNI(supabase: any, tags: string[]): Promise<string[
   return Array.from(expanded);
 }
 
-async function retrieveFromCMC(supabase: any, query: string, tags: string[]): Promise<{ atoms: any[]; contextBlock: string }> {
+async function retrieveFromCMC(supabase: any, query: string, tags: string[], config: Record<string, any>): Promise<{ atoms: any[]; contextBlock: string }> {
+  const retrievalLimit = config.memory_retrieval_limit || 8;
+  const tokenBudgetMax = config.context_token_budget || 6000;
   const keywords = query.toLowerCase().split(/\s+/).filter((w: string) => w.length > 2);
   
-  // Search hot + warm first
   const keywordFilter = keywords.length > 0
     ? keywords.slice(0, 5).map((k: string) => `content.ilike.%${k}%`).join(",")
     : null;
@@ -229,12 +442,11 @@ async function retrieveFromCMC(supabase: any, query: string, tags: string[]): Pr
     .select("id, content, content_type, tags, source_refs, confidence_score, memory_level, access_count")
     .in("memory_level", ["hot", "warm"])
     .order("confidence_score", { ascending: false })
-    .limit(10);
+    .limit(retrievalLimit + 2);
 
   if (keywordFilter) q1 = q1.or(keywordFilter);
   const { data: keywordAtoms } = await q1;
 
-  // Tag search
   let tagAtoms: any[] = [];
   if (tags.length > 0) {
     const { data } = await supabase
@@ -243,11 +455,10 @@ async function retrieveFromCMC(supabase: any, query: string, tags: string[]): Pr
       .in("memory_level", ["hot", "warm"])
       .overlaps("tags", tags)
       .order("confidence_score", { ascending: false })
-      .limit(10);
+      .limit(retrievalLimit);
     tagAtoms = data || [];
   }
 
-  // Deduplicate
   const seen = new Map<string, any>();
   for (const a of [...(keywordAtoms || []), ...tagAtoms]) {
     if (!seen.has(a.id) || a.confidence_score > seen.get(a.id).confidence_score) {
@@ -257,10 +468,9 @@ async function retrieveFromCMC(supabase: any, query: string, tags: string[]): Pr
 
   const atoms = Array.from(seen.values())
     .sort((a, b) => b.confidence_score - a.confidence_score)
-    .slice(0, 8);
+    .slice(0, retrievalLimit);
 
-  // Build context block
-  let tokenBudget = 6000;
+  let tokenBudget = tokenBudgetMax;
   const parts: string[] = [];
   for (const a of atoms) {
     const tokens = Math.ceil(a.content.length / 4);
@@ -278,12 +488,12 @@ async function retrieveFromCMC(supabase: any, query: string, tags: string[]): Pr
 
 function assessPregate(atoms: any[]): { quality: string; atomCount: number; avgConfidence: number; shouldHedge: boolean } {
   const atomCount = atoms.length;
-  const avgConfidence = atomCount > 0 ? atoms.reduce((s, a) => s + (a.confidence_score || 0.5), 0) / atomCount : 0;
+  const avgConfidence = atomCount > 0 ? atoms.reduce((s: number, a: any) => s + (a.confidence_score || 0.5), 0) / atomCount : 0;
   const quality = atomCount >= 3 && avgConfidence >= 0.5 ? "sufficient" : atomCount >= 1 ? "low" : "none";
   return { quality, atomCount, avgConfidence, shouldHedge: quality !== "sufficient" };
 }
 
-function buildSystemPrompt(liveState: any, cmcContext: any, pregate: any, tags: string[]): string {
+function buildSystemPrompt(liveState: any, cmcContext: any, pregate: any, tags: string[], dynamicPrompts: string[]): string {
   let prompt = `You are **HQ Intelligence** — the cognitive command center for AIMOS.
 
 ## System Architecture
@@ -314,6 +524,11 @@ You operate within a 6-subsystem cognitive stack:
 4. When uncertain, state confidence level explicitly
 5. For planning queries, suggest T0→T6 decomposition`;
 
+  // Inject dynamic prompts from evolution proposals
+  if (dynamicPrompts.length > 0) {
+    prompt += `\n\n## Dynamic Directives (from Self-Evolution)\n${dynamicPrompts.join("\n\n")}`;
+  }
+
   if (cmcContext.contextBlock) {
     prompt += `\n\n## Retrieved Memory Context\n${cmcContext.contextBlock}`;
   }
@@ -323,28 +538,4 @@ You operate within a 6-subsystem cognitive stack:
   }
 
   return prompt;
-}
-
-function schedulePostProcessing(supabase: any, apiKey: string, chainId: string, query: string, atoms: any[]) {
-  // Fire-and-forget: log to Agent Discord that processing occurred
-  supabase.from("aimos_agent_discord").insert({
-    agent_role: "meta_observer",
-    message_type: "THOUGHT",
-    content: `Query processed: "${query.slice(0, 100)}..." with ${atoms.length} CMC atoms. Chain: ${chainId}`,
-    metadata: { chainId, atomCount: atoms.length },
-  }).then(() => {});
-
-  // Store the interaction as a new warm memory atom for future retrieval
-  if (query.length > 20) {
-    supabase.from("aimos_memory_atoms").insert({
-      content: `User query: ${query.slice(0, 500)}`,
-      content_type: "interaction",
-      tags: extractTags(query),
-      memory_level: "warm",
-      access_count: 1,
-      confidence_score: 0.6,
-      quality_score: 0.5,
-      metadata: { chain_id: chainId, type: "hq_chat_query" },
-    }).then(() => {});
-  }
 }
