@@ -336,11 +336,56 @@ async function collectAndPostProcess(
         : Promise.resolve(),
     ]);
 
+    // ── Phase E: Context Bank Pruning ──
+    await pruneContextBanks(supabase, primaryAgent);
+
   } catch (e) {
     console.error("[hq-chat] Post-processing error:", e);
-    // Non-blocking — don't crash the response
   }
 }
+
+async function pruneContextBanks(supabase: any, agentRole: string) {
+  try {
+    // Decay importance by 0.01 per day since last access
+    await supabase.rpc ? null : null; // No rpc needed, do it manually
+    const { data: entries } = await supabase
+      .from("agent_context_bank")
+      .select("id, importance, last_accessed_at, access_count, content")
+      .eq("agent_role", agentRole)
+      .order("importance", { ascending: true });
+
+    if (!entries || entries.length <= 50) return;
+
+    const now = Date.now();
+    const toDelete: string[] = [];
+
+    // Decay importance and mark stale entries
+    for (const e of entries) {
+      const lastAccess = e.last_accessed_at ? new Date(e.last_accessed_at).getTime() : now - 7 * 86400000;
+      const daysSinceAccess = (now - lastAccess) / 86400000;
+      const decayedImportance = Math.max(0, (e.importance || 0.5) - daysSinceAccess * 0.01);
+
+      if (decayedImportance < 0.1 && (e.access_count || 0) === 0) {
+        toDelete.push(e.id);
+      } else if (decayedImportance !== e.importance) {
+        await supabase.from("agent_context_bank").update({ importance: decayedImportance }).eq("id", e.id);
+      }
+    }
+
+    // Delete lowest entries exceeding cap of 50
+    if (entries.length - toDelete.length > 50) {
+      const remaining = entries.filter((e: any) => !toDelete.includes(e.id));
+      const excess = remaining.slice(0, remaining.length - 50);
+      toDelete.push(...excess.map((e: any) => e.id));
+    }
+
+    if (toDelete.length > 0) {
+      await supabase.from("agent_context_bank").delete().in("id", toDelete.slice(0, 20));
+      console.log(`[hq-chat] Pruned ${Math.min(toDelete.length, 20)} context entries for ${agentRole}`);
+    }
+  } catch (e) {
+    console.error("[hq-chat] Context pruning error:", e);
+  }
 
 function inferPrimaryAgent(query: string): string {
   const q = query.toLowerCase();

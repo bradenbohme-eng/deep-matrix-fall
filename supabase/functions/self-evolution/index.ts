@@ -92,6 +92,9 @@ serve(async (req) => {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
 
+      case "quick_health_check":
+        return await handleQuickHealthCheck(supabase);
+
       // ═══════════════════════════════════════════════════════════════
       // INTROSPECTION ACTIONS
       // ═══════════════════════════════════════════════════════════════
