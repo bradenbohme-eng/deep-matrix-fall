@@ -350,7 +350,7 @@ const SubsystemCard: React.FC<{
 
   return (
     <Card className={`border ${borderColor} transition-all`}>
-      <button onClick={onToggle} className="w-full text-left">
+      <div role="button" tabIndex={0} onClick={onToggle} onKeyDown={(e) => e.key === 'Enter' && onToggle()} className="w-full text-left cursor-pointer">
         <CardHeader className="py-2.5 px-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2.5">
@@ -373,7 +373,7 @@ const SubsystemCard: React.FC<{
             </div>
           </div>
         </CardHeader>
-      </button>
+      </div>
       {expanded && (
         <CardContent className="py-0 px-4 pb-3">
           {Object.keys(proof.details).length > 0 && (
