@@ -39,6 +39,27 @@ serve(async (req) => {
     const expandedTags = await expandTagsViaHHNI(supabase, queryTags);
     const cmcContext = await retrieveFromCMC(supabase, lastUserMsg, expandedTags, dynamicConfig);
 
+    // ── STEP 3b: Context Sync — BCI-powered context resolution ──
+    let bciManifest: any = null;
+    try {
+      const csResp = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/context-sync`, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          action: "resolve_context",
+          prompt: lastUserMsg,
+          token_budget: 3000,
+          policy_name: "default",
+        }),
+      });
+      if (csResp.ok) bciManifest = await csResp.json();
+    } catch (e) {
+      console.error("[hq-chat] Context-sync resolve failed (non-blocking):", e);
+    }
+
     // ── STEP 4: VIF Pre-Gate — assess context quality ──
     const pregate = assessPregate(cmcContext.atoms);
     
@@ -48,8 +69,8 @@ serve(async (req) => {
     // ── STEP 5b: Load agent genomes for swarm context ──
     const agentGenomes = await loadAgentGenomes(supabase);
     
-    // ── STEP 6: Build enriched system prompt (now includes active plan directive) ──
-    const systemPrompt = buildSystemPrompt(liveState, cmcContext, pregate, expandedTags, dynamicPrompts, agentGenomes);
+    // ── STEP 6: Build enriched system prompt (now includes BCI context) ──
+    const systemPrompt = buildSystemPrompt(liveState, cmcContext, pregate, expandedTags, dynamicPrompts, agentGenomes, bciManifest);
 
     // ── STEP 7: Create reasoning chain record ──
     const chainId = crypto.randomUUID();
@@ -1067,7 +1088,7 @@ function assessPregate(atoms: any[]): { quality: string; atomCount: number; avgC
   return { quality, atomCount, avgConfidence, shouldHedge: quality !== "sufficient" };
 }
 
-function buildSystemPrompt(liveState: any, cmcContext: any, pregate: any, tags: string[], dynamicPrompts: string[], agentGenomes: any[] = []): string {
+function buildSystemPrompt(liveState: any, cmcContext: any, pregate: any, tags: string[], dynamicPrompts: string[], agentGenomes: any[] = [], bciManifest: any = null): string {
   let prompt = `You are **HQ Intelligence** — the cognitive command center for AIMOS.
 
 ## System Architecture
@@ -1138,6 +1159,17 @@ You are currently executing **Step ${currentStep + 1}/${steps.length}** of plan 
 
   if (cmcContext.contextBlock) {
     prompt += `\n\n## Retrieved Memory Context\n${cmcContext.contextBlock}`;
+  }
+
+  // ── BCI Context Sync — Structured boundary views ──
+  if (bciManifest && bciManifest.manifest && bciManifest.manifest.length > 0) {
+    prompt += `\n\n## 🔗 BCI Contextual Sync (${bciManifest.entity_count} entities, ${bciManifest.total_tokens} tokens)\n`;
+    for (const item of bciManifest.manifest.slice(0, 15)) {
+      prompt += `- **${item.entity_id}** [${item.kind}|${item.level}|U=${item.utility}]: ${(item.content || "").slice(0, 200)}\n`;
+    }
+    if (bciManifest.dropped?.length > 0) {
+      prompt += `\n_${bciManifest.dropped.length} entities dropped (budget: ${bciManifest.budget_remaining} tokens remaining)_`;
+    }
   }
 
   if (pregate.shouldHedge) {

@@ -44,6 +44,7 @@ import ScenariosPanel from './ScenariosPanel';
 import ConnectionsPanel from './ConnectionsPanel';
 import MetricsPanel from './MetricsPanel';
 import SystemProofDashboard from './SystemProofDashboard';
+import ContextSyncDashboard from './ContextSyncDashboard';
 
 interface EvolutionCenterProps {
   subPage: SubPage;
@@ -89,6 +90,8 @@ const EvolutionCenter: React.FC<EvolutionCenterProps> = ({ subPage }) => {
       return <ProposalsPanel />;
     case 'proof':
       return <SystemProofDashboard />;
+    case 'context-sync':
+      return <ContextSyncDashboard />;
     default:
       return <AuditPanel />;
   }

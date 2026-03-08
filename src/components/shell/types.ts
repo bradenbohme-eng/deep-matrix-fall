@@ -8,7 +8,7 @@ export type OrchestrationSubPage = 'command' | 'pipeline' | 'events' | 'tests' |
 export type CodeSubPage = 'editor' | 'preview' | 'diff';
 export type IntelSubPage = 'feeds' | 'network' | 'threats';
 export type DocsSubPage = 'edit' | 'outline' | 'versions';
-export type EvolveSubPage = 'audit' | 'engines' | 'scenarios' | 'connections' | 'metrics' | 'sandbox' | 'proposals' | 'proof';
+export type EvolveSubPage = 'audit' | 'engines' | 'scenarios' | 'connections' | 'metrics' | 'sandbox' | 'proposals' | 'proof' | 'context-sync';
 
 export type SubPage = OrchestrationSubPage | CodeSubPage | IntelSubPage | DocsSubPage | EvolveSubPage;
 
@@ -83,6 +83,7 @@ export const WORLD_SUBPAGES: Record<WorldPage, { id: SubPage; label: string }[]>
     { id: 'sandbox', label: 'Sandbox' },
     { id: 'proposals', label: 'Proposals' },
     { id: 'proof', label: '⚡ System Proof' },
+    { id: 'context-sync', label: '🔗 Context Sync' },
   ],
 };
 
