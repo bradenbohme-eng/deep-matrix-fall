@@ -556,12 +556,13 @@ const AgentDiscordFeed: React.FC<{ expanded: boolean; onToggle: () => void }> = 
         const newMsg = payload.new as AgentDiscordMessage;
         if (roleFilter !== 'all' && newMsg.agent_role !== roleFilter) return;
         if (typeFilter !== 'all' && newMsg.message_type !== typeFilter) return;
+        if (planFilter !== 'all' && newMsg.plan_id !== planFilter) return;
         setMessages(prev => [newMsg, ...prev].slice(0, 50));
       })
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
-  }, [expanded, fetchMessages, roleFilter, typeFilter]);
+  }, [expanded, fetchMessages, roleFilter, typeFilter, planFilter]);
 
   // Group by thread_id
   const threads = useMemo(() => {
