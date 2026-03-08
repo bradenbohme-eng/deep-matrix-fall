@@ -1,4 +1,4 @@
-// StatusBar — Phase 4: Live telemetry from real DB + self-evolution awareness
+// StatusBar — Live telemetry from real DB with full cognitive pipeline awareness
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
@@ -13,44 +13,49 @@ interface SystemHealth {
   atomCount: number;
   chainCount: number;
   planCount: number;
+  entityCount: number;
   pendingProposals: number;
-  avgCoherence: number;
+  avgKappa: number;
+  memoryLevels: { hot: number; warm: number; cold: number; frozen: number };
   aiOnline: boolean;
 }
 
 const StatusBar: React.FC<StatusBarProps> = ({ activeWorld }) => {
   const [time, setTime] = useState(new Date());
   const [health, setHealth] = useState<SystemHealth>({
-    atomCount: 0, chainCount: 0, planCount: 0,
-    pendingProposals: 0, avgCoherence: 0, aiOnline: true,
+    atomCount: 0, chainCount: 0, planCount: 0, entityCount: 0,
+    pendingProposals: 0, avgKappa: 0,
+    memoryLevels: { hot: 0, warm: 0, cold: 0, frozen: 0 },
+    aiOnline: true,
   });
 
-  // Clock
   useEffect(() => {
     const interval = setInterval(() => setTime(new Date()), 1000);
     return () => clearInterval(interval);
   }, []);
 
-  // Poll real system health every 30s
   const fetchHealth = useCallback(async () => {
     try {
-      const [atoms, chains, plans, proposals, reasoning] = await Promise.all([
+      const [atoms, chains, plans, entities, proposals, reasoning] = await Promise.all([
         supabase.from('aimos_memory_atoms').select('*', { count: 'exact', head: true }),
         supabase.from('aimos_reasoning_chains').select('*', { count: 'exact', head: true }),
         supabase.from('aimos_plans').select('*', { count: 'exact', head: true }),
+        supabase.from('aimos_entities').select('*', { count: 'exact', head: true }),
         supabase.from('evolution_proposals').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
-        supabase.from('aimos_reasoning_chains').select('coherence_score').order('created_at', { ascending: false }).limit(20),
+        supabase.from('aimos_reasoning_chains').select('confidence_kappa').order('created_at', { ascending: false }).limit(20),
       ]);
 
-      const scores = (reasoning.data || []).map((r: any) => r.coherence_score || 0);
-      const avgCoherence = scores.length ? scores.reduce((a: number, b: number) => a + b, 0) / scores.length : 0;
+      const scores = (reasoning.data || []).map((r: any) => r.confidence_kappa).filter((v: any) => v != null);
+      const avgKappa = scores.length ? scores.reduce((a: number, b: number) => a + b, 0) / scores.length : 0;
 
       setHealth({
         atomCount: atoms.count || 0,
         chainCount: chains.count || 0,
         planCount: plans.count || 0,
+        entityCount: entities.count || 0,
         pendingProposals: proposals.count || 0,
-        avgCoherence,
+        avgKappa,
+        memoryLevels: { hot: 0, warm: 0, cold: 0, frozen: 0 },
         aiOnline: true,
       });
     } catch {
@@ -64,8 +69,8 @@ const StatusBar: React.FC<StatusBarProps> = ({ activeWorld }) => {
     return () => clearInterval(interval);
   }, [fetchHealth]);
 
-  const kappa = health.avgCoherence > 0 ? `${(health.avgCoherence * 100).toFixed(1)}%` : '—';
-  const kappaColor = health.avgCoherence >= 0.7 ? 'text-success' : health.avgCoherence >= 0.4 ? 'text-warning' : 'text-destructive';
+  const kappa = health.avgKappa > 0 ? `${(health.avgKappa * 100).toFixed(1)}%` : '—';
+  const kappaColor = health.avgKappa >= 0.7 ? 'text-success' : health.avgKappa >= 0.4 ? 'text-warning' : 'text-destructive';
 
   return (
     <footer
@@ -92,6 +97,7 @@ const StatusBar: React.FC<StatusBarProps> = ({ activeWorld }) => {
         <Metric label="Atoms" value={String(health.atomCount)} />
         <Metric label="Chains" value={String(health.chainCount)} />
         <Metric label="Plans" value={String(health.planCount)} />
+        <Metric label="Entities" value={String(health.entityCount)} />
         {health.pendingProposals > 0 && (
           <>
             <span className="divider-v h-3" />
