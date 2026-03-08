@@ -1,9 +1,9 @@
 // LeftRail — Canon §8: Page Ontology and Local Systems
-// Enhanced with framer-motion active indicator
+// Phase 3: Tier 3 MatrixRainCanvas replaces old sidebar rain
 
 import React from 'react';
 import { motion } from 'framer-motion';
-import MatrixSidebarRain from '@/components/matrix/MatrixSidebarRain';
+import MatrixRainCanvas from './effects/MatrixRainCanvas';
 import {
   ListChecks, Bot, Layers, Gauge, ShieldCheck,
   FolderOpen, Search, GitBranch, Puzzle,
@@ -38,10 +38,11 @@ const LeftRail: React.FC<LeftRailProps> = ({ activeWorld, activeTab, drawerOpen,
       className="relative surface-rail flex flex-col items-center py-2 gap-1 overflow-hidden border-r border-border"
       style={{ width: 'var(--rail-width)' }}
     >
-      <MatrixSidebarRain />
+      {/* Tier 3 canvas rain */}
+      <MatrixRainCanvas variant="sidebar" density={12} opacity={0.35} speed={0.6} />
 
       <div className="relative z-10 flex flex-col items-center gap-0.5 flex-1">
-        {tabs.map(({ id, label, icon }) => {
+        {tabs.map(({ id, label, icon }, i) => {
           const Icon = ICON_MAP[icon] || ListChecks;
           const isActive = activeTab === id && drawerOpen;
 
@@ -54,6 +55,9 @@ const LeftRail: React.FC<LeftRailProps> = ({ activeWorld, activeTab, drawerOpen,
                   aria-label={label}
                   whileHover={{ scale: 1.1 }}
                   whileTap={{ scale: 0.9 }}
+                  initial={{ opacity: 0, x: -8 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: i * 0.04, type: 'spring', stiffness: 400, damping: 25 }}
                 >
                   <Icon className="w-[18px] h-[18px]" />
                 </motion.button>
