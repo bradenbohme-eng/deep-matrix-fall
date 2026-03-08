@@ -7,6 +7,7 @@ import OrchestrationDashboard from '@/components/hq/OrchestrationDashboard';
 import DAGVisualization from '@/components/hq/DAGVisualization';
 import TestHarnessPanel from '@/components/hq/TestHarnessPanel';
 import EvolutionCenter from './EvolutionCenter';
+import AgentGenomesPanel from './AgentGenomesPanel';
 import Editor from '@monaco-editor/react';
 import { useIDEStore } from '@/components/ide/useIDEStore';
 import type { Task, DAGState } from '@/lib/orchestration/types';
@@ -110,6 +111,8 @@ const OrchestrationCenter: React.FC<{ subPage: SubPage }> = ({ subPage }) => {
       return <EventLogCenter />;
     case 'tests':
       return <TestHarnessPanel />;
+    case 'genomes':
+      return <AgentGenomesPanel />;
     default:
       return null;
   }

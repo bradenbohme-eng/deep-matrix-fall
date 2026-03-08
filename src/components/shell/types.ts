@@ -4,7 +4,7 @@
 export type WorldPage = 'orchestration' | 'code' | 'intel' | 'docs' | 'evolve';
 
 // ─── Sub-Pages per World (Canon §7) ───
-export type OrchestrationSubPage = 'command' | 'pipeline' | 'events' | 'tests';
+export type OrchestrationSubPage = 'command' | 'pipeline' | 'events' | 'tests' | 'genomes';
 export type CodeSubPage = 'editor' | 'preview' | 'diff';
 export type IntelSubPage = 'feeds' | 'network' | 'threats';
 export type DocsSubPage = 'edit' | 'outline' | 'versions';
@@ -57,6 +57,7 @@ export const WORLD_SUBPAGES: Record<WorldPage, { id: SubPage; label: string }[]>
     { id: 'pipeline', label: 'Pipeline' },
     { id: 'events', label: 'Events' },
     { id: 'tests', label: 'Tests' },
+    { id: 'genomes', label: 'Agent Genomes' },
   ],
   code: [
     { id: 'editor', label: 'Editor' },

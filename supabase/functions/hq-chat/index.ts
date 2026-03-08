@@ -39,9 +39,12 @@ serve(async (req) => {
     
     // ── STEP 5: Load dynamic system prompts ──
     const dynamicPrompts = await loadDynamicPrompts(supabase);
+
+    // ── STEP 5b: Load agent genomes for swarm context ──
+    const agentGenomes = await loadAgentGenomes(supabase);
     
     // ── STEP 6: Build enriched system prompt ──
-    const systemPrompt = buildSystemPrompt(liveState, cmcContext, pregate, expandedTags, dynamicPrompts);
+    const systemPrompt = buildSystemPrompt(liveState, cmcContext, pregate, expandedTags, dynamicPrompts, agentGenomes);
 
     // ── STEP 7: Create reasoning chain record ──
     const chainId = crypto.randomUUID();
@@ -155,6 +158,81 @@ async function loadDynamicPrompts(supabase: any): Promise<string[]> {
 }
 
 // ═══════════════════════════════════════════════════════════
+// AGENT GENOMES — Persistent Agent Identity & Context
+// ═══════════════════════════════════════════════════════════
+
+async function loadAgentGenomes(supabase: any): Promise<any[]> {
+  try {
+    const { data: genomes } = await supabase
+      .from("agent_genomes")
+      .select("agent_role, display_name, system_prompt_core, capabilities, skill_levels, avg_kappa, total_tasks_completed")
+      .order("priority", { ascending: true });
+
+    if (!genomes || genomes.length === 0) return [];
+
+    // Load top context entries per agent (most important ones)
+    const roles = genomes.map((g: any) => g.agent_role);
+    const { data: contextEntries } = await supabase
+      .from("agent_context_bank")
+      .select("agent_role, context_type, content, importance")
+      .in("agent_role", roles)
+      .order("importance", { ascending: false })
+      .limit(30);
+
+    // Attach context to genomes
+    for (const g of genomes) {
+      g.top_context = (contextEntries || [])
+        .filter((c: any) => c.agent_role === g.agent_role)
+        .slice(0, 5);
+    }
+
+    return genomes;
+  } catch (e) {
+    console.error("[hq-chat] Failed to load agent genomes:", e);
+    return [];
+  }
+}
+
+async function updateAgentGenomePostTask(supabase: any, agentRole: string, kappa: number, tokensUsed: number, learnings: string[], chainId: string) {
+  try {
+    // Update genome stats
+    const { data: genome } = await supabase
+      .from("agent_genomes")
+      .select("total_tasks_completed, total_tokens_used, avg_kappa")
+      .eq("agent_role", agentRole)
+      .maybeSingle();
+
+    if (genome) {
+      const newTotal = (genome.total_tasks_completed || 0) + 1;
+      const newAvgKappa = ((genome.avg_kappa || 0.5) * (genome.total_tasks_completed || 0) + kappa) / newTotal;
+      await supabase.from("agent_genomes").update({
+        total_tasks_completed: newTotal,
+        total_tokens_used: (genome.total_tokens_used || 0) + tokensUsed,
+        avg_kappa: newAvgKappa,
+        avg_confidence: newAvgKappa,
+        last_active_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      }).eq("agent_role", agentRole);
+    }
+
+    // Store learnings as context bank entries
+    for (const learning of learnings.slice(0, 3)) {
+      await supabase.from("agent_context_bank").insert({
+        agent_role: agentRole,
+        context_type: kappa > 0.7 ? "success" : "pattern",
+        content: learning,
+        importance: Math.min(1, kappa),
+        source_chain_id: chainId,
+        tags: [],
+        metadata: { kappa, tokens: tokensUsed },
+      });
+    }
+  } catch (e) {
+    console.error("[hq-chat] Failed to update agent genome:", e);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
 // POST-PROCESSING: Collect full response, run VIF + SEG
 // ═══════════════════════════════════════════════════════════
 
@@ -246,10 +324,50 @@ async function collectAndPostProcess(
       confidence: vifScore.kappa,
     });
 
+    // ── Update agent genomes — meta_observer always active, infer primary agent from query ──
+    const primaryAgent = inferPrimaryAgent(query);
+    const learnings = extractLearnings(fullResponse, query);
+    const estimatedTokens = Math.ceil(fullResponse.length / 4);
+    
+    await Promise.all([
+      updateAgentGenomePostTask(supabase, "meta_observer", vifScore.kappa, estimatedTokens, [`Processed query: "${query.slice(0, 60)}". κ=${vifScore.kappa.toFixed(2)}`], chainId),
+      primaryAgent !== "meta_observer" 
+        ? updateAgentGenomePostTask(supabase, primaryAgent, vifScore.kappa, estimatedTokens, learnings, chainId)
+        : Promise.resolve(),
+    ]);
+
   } catch (e) {
     console.error("[hq-chat] Post-processing error:", e);
     // Non-blocking — don't crash the response
   }
+}
+
+function inferPrimaryAgent(query: string): string {
+  const q = query.toLowerCase();
+  if (/plan|decompos|goal|task|schedul|priorit/i.test(q)) return "planner";
+  if (/search|find|research|evidence|retriev|gather/i.test(q)) return "researcher";
+  if (/build|code|implement|create|schema|function/i.test(q)) return "builder";
+  if (/verif|check|valid|confiden|hallucin|test/i.test(q)) return "verifier";
+  if (/audit|review|quality|assess|improv/i.test(q)) return "auditor";
+  if (/doc|write|spec|guide|summar/i.test(q)) return "documenter";
+  return "researcher"; // default
+}
+
+function extractLearnings(response: string, query: string): string[] {
+  const learnings: string[] = [];
+  // Extract key conclusions from the response
+  const sentences = response.split(/[.!?]+/).filter(s => s.trim().length > 20);
+  // Pick the most information-dense sentences
+  const scored = sentences.map(s => ({
+    text: s.trim(),
+    score: (s.match(/\b(is|are|means|requires|should|must|because|therefore|specifically)\b/gi) || []).length,
+  }));
+  scored.sort((a, b) => b.score - a.score);
+  for (const s of scored.slice(0, 3)) {
+    if (s.score > 0) learnings.push(s.text.slice(0, 200));
+  }
+  if (learnings.length === 0) learnings.push(`Handled query: "${query.slice(0, 100)}"`);
+  return learnings;
 }
 
 function computeLocalVIFScore(response: string, query: string, atoms: any[]): { kappa: number; tier: string } {
@@ -493,7 +611,7 @@ function assessPregate(atoms: any[]): { quality: string; atomCount: number; avgC
   return { quality, atomCount, avgConfidence, shouldHedge: quality !== "sufficient" };
 }
 
-function buildSystemPrompt(liveState: any, cmcContext: any, pregate: any, tags: string[], dynamicPrompts: string[]): string {
+function buildSystemPrompt(liveState: any, cmcContext: any, pregate: any, tags: string[], dynamicPrompts: string[], agentGenomes: any[] = []): string {
   let prompt = `You are **HQ Intelligence** — the cognitive command center for AIMOS.
 
 ## System Architecture
@@ -523,6 +641,23 @@ You operate within a 6-subsystem cognitive stack:
 3. Use markdown formatting: bold, bullets, code blocks
 4. When uncertain, state confidence level explicitly
 5. For planning queries, suggest T0→T6 decomposition`;
+
+  // Inject agent genome awareness
+  if (agentGenomes.length > 0) {
+    prompt += `\n\n## Agent Swarm — Persistent Genomes\nYou coordinate ${agentGenomes.length} specialized agents, each with persistent identity and evolving skills:\n`;
+    for (const g of agentGenomes) {
+      const skills = Object.entries(g.skill_levels || {})
+        .map(([k, v]) => `${k.replace(/_/g, ' ')}:${((v as number) * 100).toFixed(0)}%`)
+        .join(', ');
+      prompt += `- **${g.display_name}** (${g.agent_role}): ${g.total_tasks_completed} tasks, κ=${((g.avg_kappa || 0.5) * 100).toFixed(0)}% | Skills: ${skills}\n`;
+      
+      // Inject top context entries for this agent
+      if (g.top_context && g.top_context.length > 0) {
+        prompt += `  Context: ${g.top_context.map((c: any) => `[${c.context_type}] ${c.content.slice(0, 80)}`).join(' | ')}\n`;
+      }
+    }
+    prompt += `\nWhen delegating work, reference the appropriate agent's capabilities and accumulated context. Agents learn from each interaction and maintain their own specialized knowledge banks.`;
+  }
 
   // Inject dynamic prompts from evolution proposals
   if (dynamicPrompts.length > 0) {

@@ -55,6 +55,157 @@ export type Database = {
           },
         ]
       }
+      agent_context_bank: {
+        Row: {
+          access_count: number | null
+          agent_role: string
+          content: string
+          context_type: string
+          created_at: string | null
+          id: string
+          importance: number | null
+          last_accessed_at: string | null
+          metadata: Json | null
+          source_chain_id: string | null
+          tags: string[] | null
+          updated_at: string | null
+        }
+        Insert: {
+          access_count?: number | null
+          agent_role: string
+          content: string
+          context_type: string
+          created_at?: string | null
+          id?: string
+          importance?: number | null
+          last_accessed_at?: string | null
+          metadata?: Json | null
+          source_chain_id?: string | null
+          tags?: string[] | null
+          updated_at?: string | null
+        }
+        Update: {
+          access_count?: number | null
+          agent_role?: string
+          content?: string
+          context_type?: string
+          created_at?: string | null
+          id?: string
+          importance?: number | null
+          last_accessed_at?: string | null
+          metadata?: Json | null
+          source_chain_id?: string | null
+          tags?: string[] | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_context_bank_agent_role_fkey"
+            columns: ["agent_role"]
+            isOneToOne: false
+            referencedRelation: "agent_genomes"
+            referencedColumns: ["agent_role"]
+          },
+        ]
+      }
+      agent_genomes: {
+        Row: {
+          agent_role: string
+          avg_confidence: number | null
+          avg_kappa: number | null
+          capabilities: string[] | null
+          created_at: string | null
+          description: string | null
+          display_name: string
+          id: string
+          last_active_at: string | null
+          personality_traits: Json | null
+          priority: number | null
+          skill_levels: Json | null
+          system_prompt_core: string
+          total_tasks_completed: number | null
+          total_tokens_used: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          agent_role: string
+          avg_confidence?: number | null
+          avg_kappa?: number | null
+          capabilities?: string[] | null
+          created_at?: string | null
+          description?: string | null
+          display_name: string
+          id?: string
+          last_active_at?: string | null
+          personality_traits?: Json | null
+          priority?: number | null
+          skill_levels?: Json | null
+          system_prompt_core?: string
+          total_tasks_completed?: number | null
+          total_tokens_used?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          agent_role?: string
+          avg_confidence?: number | null
+          avg_kappa?: number | null
+          capabilities?: string[] | null
+          created_at?: string | null
+          description?: string | null
+          display_name?: string
+          id?: string
+          last_active_at?: string | null
+          personality_traits?: Json | null
+          priority?: number | null
+          skill_levels?: Json | null
+          system_prompt_core?: string
+          total_tasks_completed?: number | null
+          total_tokens_used?: number | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      agent_skill_log: {
+        Row: {
+          agent_role: string
+          created_at: string | null
+          details: string | null
+          id: string
+          proficiency_after: number | null
+          proficiency_before: number | null
+          skill_name: string
+          trigger_event: string | null
+        }
+        Insert: {
+          agent_role: string
+          created_at?: string | null
+          details?: string | null
+          id?: string
+          proficiency_after?: number | null
+          proficiency_before?: number | null
+          skill_name: string
+          trigger_event?: string | null
+        }
+        Update: {
+          agent_role?: string
+          created_at?: string | null
+          details?: string | null
+          id?: string
+          proficiency_after?: number | null
+          proficiency_before?: number | null
+          skill_name?: string
+          trigger_event?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_skill_log_agent_role_fkey"
+            columns: ["agent_role"]
+            isOneToOne: false
+            referencedRelation: "agent_genomes"
+            referencedColumns: ["agent_role"]
+          },
+        ]
+      }
       ai_issue_detection: {
         Row: {
           affected_services: Json | null

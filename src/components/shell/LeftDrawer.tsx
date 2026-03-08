@@ -101,32 +101,38 @@ const TasksList: React.FC = () => {
 };
 
 const AgentsList: React.FC = () => {
-  const agents = [
-    { name: 'Planner', status: 'active', load: 72 },
-    { name: 'Verifier', status: 'idle', load: 0 },
-    { name: 'Researcher', status: 'active', load: 45 },
-    { name: 'Auditor', status: 'standby', load: 10 },
-  ];
+  const [agents, setAgents] = React.useState<any[]>([]);
+  React.useEffect(() => {
+    import('@/lib/agentGenomeService').then(({ fetchAllGenomes }) =>
+      fetchAllGenomes().then(setAgents).catch(() => {})
+    );
+  }, []);
 
   return (
     <div className="space-y-2">
       {agents.map(agent => (
-        <div key={agent.name} className="surface-raised rounded-md p-2.5">
+        <div key={agent.agent_role} className="surface-raised rounded-md p-2.5">
           <div className="flex items-center justify-between mb-1.5">
-            <span className="text-xs font-mono text-foreground">{agent.name}</span>
-            <span className={`badge-live ${agent.status === 'active' ? '' : 'opacity-50'}`}>
-              {agent.status}
+            <span className="text-xs font-mono text-foreground">{agent.display_name}</span>
+            <span className="text-[9px] font-mono text-muted-foreground">
+              κ {(agent.avg_kappa * 100).toFixed(0)}%
             </span>
           </div>
-          {/* Load bar */}
+          <div className="flex items-center justify-between text-[10px] text-muted-foreground mb-1">
+            <span>{agent.total_tasks_completed} tasks</span>
+            <span>{(agent.capabilities || []).length} caps</span>
+          </div>
           <div className="h-1 bg-surface-1 rounded-full overflow-hidden">
             <div
               className="h-full bg-primary rounded-full transition-all duration-500"
-              style={{ width: `${agent.load}%` }}
+              style={{ width: `${agent.avg_confidence * 100}%` }}
             />
           </div>
         </div>
       ))}
+      {agents.length === 0 && (
+        <p className="text-[10px] text-muted-foreground text-center py-2">Loading genomes...</p>
+      )}
     </div>
   );
 };
