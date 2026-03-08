@@ -571,7 +571,7 @@ function assessPregate(atoms: any[]): { quality: string; atomCount: number; avgC
   return { quality, atomCount, avgConfidence, shouldHedge: quality !== "sufficient" };
 }
 
-function buildSystemPrompt(liveState: any, cmcContext: any, pregate: any, tags: string[], dynamicPrompts: string[]): string {
+function buildSystemPrompt(liveState: any, cmcContext: any, pregate: any, tags: string[], dynamicPrompts: string[], agentGenomes: any[] = []): string {
   let prompt = `You are **HQ Intelligence** — the cognitive command center for AIMOS.
 
 ## System Architecture
@@ -601,6 +601,23 @@ You operate within a 6-subsystem cognitive stack:
 3. Use markdown formatting: bold, bullets, code blocks
 4. When uncertain, state confidence level explicitly
 5. For planning queries, suggest T0→T6 decomposition`;
+
+  // Inject agent genome awareness
+  if (agentGenomes.length > 0) {
+    prompt += `\n\n## Agent Swarm — Persistent Genomes\nYou coordinate ${agentGenomes.length} specialized agents, each with persistent identity and evolving skills:\n`;
+    for (const g of agentGenomes) {
+      const skills = Object.entries(g.skill_levels || {})
+        .map(([k, v]) => `${k.replace(/_/g, ' ')}:${((v as number) * 100).toFixed(0)}%`)
+        .join(', ');
+      prompt += `- **${g.display_name}** (${g.agent_role}): ${g.total_tasks_completed} tasks, κ=${((g.avg_kappa || 0.5) * 100).toFixed(0)}% | Skills: ${skills}\n`;
+      
+      // Inject top context entries for this agent
+      if (g.top_context && g.top_context.length > 0) {
+        prompt += `  Context: ${g.top_context.map((c: any) => `[${c.context_type}] ${c.content.slice(0, 80)}`).join(' | ')}\n`;
+      }
+    }
+    prompt += `\nWhen delegating work, reference the appropriate agent's capabilities and accumulated context. Agents learn from each interaction and maintain their own specialized knowledge banks.`;
+  }
 
   // Inject dynamic prompts from evolution proposals
   if (dynamicPrompts.length > 0) {
