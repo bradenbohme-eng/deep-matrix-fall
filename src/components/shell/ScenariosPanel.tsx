@@ -221,8 +221,8 @@ async function runCognitiveLoop(onUpdate: (steps: ScenarioStep[]) => void): Prom
   steps[5] = { ...steps[5], status: 'running', engine: 'vif-engine' };
   onUpdate([...steps]);
   const kappa = chain?.confidence_kappa || 0;
-  const kappaPass = kappa > 0.5;
-  steps[5] = { name: steps[5].name, engine: 'vif-engine', status: kappaPass ? 'pass' : 'fail', latency: 0, details: `κ=${kappa.toFixed(3)} ${kappaPass ? '> 0.5 ✓' : '≤ 0.5 ✗'}` };
+  const kappaPass = kappa > 0.6;
+  steps[5] = { name: steps[5].name, engine: 'vif-engine', status: kappaPass ? 'pass' : 'fail', latency: 0, details: `κ=${kappa.toFixed(3)} ${kappaPass ? '> 0.6 ✓' : '≤ 0.6 ✗'}` };
   onUpdate([...steps]);
 
   return steps;
@@ -523,6 +523,8 @@ const AgentDiscordFeed: React.FC<{ expanded: boolean; onToggle: () => void }> = 
   const [messages, setMessages] = useState<AgentDiscordMessage[]>([]);
   const [roleFilter, setRoleFilter] = useState<string>('all');
   const [typeFilter, setTypeFilter] = useState<string>('all');
+  const [planFilter, setPlanFilter] = useState<string>('all');
+  const [availablePlans, setAvailablePlans] = useState<string[]>([]);
 
   const fetchMessages = useCallback(async () => {
     let q = supabase
@@ -532,9 +534,16 @@ const AgentDiscordFeed: React.FC<{ expanded: boolean; onToggle: () => void }> = 
       .limit(50);
     if (roleFilter !== 'all') q = q.eq('agent_role', roleFilter);
     if (typeFilter !== 'all') q = q.eq('message_type', typeFilter);
+    if (planFilter !== 'all') q = q.eq('plan_id', planFilter);
     const { data } = await q;
-    if (data) setMessages(data);
-  }, [roleFilter, typeFilter]);
+    if (data) {
+      setMessages(data);
+      // Collect unique plan_ids for filter dropdown
+      const plans = new Set<string>();
+      data.forEach((m: any) => { if (m.plan_id) plans.add(m.plan_id); });
+      setAvailablePlans(Array.from(plans));
+    }
+  }, [roleFilter, typeFilter, planFilter]);
 
   // Supabase Realtime subscription
   useEffect(() => {
@@ -547,12 +556,13 @@ const AgentDiscordFeed: React.FC<{ expanded: boolean; onToggle: () => void }> = 
         const newMsg = payload.new as AgentDiscordMessage;
         if (roleFilter !== 'all' && newMsg.agent_role !== roleFilter) return;
         if (typeFilter !== 'all' && newMsg.message_type !== typeFilter) return;
+        if (planFilter !== 'all' && newMsg.plan_id !== planFilter) return;
         setMessages(prev => [newMsg, ...prev].slice(0, 50));
       })
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
-  }, [expanded, fetchMessages, roleFilter, typeFilter]);
+  }, [expanded, fetchMessages, roleFilter, typeFilter, planFilter]);
 
   // Group by thread_id
   const threads = useMemo(() => {
@@ -636,6 +646,17 @@ const AgentDiscordFeed: React.FC<{ expanded: boolean; onToggle: () => void }> = 
                 <SelectItem value="SUMMARY">Summary</SelectItem>
                 <SelectItem value="TASK_PROPOSE">Task Propose</SelectItem>
                 <SelectItem value="TASK_COMPLETE">Task Complete</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={planFilter} onValueChange={setPlanFilter}>
+              <SelectTrigger className="h-6 text-[10px] w-28 font-mono">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Plans</SelectItem>
+                {availablePlans.map(p => (
+                  <SelectItem key={p} value={p}>{p.slice(0, 8)}...</SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>

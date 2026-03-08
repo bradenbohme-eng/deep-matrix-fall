@@ -5924,6 +5924,7 @@ export type Database = {
       }
       system_prompts: {
         Row: {
+          category: string
           created_at: string | null
           id: string
           is_active: boolean | null
@@ -5932,9 +5933,11 @@ export type Database = {
           prompt_text: string
           proposal_id: string | null
           source: string | null
+          source_proposal_id: string | null
           updated_at: string | null
         }
         Insert: {
+          category?: string
           created_at?: string | null
           id?: string
           is_active?: boolean | null
@@ -5943,9 +5946,11 @@ export type Database = {
           prompt_text: string
           proposal_id?: string | null
           source?: string | null
+          source_proposal_id?: string | null
           updated_at?: string | null
         }
         Update: {
+          category?: string
           created_at?: string | null
           id?: string
           is_active?: boolean | null
@@ -5954,12 +5959,20 @@ export type Database = {
           prompt_text?: string
           proposal_id?: string | null
           source?: string | null
+          source_proposal_id?: string | null
           updated_at?: string | null
         }
         Relationships: [
           {
             foreignKeyName: "system_prompts_proposal_id_fkey"
             columns: ["proposal_id"]
+            isOneToOne: false
+            referencedRelation: "evolution_proposals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "system_prompts_source_proposal_id_fkey"
+            columns: ["source_proposal_id"]
             isOneToOne: false
             referencedRelation: "evolution_proposals"
             referencedColumns: ["id"]
