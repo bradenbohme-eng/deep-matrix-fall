@@ -5,6 +5,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import ReactMarkdown from 'react-markdown';
 import { streamHQChat, type ChatMessage } from '@/lib/hqChatService';
+import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import MatrixRainCanvas from './effects/MatrixRainCanvas';
 import { ScrollArea } from '@/components/ui/scroll-area';
