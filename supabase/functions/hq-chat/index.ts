@@ -154,7 +154,82 @@ async function loadDynamicPrompts(supabase: any): Promise<string[]> {
   } catch (e) {
     console.error("[hq-chat] Failed to load dynamic prompts:", e);
     return [];
+}
+
+// ═══════════════════════════════════════════════════════════
+// AGENT GENOMES — Persistent Agent Identity & Context
+// ═══════════════════════════════════════════════════════════
+
+async function loadAgentGenomes(supabase: any): Promise<any[]> {
+  try {
+    const { data: genomes } = await supabase
+      .from("agent_genomes")
+      .select("agent_role, display_name, system_prompt_core, capabilities, skill_levels, avg_kappa, total_tasks_completed")
+      .order("priority", { ascending: true });
+
+    if (!genomes || genomes.length === 0) return [];
+
+    // Load top context entries per agent (most important ones)
+    const roles = genomes.map((g: any) => g.agent_role);
+    const { data: contextEntries } = await supabase
+      .from("agent_context_bank")
+      .select("agent_role, context_type, content, importance")
+      .in("agent_role", roles)
+      .order("importance", { ascending: false })
+      .limit(30);
+
+    // Attach context to genomes
+    for (const g of genomes) {
+      g.top_context = (contextEntries || [])
+        .filter((c: any) => c.agent_role === g.agent_role)
+        .slice(0, 5);
+    }
+
+    return genomes;
+  } catch (e) {
+    console.error("[hq-chat] Failed to load agent genomes:", e);
+    return [];
   }
+}
+
+async function updateAgentGenomePostTask(supabase: any, agentRole: string, kappa: number, tokensUsed: number, learnings: string[], chainId: string) {
+  try {
+    // Update genome stats
+    const { data: genome } = await supabase
+      .from("agent_genomes")
+      .select("total_tasks_completed, total_tokens_used, avg_kappa")
+      .eq("agent_role", agentRole)
+      .maybeSingle();
+
+    if (genome) {
+      const newTotal = (genome.total_tasks_completed || 0) + 1;
+      const newAvgKappa = ((genome.avg_kappa || 0.5) * (genome.total_tasks_completed || 0) + kappa) / newTotal;
+      await supabase.from("agent_genomes").update({
+        total_tasks_completed: newTotal,
+        total_tokens_used: (genome.total_tokens_used || 0) + tokensUsed,
+        avg_kappa: newAvgKappa,
+        avg_confidence: newAvgKappa,
+        last_active_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      }).eq("agent_role", agentRole);
+    }
+
+    // Store learnings as context bank entries
+    for (const learning of learnings.slice(0, 3)) {
+      await supabase.from("agent_context_bank").insert({
+        agent_role: agentRole,
+        context_type: kappa > 0.7 ? "success" : "pattern",
+        content: learning,
+        importance: Math.min(1, kappa),
+        source_chain_id: chainId,
+        tags: [],
+        metadata: { kappa, tokens: tokensUsed },
+      });
+    }
+  } catch (e) {
+    console.error("[hq-chat] Failed to update agent genome:", e);
+  }
+}
 }
 
 // ═══════════════════════════════════════════════════════════
