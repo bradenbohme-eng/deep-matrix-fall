@@ -39,9 +39,12 @@ serve(async (req) => {
     
     // ── STEP 5: Load dynamic system prompts ──
     const dynamicPrompts = await loadDynamicPrompts(supabase);
+
+    // ── STEP 5b: Load agent genomes for swarm context ──
+    const agentGenomes = await loadAgentGenomes(supabase);
     
     // ── STEP 6: Build enriched system prompt ──
-    const systemPrompt = buildSystemPrompt(liveState, cmcContext, pregate, expandedTags, dynamicPrompts);
+    const systemPrompt = buildSystemPrompt(liveState, cmcContext, pregate, expandedTags, dynamicPrompts, agentGenomes);
 
     // ── STEP 7: Create reasoning chain record ──
     const chainId = crypto.randomUUID();
