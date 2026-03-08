@@ -1585,6 +1585,140 @@ export type Database = {
         }
         Relationships: []
       }
+      bci_entities: {
+        Row: {
+          blast_radius: number | null
+          boundary_views: Json | null
+          confidence_score: number | null
+          contract: Json | null
+          contradiction_refs: string[] | null
+          created_at: string
+          dependencies: Json | null
+          entity_id: string
+          kind: string
+          language: string | null
+          owner: string | null
+          parity_score: number | null
+          path: string | null
+          quartet: Json | null
+          span: Json | null
+          stale_reasons: string[] | null
+          superseded_by: string | null
+          supersedes: string | null
+          sync_status: string
+          tx_time: string
+          updated_at: string
+          valid_time_end: string | null
+          valid_time_start: string
+          visibility: string | null
+          weights: Json | null
+        }
+        Insert: {
+          blast_radius?: number | null
+          boundary_views?: Json | null
+          confidence_score?: number | null
+          contract?: Json | null
+          contradiction_refs?: string[] | null
+          created_at?: string
+          dependencies?: Json | null
+          entity_id: string
+          kind?: string
+          language?: string | null
+          owner?: string | null
+          parity_score?: number | null
+          path?: string | null
+          quartet?: Json | null
+          span?: Json | null
+          stale_reasons?: string[] | null
+          superseded_by?: string | null
+          supersedes?: string | null
+          sync_status?: string
+          tx_time?: string
+          updated_at?: string
+          valid_time_end?: string | null
+          valid_time_start?: string
+          visibility?: string | null
+          weights?: Json | null
+        }
+        Update: {
+          blast_radius?: number | null
+          boundary_views?: Json | null
+          confidence_score?: number | null
+          contract?: Json | null
+          contradiction_refs?: string[] | null
+          created_at?: string
+          dependencies?: Json | null
+          entity_id?: string
+          kind?: string
+          language?: string | null
+          owner?: string | null
+          parity_score?: number | null
+          path?: string | null
+          quartet?: Json | null
+          span?: Json | null
+          stale_reasons?: string[] | null
+          superseded_by?: string | null
+          supersedes?: string | null
+          sync_status?: string
+          tx_time?: string
+          updated_at?: string
+          valid_time_end?: string | null
+          valid_time_start?: string
+          visibility?: string | null
+          weights?: Json | null
+        }
+        Relationships: []
+      }
+      bci_entity_versions: {
+        Row: {
+          boundary_views: Json | null
+          contract: Json | null
+          dependencies: Json | null
+          dependency_hash: string | null
+          entity_id: string
+          id: string
+          tx_time: string
+          valid_time_end: string | null
+          valid_time_start: string
+          version_number: number
+          weights: Json | null
+        }
+        Insert: {
+          boundary_views?: Json | null
+          contract?: Json | null
+          dependencies?: Json | null
+          dependency_hash?: string | null
+          entity_id: string
+          id?: string
+          tx_time?: string
+          valid_time_end?: string | null
+          valid_time_start?: string
+          version_number?: number
+          weights?: Json | null
+        }
+        Update: {
+          boundary_views?: Json | null
+          contract?: Json | null
+          dependencies?: Json | null
+          dependency_hash?: string | null
+          entity_id?: string
+          id?: string
+          tx_time?: string
+          valid_time_end?: string | null
+          valid_time_start?: string
+          version_number?: number
+          weights?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bci_entity_versions_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "bci_entities"
+            referencedColumns: ["entity_id"]
+          },
+        ]
+      }
       challenges: {
         Row: {
           created_at: string | null
@@ -5919,6 +6053,227 @@ export type Database = {
           importance_score?: number | null
           occurrences?: string[] | null
           symbol?: string
+        }
+        Relationships: []
+      }
+      sync_contradictions: {
+        Row: {
+          id: string
+          object: string
+          reason: string | null
+          relation: string | null
+          severity: string | null
+          status: string | null
+          subject: string
+          tx_time: string
+          valid_time_end: string | null
+          valid_time_start: string
+        }
+        Insert: {
+          id?: string
+          object: string
+          reason?: string | null
+          relation?: string | null
+          severity?: string | null
+          status?: string | null
+          subject: string
+          tx_time?: string
+          valid_time_end?: string | null
+          valid_time_start?: string
+        }
+        Update: {
+          id?: string
+          object?: string
+          reason?: string | null
+          relation?: string | null
+          severity?: string | null
+          status?: string | null
+          subject?: string
+          tx_time?: string
+          valid_time_end?: string | null
+          valid_time_start?: string
+        }
+        Relationships: []
+      }
+      sync_evaluations: {
+        Row: {
+          contradiction_refs: string[] | null
+          detected_failures: string[] | null
+          event: string | null
+          id: string
+          policy: Json | null
+          recommended_action: string | null
+          scores: Json | null
+          status_after: string | null
+          status_before: string | null
+          target_entities: string[]
+          tx_time: string
+          valid_time_end: string | null
+          valid_time_start: string
+        }
+        Insert: {
+          contradiction_refs?: string[] | null
+          detected_failures?: string[] | null
+          event?: string | null
+          id?: string
+          policy?: Json | null
+          recommended_action?: string | null
+          scores?: Json | null
+          status_after?: string | null
+          status_before?: string | null
+          target_entities?: string[]
+          tx_time?: string
+          valid_time_end?: string | null
+          valid_time_start?: string
+        }
+        Update: {
+          contradiction_refs?: string[] | null
+          detected_failures?: string[] | null
+          event?: string | null
+          id?: string
+          policy?: Json | null
+          recommended_action?: string | null
+          scores?: Json | null
+          status_after?: string | null
+          status_before?: string | null
+          target_entities?: string[]
+          tx_time?: string
+          valid_time_end?: string | null
+          valid_time_start?: string
+        }
+        Relationships: []
+      }
+      sync_policy_profiles: {
+        Row: {
+          block_on: string[] | null
+          id: string
+          is_active: boolean | null
+          max_auto_retries: number | null
+          max_blast_radius_auto: number | null
+          min_confidence: number | null
+          min_parity: number | null
+          min_witness_coverage: number | null
+          name: string
+          version: number | null
+          warn_on: string[] | null
+        }
+        Insert: {
+          block_on?: string[] | null
+          id?: string
+          is_active?: boolean | null
+          max_auto_retries?: number | null
+          max_blast_radius_auto?: number | null
+          min_confidence?: number | null
+          min_parity?: number | null
+          min_witness_coverage?: number | null
+          name: string
+          version?: number | null
+          warn_on?: string[] | null
+        }
+        Update: {
+          block_on?: string[] | null
+          id?: string
+          is_active?: boolean | null
+          max_auto_retries?: number | null
+          max_blast_radius_auto?: number | null
+          min_confidence?: number | null
+          min_parity?: number | null
+          min_witness_coverage?: number | null
+          name?: string
+          version?: number | null
+          warn_on?: string[] | null
+        }
+        Relationships: []
+      }
+      sync_remediation_atoms: {
+        Row: {
+          authority_tier: string | null
+          escalation_target: string | null
+          failure_class: string | null
+          id: string
+          missing_dimensions: string[] | null
+          narrowed_task: string | null
+          origin_evaluation_id: string | null
+          required_context: string[] | null
+          retry_budget_remaining: number | null
+          status: string | null
+          target_entity: string | null
+          tx_time: string
+        }
+        Insert: {
+          authority_tier?: string | null
+          escalation_target?: string | null
+          failure_class?: string | null
+          id?: string
+          missing_dimensions?: string[] | null
+          narrowed_task?: string | null
+          origin_evaluation_id?: string | null
+          required_context?: string[] | null
+          retry_budget_remaining?: number | null
+          status?: string | null
+          target_entity?: string | null
+          tx_time?: string
+        }
+        Update: {
+          authority_tier?: string | null
+          escalation_target?: string | null
+          failure_class?: string | null
+          id?: string
+          missing_dimensions?: string[] | null
+          narrowed_task?: string | null
+          origin_evaluation_id?: string | null
+          required_context?: string[] | null
+          retry_budget_remaining?: number | null
+          status?: string | null
+          target_entity?: string | null
+          tx_time?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sync_remediation_atoms_origin_evaluation_id_fkey"
+            columns: ["origin_evaluation_id"]
+            isOneToOne: false
+            referencedRelation: "sync_evaluations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sync_witnesses: {
+        Row: {
+          artifacts: string[] | null
+          claims_supported: string[] | null
+          environment: Json | null
+          id: string
+          kind: string
+          result: string | null
+          subject_entities: string[]
+          tx_time: string
+          valid_time_end: string | null
+          valid_time_start: string
+        }
+        Insert: {
+          artifacts?: string[] | null
+          claims_supported?: string[] | null
+          environment?: Json | null
+          id?: string
+          kind?: string
+          result?: string | null
+          subject_entities?: string[]
+          tx_time?: string
+          valid_time_end?: string | null
+          valid_time_start?: string
+        }
+        Update: {
+          artifacts?: string[] | null
+          claims_supported?: string[] | null
+          environment?: Json | null
+          id?: string
+          kind?: string
+          result?: string | null
+          subject_entities?: string[]
+          tx_time?: string
+          valid_time_end?: string | null
+          valid_time_start?: string
         }
         Relationships: []
       }
