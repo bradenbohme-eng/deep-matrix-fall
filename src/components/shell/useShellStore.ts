@@ -42,7 +42,8 @@ export function useShellStore() {
       // Reset left tab to first tab of new world
       leftActiveTab: world === 'orchestration' ? 'tasks' :
                      world === 'code' ? 'explorer' :
-                     world === 'intel' ? 'sources' : 'outline',
+                     world === 'intel' ? 'sources' :
+                     world === 'evolve' ? 'status' : 'outline',
     }));
   }, []);
 

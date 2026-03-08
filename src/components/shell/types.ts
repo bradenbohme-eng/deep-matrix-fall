@@ -1,23 +1,25 @@
 // Shell Type System — Canon-grade persistent cognitive shell
 
 // ─── World Pages (Canon §6 - Top Bar Territories) ───
-export type WorldPage = 'orchestration' | 'code' | 'intel' | 'docs';
+export type WorldPage = 'orchestration' | 'code' | 'intel' | 'docs' | 'evolve';
 
 // ─── Sub-Pages per World (Canon §7) ───
 export type OrchestrationSubPage = 'command' | 'pipeline' | 'events' | 'tests';
 export type CodeSubPage = 'editor' | 'preview' | 'diff';
 export type IntelSubPage = 'feeds' | 'network' | 'threats';
 export type DocsSubPage = 'edit' | 'outline' | 'versions';
+export type EvolveSubPage = 'audit' | 'engines' | 'sandbox' | 'proposals';
 
-export type SubPage = OrchestrationSubPage | CodeSubPage | IntelSubPage | DocsSubPage;
+export type SubPage = OrchestrationSubPage | CodeSubPage | IntelSubPage | DocsSubPage | EvolveSubPage;
 
 // ─── Left Rail (Canon §8 - Page Ontology) ───
 export type OrchestrationLeftTab = 'tasks' | 'agents' | 'context' | 'budgets' | 'policies';
 export type CodeLeftTab = 'explorer' | 'search' | 'git' | 'extensions';
 export type IntelLeftTab = 'sources' | 'red-team' | 'blue-team' | 'network';
 export type DocsLeftTab = 'outline' | 'sources' | 'templates';
+export type EvolveLeftTab = 'status' | 'history' | 'config';
 
-export type LeftTab = OrchestrationLeftTab | CodeLeftTab | IntelLeftTab | DocsLeftTab;
+export type LeftTab = OrchestrationLeftTab | CodeLeftTab | IntelLeftTab | DocsLeftTab | EvolveLeftTab;
 
 // ─── Right Panel Modes (Canon §10 - Toggled Domain Separation) ───
 export type RightPanelMode = 'ai' | 'swarm' | 'inspect' | 'analyze' | 'memory';
@@ -71,6 +73,12 @@ export const WORLD_SUBPAGES: Record<WorldPage, { id: SubPage; label: string }[]>
     { id: 'outline', label: 'Outline' },
     { id: 'versions', label: 'Versions' },
   ],
+  evolve: [
+    { id: 'audit', label: 'Self-Audit' },
+    { id: 'engines', label: 'Engine Tests' },
+    { id: 'sandbox', label: 'Sandbox' },
+    { id: 'proposals', label: 'Proposals' },
+  ],
 };
 
 // ─── Default sub-pages when switching worlds ───
@@ -79,6 +87,7 @@ export const WORLD_DEFAULT_SUBPAGE: Record<WorldPage, SubPage> = {
   code: 'editor',
   intel: 'feeds',
   docs: 'edit',
+  evolve: 'audit',
 };
 
 // ─── Left rail tabs per world ───
@@ -106,5 +115,10 @@ export const WORLD_LEFT_TABS: Record<WorldPage, { id: LeftTab; label: string; ic
     { id: 'outline', label: 'Outline', icon: 'list' },
     { id: 'sources', label: 'Sources', icon: 'book-open' },
     { id: 'templates', label: 'Templates', icon: 'layout-template' },
+  ],
+  evolve: [
+    { id: 'status', label: 'Status', icon: 'activity' },
+    { id: 'history', label: 'History', icon: 'history' },
+    { id: 'config', label: 'Config', icon: 'settings' },
   ],
 };
