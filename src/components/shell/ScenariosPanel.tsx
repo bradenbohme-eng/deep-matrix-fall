@@ -913,11 +913,11 @@ const ScenariosPanel: React.FC = () => {
     // Load previous results to detect regressions
     const { data: prevRuns } = await supabase
       .from('aimos_test_runs' as any)
-      .select('metrics')
+      .select('*')
       .order('started_at', { ascending: false })
       .limit(SCENARIOS.length);
     const prevStatus: Record<string, string> = {};
-    for (const r of prevRuns || []) {
+    for (const r of (prevRuns || []) as any[]) {
       const m = typeof r.metrics === 'string' ? JSON.parse(r.metrics) : r.metrics;
       if (m?.scenario && !prevStatus[m.scenario]) prevStatus[m.scenario] = r.status || 'unknown';
     }
