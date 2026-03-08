@@ -231,7 +231,6 @@ async function updateAgentGenomePostTask(supabase: any, agentRole: string, kappa
     console.error("[hq-chat] Failed to update agent genome:", e);
   }
 }
-}
 
 // ═══════════════════════════════════════════════════════════
 // POST-PROCESSING: Collect full response, run VIF + SEG
