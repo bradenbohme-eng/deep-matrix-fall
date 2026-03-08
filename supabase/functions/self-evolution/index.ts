@@ -157,6 +157,25 @@ serve(async (req) => {
         
       case "get_evolution_history":
         return await handleGetEvolutionHistory(supabase, body);
+
+      // ═══════════════════════════════════════════════════════════════
+      // PROPOSAL-BASED EVOLUTION (APPROVAL GATED)
+      // ═══════════════════════════════════════════════════════════════
+      
+      case "self_audit":
+        return await handleSelfAudit(supabase, lovableApiKey, body);
+        
+      case "get_proposals":
+        return await handleGetProposals(supabase, body);
+      
+      case "approve_proposal":
+        return await handleApproveProposal(supabase, lovableApiKey, body);
+        
+      case "reject_proposal":
+        return await handleRejectProposal(supabase, body);
+        
+      case "get_audit_history":
+        return await handleGetAuditHistory(supabase, body);
         
       default:
         return new Response(
