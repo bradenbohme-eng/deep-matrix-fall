@@ -534,9 +534,16 @@ const AgentDiscordFeed: React.FC<{ expanded: boolean; onToggle: () => void }> = 
       .limit(50);
     if (roleFilter !== 'all') q = q.eq('agent_role', roleFilter);
     if (typeFilter !== 'all') q = q.eq('message_type', typeFilter);
+    if (planFilter !== 'all') q = q.eq('plan_id', planFilter);
     const { data } = await q;
-    if (data) setMessages(data);
-  }, [roleFilter, typeFilter]);
+    if (data) {
+      setMessages(data);
+      // Collect unique plan_ids for filter dropdown
+      const plans = new Set<string>();
+      data.forEach((m: any) => { if (m.plan_id) plans.add(m.plan_id); });
+      setAvailablePlans(Array.from(plans));
+    }
+  }, [roleFilter, typeFilter, planFilter]);
 
   // Supabase Realtime subscription
   useEffect(() => {
