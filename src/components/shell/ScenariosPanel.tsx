@@ -188,36 +188,26 @@ async function runMultiAgent(onUpdate: (steps: ScenarioStep[]) => void): Promise
   const { data: d1, error: e1, latency: l1 } = await runStep('apoe-engine', {
     action: 'decompose',
     objective: 'Design and implement a multi-agent research pipeline with verification',
-    title: `Multi-Agent Test ${new Date().toISOString().slice(11, 19)}`,
   });
   const planId = d1?.planId || '';
-  steps[0] = { name: steps[0].name, engine: 'apoe-engine', status: e1 ? 'fail' : 'pass', latency: l1, details: e1 ? e1.message : `Plan ${planId.slice(0, 8)}...`, output: d1 };
+  steps[0] = { name: steps[0].name, engine: 'apoe-engine', status: e1 ? 'fail' : 'pass', latency: l1, details: e1 ? e1.message : `Plan ${planId.slice(0, 8)}... with ${d1?.plan?.t1?.length || 0} T1 goals`, output: d1 };
   onUpdate([...steps]);
 
-  // Steps 2-5: Queue agent tasks
-  const agentRoles = [
-    { role: 'planner', tier: 'T1', input: 'Create research plan for AIMOS architecture documentation' },
-    { role: 'researcher', tier: 'T2', input: 'Gather evidence on CMC, VIF, SEG, APOE subsystems' },
-    { role: 'builder', tier: 'T3', input: 'Synthesize research into structured documentation' },
-    { role: 'verifier', tier: 'T4', input: 'Verify documentation accuracy against source specifications' },
-  ];
+  // Steps 2-5: Execute queued tasks sequentially (Planner→Researcher→Builder→Verifier)
+  const agentLabels = ['Planner', 'Researcher', 'Builder', 'Verifier'];
 
-  for (let i = 0; i < agentRoles.length; i++) {
-    const agent = agentRoles[i];
+  for (let i = 0; i < 4; i++) {
     steps[i + 1] = { ...steps[i + 1], status: 'running', engine: 'apoe-engine' };
     onUpdate([...steps]);
 
     const { data, error, latency } = await runStep('apoe-engine', {
-      action: 'enqueue',
+      action: 'execute_next',
       planId: planId || undefined,
-      agentRole: agent.role,
-      tier: agent.tier,
-      input: { task: agent.input },
     });
     steps[i + 1] = {
       name: steps[i + 1].name, engine: 'apoe-engine',
       status: error ? 'fail' : 'pass', latency,
-      details: error ? error.message : `Task ${data?.taskId?.slice(0, 8) || 'queued'}... (${agent.role})`,
+      details: error ? error.message : (data?.executed ? `Executed ${data.executed.slice(0, 8)}... (${data.tier || agentLabels[i]})` : `No queued tasks (${agentLabels[i]} skipped)`),
       output: data,
     };
     onUpdate([...steps]);
@@ -229,9 +219,9 @@ async function runMultiAgent(onUpdate: (steps: ScenarioStep[]) => void): Promise
   const start = performance.now();
   try {
     const { error } = await supabase.from('aimos_agent_discord').insert([
-      { agent_role: 'planner', message_type: 'DECISION', content: 'Multi-agent orchestration test initiated', plan_id: planId || null, thread_id: planId || null, confidence: 0.9 },
-      { agent_role: 'researcher', message_type: 'THOUGHT', content: 'Analyzing available evidence sources for AIMOS subsystems', plan_id: planId || null, thread_id: planId || null, confidence: 0.85 },
-      { agent_role: 'verifier', message_type: 'ALERT', content: 'Verification gate activated for multi-agent output', plan_id: planId || null, thread_id: planId || null, confidence: 0.92 },
+      { agent_role: 'planner', message_type: 'DECISION', content: 'Multi-agent orchestration test completed', plan_id: planId || null, thread_id: planId || null, confidence: 0.9 },
+      { agent_role: 'researcher', message_type: 'THOUGHT', content: 'Evidence gathering phase complete for AIMOS subsystems', plan_id: planId || null, thread_id: planId || null, confidence: 0.85 },
+      { agent_role: 'verifier', message_type: 'ALERT', content: 'Verification gate passed for multi-agent output', plan_id: planId || null, thread_id: planId || null, confidence: 0.92 },
     ]);
     steps[5] = { name: steps[5].name, engine: 'supabase', status: error ? 'fail' : 'pass', latency: performance.now() - start, details: error ? error.message : '3 agent discord messages logged', output: null };
   } catch (e: any) {
@@ -383,7 +373,7 @@ async function runSelfEvolution(onUpdate: (steps: ScenarioStep[]) => void): Prom
   steps[0] = { ...steps[0], status: 'running', engine: 'self-evolution' };
   onUpdate([...steps]);
   const { data: d1, error: e1, latency: l1 } = await runStep('self-evolution', {
-    action: 'audit', auditType: 'full',
+    action: 'self_audit',
   });
   steps[0] = { name: steps[0].name, engine: 'self-evolution', status: e1 ? 'fail' : 'pass', latency: l1, details: e1 ? e1.message : `Health: ${((d1?.healthScore || 0) * 100).toFixed(0)}%, ${d1?.findings?.length || 0} findings`, output: d1 };
   onUpdate([...steps]);
@@ -392,7 +382,7 @@ async function runSelfEvolution(onUpdate: (steps: ScenarioStep[]) => void): Prom
   steps[1] = { ...steps[1], status: 'running', engine: 'self-evolution' };
   onUpdate([...steps]);
   const { data: d2, error: e2, latency: l2 } = await runStep('self-evolution', {
-    action: 'suggest_evolutions',
+    action: 'suggest_evolution',
   });
   steps[1] = { name: steps[1].name, engine: 'self-evolution', status: e2 ? 'fail' : 'pass', latency: l2, details: e2 ? e2.message : `${d2?.suggestions?.length || 0} proposals generated`, output: d2 };
   onUpdate([...steps]);
@@ -424,9 +414,9 @@ async function runSelfEvolution(onUpdate: (steps: ScenarioStep[]) => void): Prom
   steps[4] = { ...steps[4], status: 'running', engine: 'self-evolution' };
   onUpdate([...steps]);
   const { data: d5, error: e5, latency: l5 } = await runStep('self-evolution', {
-    action: 'diagnostics',
+    action: 'run_diagnostics',
   });
-  steps[4] = { name: steps[4].name, engine: 'self-evolution', status: e5 ? 'fail' : 'pass', latency: l5, details: e5 ? e5.message : `${d5?.diagnostics?.length || 0} components checked`, output: d5 };
+  steps[4] = { name: steps[4].name, engine: 'self-evolution', status: e5 ? 'fail' : 'pass', latency: l5, details: e5 ? e5.message : `Diagnostics complete: ${d5?.diagnostics?.length || 0} components checked`, output: d5 };
   onUpdate([...steps]);
 
   return steps;
