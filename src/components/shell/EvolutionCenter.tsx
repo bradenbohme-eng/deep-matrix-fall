@@ -352,9 +352,147 @@ const AuditPanel: React.FC = () => {
 // ENGINE TEST PANEL — Test CMC, VIF, SEG, APOE individually
 // ═══════════════════════════════════════════════════════════════
 
+interface PipelineStepResult {
+  step: string;
+  engine: string;
+  status: 'pass' | 'fail' | 'running';
+  latency: number;
+  details: string;
+  data?: any;
+}
+
 const EngineTestPanel: React.FC = () => {
   const [results, setResults] = useState<EngineTestResult[]>([]);
   const [running, setRunning] = useState(false);
+  const [pipelineResults, setPipelineResults] = useState<PipelineStepResult[]>([]);
+  const [pipelineRunning, setPipelineRunning] = useState(false);
+
+  const runFullPipeline = useCallback(async () => {
+    setPipelineRunning(true);
+    const steps: PipelineStepResult[] = [];
+    const updateSteps = (s: PipelineStepResult[]) => setPipelineResults([...s]);
+
+    // Step 1: CMC Ingest
+    steps.push({ step: '1. CMC Ingest', engine: 'cmc-engine', status: 'running', latency: 0, details: 'Ingesting test memory atom...' });
+    updateSteps(steps);
+    let atomId = '';
+    try {
+      const start = performance.now();
+      const { data, error } = await supabase.functions.invoke('cmc-engine', {
+        body: {
+          action: 'ingest',
+          content: `Pipeline integration test at ${new Date().toISOString()}. AIMOS uses CMC for memory management, VIF for verification with kappa scoring, SEG for entity extraction, and APOE for orchestration.`,
+          contentType: 'test',
+          tags: ['pipeline-test', 'integration'],
+          confidence: 0.85,
+        },
+      });
+      const lat = performance.now() - start;
+      atomId = data?.atomIds?.[0] || '';
+      steps[0] = { step: '1. CMC Ingest', engine: 'cmc-engine', status: error ? 'fail' : 'pass', latency: lat, details: error ? error.message : `Atom ${atomId.slice(0, 8)}... stored`, data };
+    } catch (e: any) {
+      steps[0] = { ...steps[0], status: 'fail', details: e.message };
+    }
+    updateSteps(steps);
+
+    // Step 2: SEG Extract (local)
+    steps.push({ step: '2. SEG Extract', engine: 'seg-engine', status: 'running', latency: 0, details: 'Extracting entities...' });
+    updateSteps(steps);
+    try {
+      const start = performance.now();
+      const { data, error } = await supabase.functions.invoke('seg-engine', {
+        body: {
+          action: 'extract_local',
+          text: 'AIMOS implements CMC for memory, VIF for verification, SEG for knowledge graphs, APOE for orchestration, and HHNI for navigation. The system uses kappa confidence scoring.',
+          sourceAtomId: atomId || undefined,
+        },
+      });
+      const lat = performance.now() - start;
+      steps[1] = { step: '2. SEG Extract', engine: 'seg-engine', status: error ? 'fail' : 'pass', latency: lat, details: error ? error.message : `${data?.entitiesCreated || 0} entities, ${data?.relationshipsCreated || 0} relationships`, data };
+    } catch (e: any) {
+      steps[1] = { ...steps[1], status: 'fail', details: e.message };
+    }
+    updateSteps(steps);
+
+    // Step 3: VIF Pre-gate
+    steps.push({ step: '3. VIF Pre-gate', engine: 'vif-engine', status: 'running', latency: 0, details: 'Checking context quality...' });
+    updateSteps(steps);
+    try {
+      const start = performance.now();
+      const { data, error } = await supabase.functions.invoke('vif-engine', {
+        body: {
+          action: 'pregate',
+          query: 'What is the AIMOS memory system?',
+          contextAtomIds: atomId ? [atomId] : [],
+        },
+      });
+      const lat = performance.now() - start;
+      const pg = data?.pregate;
+      steps[2] = { step: '3. VIF Pre-gate', engine: 'vif-engine', status: error ? 'fail' : 'pass', latency: lat, details: error ? error.message : `Quality: ${pg?.quality}, Atoms: ${pg?.atomCount}, Confidence: ${(pg?.avgConfidence * 100).toFixed(1)}%`, data };
+    } catch (e: any) {
+      steps[2] = { ...steps[2], status: 'fail', details: e.message };
+    }
+    updateSteps(steps);
+
+    // Step 4: VIF Score (κ computation)
+    steps.push({ step: '4. VIF κ Score', engine: 'vif-engine', status: 'running', latency: 0, details: 'Computing kappa score...' });
+    updateSteps(steps);
+    try {
+      const start = performance.now();
+      const { data, error } = await supabase.functions.invoke('vif-engine', {
+        body: {
+          action: 'score',
+          factualAccuracy: 0.80,
+          consistency: 0.75,
+          completeness: 0.70,
+          relevance: 0.85,
+          freshness: 0.90,
+        },
+      });
+      const lat = performance.now() - start;
+      const s = data?.score;
+      steps[3] = { step: '4. VIF κ Score', engine: 'vif-engine', status: error ? 'fail' : 'pass', latency: lat, details: error ? error.message : `κ=${s?.kappa?.toFixed(3)} (${s?.qualityTier})`, data };
+    } catch (e: any) {
+      steps[3] = { ...steps[3], status: 'fail', details: e.message };
+    }
+    updateSteps(steps);
+
+    // Step 5: APOE Decompose
+    steps.push({ step: '5. APOE Plan', engine: 'apoe-engine', status: 'running', latency: 0, details: 'Creating execution plan...' });
+    updateSteps(steps);
+    try {
+      const start = performance.now();
+      const { data, error } = await supabase.functions.invoke('apoe-engine', {
+        body: {
+          action: 'decompose',
+          objective: 'Validate pipeline integration test passes all cognitive engines',
+          title: `Pipeline Test ${new Date().toISOString().slice(11, 19)}`,
+        },
+      });
+      const lat = performance.now() - start;
+      steps[4] = { step: '5. APOE Plan', engine: 'apoe-engine', status: error ? 'fail' : 'pass', latency: lat, details: error ? error.message : `Plan ${data?.planId?.slice(0, 8)}... with ${data?.plan?.t1?.length || 0} goals`, data };
+    } catch (e: any) {
+      steps[4] = { ...steps[4], status: 'fail', details: e.message };
+    }
+    updateSteps(steps);
+
+    // Step 6: SEG Stats (verify entities were created)
+    steps.push({ step: '6. SEG Verify', engine: 'seg-engine', status: 'running', latency: 0, details: 'Verifying graph state...' });
+    updateSteps(steps);
+    try {
+      const start = performance.now();
+      const { data, error } = await supabase.functions.invoke('seg-engine', { body: { action: 'stats' } });
+      const lat = performance.now() - start;
+      steps[5] = { step: '6. SEG Verify', engine: 'seg-engine', status: error || (data?.entities || 0) === 0 ? 'fail' : 'pass', latency: lat, details: error ? error.message : `Graph: ${data?.entities} entities, ${data?.relationships} relationships`, data };
+    } catch (e: any) {
+      steps[5] = { ...steps[5], status: 'fail', details: e.message };
+    }
+    updateSteps(steps);
+
+    setPipelineRunning(false);
+    const passed = steps.filter(s => s.status === 'pass').length;
+    toast[passed === steps.length ? 'success' : 'warning'](`Pipeline: ${passed}/${steps.length} steps passed`);
+  }, []);
 
   const engines = [
     { id: 'cmc', name: 'CMC — Context Memory Core', fn: 'cmc-engine', icon: Database },
