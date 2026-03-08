@@ -648,6 +648,17 @@ const AgentDiscordFeed: React.FC<{ expanded: boolean; onToggle: () => void }> = 
                 <SelectItem value="TASK_COMPLETE">Task Complete</SelectItem>
               </SelectContent>
             </Select>
+            <Select value={planFilter} onValueChange={setPlanFilter}>
+              <SelectTrigger className="h-6 text-[10px] w-28 font-mono">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Plans</SelectItem>
+                {availablePlans.map(p => (
+                  <SelectItem key={p} value={p}>{p.slice(0, 8)}...</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <ScrollArea className="h-52 border-t border-border/50">
             <div className="p-2 space-y-1">
