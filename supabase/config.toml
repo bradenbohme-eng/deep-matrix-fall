@@ -29,3 +29,6 @@ verify_jwt = false
 
 [functions.narrative-engine]
 verify_jwt = false
+
+[functions.hq-chat]
+verify_jwt = false
