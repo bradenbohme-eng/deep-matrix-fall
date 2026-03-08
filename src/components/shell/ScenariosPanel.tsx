@@ -1,7 +1,7 @@
 // ScenariosPanel — Advanced multi-step cognitive test scenarios
 // Phase A: Research Chain, Multi-Agent, Memory Lifecycle, Claim Verification, Self-Evolution
 
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -42,6 +42,7 @@ interface AgentDiscordMessage {
   message_type: string;
   content: string;
   confidence: number | null;
+  plan_id: string | null;
   thread_id: string | null;
   created_at: string;
 }
@@ -247,6 +248,7 @@ async function runMemoryLifecycle(onUpdate: (steps: ScenarioStep[]) => void): Pr
     tags: ['lifecycle-test', 'hot-tier'],
     confidence: 0.90,
   });
+  const lifecycleAtomId = d1?.atomIds?.[0] || '';
   steps[0] = { name: steps[0].name, engine: 'cmc-engine', status: e1 ? 'fail' : 'pass', latency: l1, details: e1 ? e1.message : `${d1?.atomIds?.length || 0} hot atoms created`, output: d1 };
   onUpdate([...steps]);
 
@@ -255,40 +257,43 @@ async function runMemoryLifecycle(onUpdate: (steps: ScenarioStep[]) => void): Pr
   onUpdate([...steps]);
   const { data: d2, error: e2, latency: l2 } = await runStep('cmc-engine', {
     action: 'decay',
-    maxAge: 0, // Force decay on all
   });
-  steps[1] = { name: steps[1].name, engine: 'cmc-engine', status: e2 ? 'fail' : 'pass', latency: l2, details: e2 ? e2.message : `Decay cycle: ${d2?.decayed || 0} atoms transitioned`, output: d2 };
+  const decay = d2?.decay || {};
+  steps[1] = { name: steps[1].name, engine: 'cmc-engine', status: e2 ? 'fail' : 'pass', latency: l2, details: e2 ? e2.message : `Decay: +${decay.promoted || 0} / -${decay.demoted || 0} / compressed ${decay.compressed || 0}`, output: d2 };
   onUpdate([...steps]);
 
   // Step 3: Verify tiers
   steps[2] = { ...steps[2], status: 'running', engine: 'supabase' };
   onUpdate([...steps]);
   const start3 = performance.now();
-  const { data: tierData } = await supabase.from('aimos_memory_atoms').select('memory_level').limit(100);
+  const { data: tierData, error: tierError } = await supabase.from('aimos_memory_atoms').select('memory_level').limit(100);
   const tiers: Record<string, number> = {};
   (tierData || []).forEach((r: any) => { tiers[r.memory_level] = (tiers[r.memory_level] || 0) + 1; });
-  steps[2] = { name: steps[2].name, engine: 'supabase', status: 'pass', latency: performance.now() - start3, details: Object.entries(tiers).map(([k, v]) => `${k}:${v}`).join(' '), output: tiers };
+  steps[2] = { name: steps[2].name, engine: 'supabase', status: tierError ? 'fail' : 'pass', latency: performance.now() - start3, details: tierError ? tierError.message : Object.entries(tiers).map(([k, v]) => `${k}:${v}`).join(' '), output: tiers };
   onUpdate([...steps]);
 
   // Step 4: Test Compression
   steps[3] = { ...steps[3], status: 'running', engine: 'cmc-engine' };
   onUpdate([...steps]);
-  const { data: d4, error: e4, latency: l4 } = await runStep('cmc-engine', {
-    action: 'compress',
-    targetLevel: 'cold',
-  });
-  steps[3] = { name: steps[3].name, engine: 'cmc-engine', status: e4 ? 'fail' : 'pass', latency: l4, details: e4 ? e4.message : `Compression: ${d4?.compressed || 0} atoms`, output: d4 };
+  if (!lifecycleAtomId) {
+    steps[3] = { ...steps[3], status: 'fail', details: 'No atom ID available for compression test' };
+  } else {
+    const { data: d4, error: e4, latency: l4 } = await runStep('cmc-engine', {
+      action: 'compress',
+      atomId: lifecycleAtomId,
+      targetRatio: 0.3,
+    });
+    steps[3] = { name: steps[3].name, engine: 'cmc-engine', status: e4 ? 'fail' : 'pass', latency: l4, details: e4 ? e4.message : `Compression ratio ${(d4?.ratio || 0).toFixed(2)}`, output: d4 };
+  }
   onUpdate([...steps]);
 
   // Step 5: Verify Retrieval
   steps[4] = { ...steps[4], status: 'running', engine: 'supabase' };
   onUpdate([...steps]);
   const start5 = performance.now();
-  const { data: retrieveData, error: e5 } = await supabase
-    .from('aimos_memory_atoms')
-    .select('id, content, memory_level')
-    .ilike('content', '%lifecycle test%')
-    .limit(5);
+  let query = supabase.from('aimos_memory_atoms').select('id, content, memory_level').limit(5);
+  query = lifecycleAtomId ? query.eq('id', lifecycleAtomId) : query.ilike('content', '%lifecycle test%');
+  const { data: retrieveData, error: e5 } = await query;
   steps[4] = { name: steps[4].name, engine: 'supabase', status: e5 || !retrieveData?.length ? 'fail' : 'pass', latency: performance.now() - start5, details: e5 ? e5.message : `Retrieved ${retrieveData?.length || 0} atoms post-compression`, output: retrieveData };
   onUpdate([...steps]);
 
@@ -384,14 +389,16 @@ async function runSelfEvolution(onUpdate: (steps: ScenarioStep[]) => void): Prom
   const { data: d2, error: e2, latency: l2 } = await runStep('self-evolution', {
     action: 'suggest_evolution',
   });
-  steps[1] = { name: steps[1].name, engine: 'self-evolution', status: e2 ? 'fail' : 'pass', latency: l2, details: e2 ? e2.message : `${d2?.suggestions?.length || 0} proposals generated`, output: d2 };
+  const suggestionCount = d2?.evolutionSuggestions?.length || 0;
+  steps[1] = { name: steps[1].name, engine: 'self-evolution', status: e2 ? 'fail' : 'pass', latency: l2, details: e2 ? e2.message : `${suggestionCount} proposals generated`, output: d2 };
   onUpdate([...steps]);
 
   // Step 3: Get pending proposals
   steps[2] = { ...steps[2], status: 'running', engine: 'self-evolution' };
   onUpdate([...steps]);
   const { data: d3, error: e3, latency: l3 } = await runStep('self-evolution', {
-    action: 'get_proposals', status: 'pending',
+    action: 'get_proposals',
+    payload: { status: 'pending' },
   });
   const proposals = d3?.proposals || [];
   steps[2] = { name: steps[2].name, engine: 'self-evolution', status: e3 ? 'fail' : 'pass', latency: l3, details: e3 ? e3.message : `${proposals.length} pending proposals found`, output: d3 };
@@ -402,7 +409,8 @@ async function runSelfEvolution(onUpdate: (steps: ScenarioStep[]) => void): Prom
   onUpdate([...steps]);
   if (proposals.length > 0) {
     const { data: d4, error: e4, latency: l4 } = await runStep('self-evolution', {
-      action: 'approve_proposal', proposalId: proposals[0].id,
+      action: 'approve_proposal',
+      payload: { proposalId: proposals[0].id },
     });
     steps[3] = { name: steps[3].name, engine: 'self-evolution', status: e4 ? 'fail' : 'pass', latency: l4, details: e4 ? e4.message : `Approved: ${proposals[0].title?.slice(0, 40)}`, output: d4 };
   } else {
