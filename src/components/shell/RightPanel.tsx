@@ -27,6 +27,7 @@ interface RightPanelProps {
 
 const MODE_TABS: { id: RightPanelMode; icon: React.ElementType; label: string }[] = [
   { id: 'ai', icon: MessageCircle, label: 'AI' },
+  { id: 'swarm', icon: Users, label: 'Swarm' },
   { id: 'inspect', icon: SearchIcon, label: 'Inspect' },
   { id: 'analyze', icon: BarChart3, label: 'Analyze' },
   { id: 'memory', icon: Brain, label: 'Memory' },
