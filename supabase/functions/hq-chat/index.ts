@@ -1088,7 +1088,7 @@ function assessPregate(atoms: any[]): { quality: string; atomCount: number; avgC
   return { quality, atomCount, avgConfidence, shouldHedge: quality !== "sufficient" };
 }
 
-function buildSystemPrompt(liveState: any, cmcContext: any, pregate: any, tags: string[], dynamicPrompts: string[], agentGenomes: any[] = []): string {
+function buildSystemPrompt(liveState: any, cmcContext: any, pregate: any, tags: string[], dynamicPrompts: string[], agentGenomes: any[] = [], bciManifest: any = null): string {
   let prompt = `You are **HQ Intelligence** — the cognitive command center for AIMOS.
 
 ## System Architecture
