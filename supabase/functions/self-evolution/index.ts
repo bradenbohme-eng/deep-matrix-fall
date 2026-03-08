@@ -1643,3 +1643,73 @@ async function gatherIntrospectionData(supabase: any): Promise<any> {
     memoryUtilization: Math.min(1, (memStats.atomCount || 0) / 10000)
   };
 }
+
+// ═══════════════════════════════════════════════════════════════════
+// CONTEXT BANK PRUNING (Phase E)
+// ═══════════════════════════════════════════════════════════════════
+
+async function handlePruneContextBanks(supabase: any): Promise<Response> {
+  const start = performance.now();
+  const results: { agent: string; pruned: number; decayed: number }[] = [];
+
+  try {
+    const { data: genomes } = await supabase.from("agent_genomes").select("agent_role");
+    const roles = (genomes || []).map((g: any) => g.agent_role);
+
+    for (const role of roles) {
+      const { data: entries } = await supabase
+        .from("agent_context_bank")
+        .select("id, importance, last_accessed_at, access_count, content")
+        .eq("agent_role", role)
+        .order("importance", { ascending: true });
+
+      if (!entries || entries.length === 0) continue;
+
+      const now = Date.now();
+      const toDelete: string[] = [];
+      let decayCount = 0;
+
+      for (const e of entries) {
+        const lastAccess = e.last_accessed_at ? new Date(e.last_accessed_at).getTime() : now - 7 * 86400000;
+        const daysSinceAccess = (now - lastAccess) / 86400000;
+        const decayedImportance = Math.max(0, (e.importance || 0.5) - daysSinceAccess * 0.01);
+
+        if (decayedImportance < 0.1 && (e.access_count || 0) === 0) {
+          toDelete.push(e.id);
+        } else if (Math.abs(decayedImportance - (e.importance || 0.5)) > 0.001) {
+          await supabase.from("agent_context_bank").update({ importance: decayedImportance }).eq("id", e.id);
+          decayCount++;
+        }
+      }
+
+      // Cap at 50 entries per agent
+      if (entries.length - toDelete.length > 50) {
+        const remaining = entries.filter((e: any) => !toDelete.includes(e.id));
+        const excess = remaining.slice(0, remaining.length - 50);
+        toDelete.push(...excess.map((e: any) => e.id));
+      }
+
+      if (toDelete.length > 0) {
+        await supabase.from("agent_context_bank").delete().in("id", toDelete.slice(0, 30));
+      }
+
+      results.push({ agent: role, pruned: Math.min(toDelete.length, 30), decayed: decayCount });
+    }
+
+    const totalPruned = results.reduce((s, r) => s + r.pruned, 0);
+    const totalDecayed = results.reduce((s, r) => s + r.decayed, 0);
+
+    return new Response(JSON.stringify({
+      success: true,
+      totalPruned,
+      totalDecayed,
+      agentResults: results,
+      latency: Math.round(performance.now() - start),
+    }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+  } catch (e) {
+    console.error("[self-evolution] Context bank pruning error:", e);
+    return new Response(JSON.stringify({ error: e.message }), {
+      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+}
