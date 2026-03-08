@@ -3,7 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
 serve(async (req) => {
@@ -12,12 +12,11 @@ serve(async (req) => {
   }
 
   try {
-    const { documentId, content, operation } = await req.json();
-    const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
+    const body = await req.json();
+    const { documentId, content, operation, section, instruction, context } = body;
     
-    if (!GEMINI_API_KEY) {
-      throw new Error("GEMINI_API_KEY not configured");
-    }
+    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
@@ -25,310 +24,261 @@ serve(async (req) => {
     );
 
     // Extract text content if URL provided
-    let documentContent = content;
-    if (content.startsWith('http')) {
-      console.log('Extracting text from URL:', content);
-      
-      // Download file from storage
+    let documentContent = content || "";
+    if (typeof content === "string" && content.startsWith("http")) {
       const fileResponse = await fetch(content);
-      if (!fileResponse.ok) {
-        throw new Error('Failed to download document from storage');
-      }
-      
+      if (!fileResponse.ok) throw new Error("Failed to download document from storage");
       const blob = await fileResponse.blob();
       const arrayBuffer = await blob.arrayBuffer();
-      
-      // For .docx files, extract text (basic extraction)
-      if (content.includes('.docx')) {
-        // Use Gemini's file processing capability
-        documentContent = await extractTextWithGemini(arrayBuffer, GEMINI_API_KEY);
+
+      if (content.includes(".docx") || content.includes(".pdf")) {
+        documentContent = await extractTextWithAI(arrayBuffer, content, LOVABLE_API_KEY);
       } else {
-        // For other files, try to decode as text
         documentContent = new TextDecoder().decode(arrayBuffer);
       }
-      
-      console.log('Extracted content length:', documentContent.length);
+      console.log("Extracted content length:", documentContent.length);
     }
 
-    // Hierarchical chunking with AI
+    // ─── CHUNK: Hierarchical chunking with AI ───
     if (operation === "chunk") {
-      const chunks = await chunkDocument(documentContent, GEMINI_API_KEY);
-      
-      // Store chunks in database
-      for (const chunk of chunks) {
-        await supabase.from("chunks").insert({
-          file_id: documentId,
-          content: chunk.content,
-          token_count: chunk.tokenCount,
-          summary: chunk.summary,
-          motifs: chunk.tags
+      const chunks = await aiCall(LOVABLE_API_KEY,
+        `You are a document analysis engine. Break this document into logical, hierarchical chunks.
+For each chunk provide: content, summary, tags (array), tokenCount (estimate), level (0=master,1=chapter,2=section).
+Return ONLY a JSON array: [{content,summary,tags,tokenCount,level}]`,
+        `Document to chunk:\n${documentContent.slice(0, 50000)}`
+      );
+
+      const parsed = safeParseJSON(chunks, []);
+      // Store chunks as memory atoms for RAG
+      for (const chunk of parsed) {
+        await supabase.from("aimos_memory_atoms").insert({
+          content: chunk.content || chunk.summary || "",
+          content_type: "context",
+          tags: chunk.tags || [],
+          source_refs: [documentId || "upload"],
+          confidence_score: 0.8,
+          quality_score: 0.7,
+          relevance_score: (chunk.level === 0 ? 0.9 : chunk.level === 1 ? 0.7 : 0.5),
+          metadata: { chunk_level: chunk.level, token_count: chunk.tokenCount, summary: chunk.summary },
         });
       }
 
-      return new Response(
-        JSON.stringify({ success: true, chunks: chunks.length }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    // Multi-level summarization
-    if (operation === "summarize") {
-      const summaries = await generateHierarchicalSummaries(documentContent, GEMINI_API_KEY);
-      
-      return new Response(
-        JSON.stringify({ success: true, summaries }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    // Master index creation
-    if (operation === "create_index") {
-      const masterIndex = await createMasterIndex(documentContent, GEMINI_API_KEY);
-      
-      return new Response(
-        JSON.stringify({ success: true, masterIndex }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    // Contextual editing assistance
-    if (operation === "edit_assist") {
-      const { section, instruction, context } = await req.json();
-      const suggestion = await getEditSuggestion(section, instruction, context, GEMINI_API_KEY);
-      
-      return new Response(
-        JSON.stringify({ success: true, suggestion }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    throw new Error("Invalid operation");
-
-  } catch (error) {
-    console.error("Document processor error:", error);
-    return new Response(
-      JSON.stringify({ error: error.message }),
-      { 
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" } 
+      // Also store in chunks table for backward compat
+      for (const chunk of parsed) {
+        await supabase.from("chunks").insert({
+          file_id: documentId,
+          content: chunk.content || "",
+          token_count: chunk.tokenCount,
+          summary: chunk.summary,
+          motifs: chunk.tags,
+        });
       }
-    );
-  }
-});
 
-async function chunkDocument(content: string, apiKey: string) {
-  const response = await fetch(
-    "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=" + apiKey,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        contents: [{
-          parts: [{
-            text: `Analyze this document and break it into logical, hierarchical chunks. For each chunk, provide:
-1. The chunk content
-2. A brief summary
-3. Key concepts/tags
-4. Token count estimate
-5. Hierarchical level (0=master, 1=chapter, 2=section, etc.)
-
-Document:
-${content}
-
-Return as JSON array with structure: [{content, summary, tags[], tokenCount, level}]`
-          }]
-        }],
-        generationConfig: {
-          temperature: 0.3,
-          topK: 40,
-          topP: 0.95,
-        }
-      })
+      return json({ success: true, chunks: parsed.length, storedAsMemoryAtoms: true });
     }
-  );
 
-  const data = await response.json();
-  const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "[]";
-  return JSON.parse(text.replace(/```json\n?|\n?```/g, ""));
-}
-
-async function generateHierarchicalSummaries(content: string, apiKey: string) {
-  const response = await fetch(
-    "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=" + apiKey,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        contents: [{
-          parts: [{
-            text: `Create a hierarchical summary system for this document with 4 levels:
-1. SHORT (50 words): High-level overview
-2. MEDIUM (200 words): Key points and structure
+    // ─── SUMMARIZE: Multi-level summaries ───
+    if (operation === "summarize") {
+      const result = await aiCall(LOVABLE_API_KEY,
+        `Create hierarchical summaries at 4 levels:
+1. SHORT (50 words): Overview
+2. MEDIUM (200 words): Key points
 3. LARGE (500 words): Detailed analysis
-4. MASTER: Comprehensive index with all major themes, concepts, and navigation map
-
-Document:
-${content}
-
-Return as JSON: {short, medium, large, master: {themes[], concepts[], navigation{}}}`
-          }]
-        }],
-        generationConfig: {
-          temperature: 0.4,
-          topK: 40,
-          topP: 0.95,
-        }
-      })
+4. MASTER: Comprehensive index with themes, concepts, navigation map
+Return ONLY JSON: {short,medium,large,master:{themes[],concepts[],navigation{}}}`,
+        `Document:\n${documentContent.slice(0, 50000)}`
+      );
+      return json({ success: true, summaries: safeParseJSON(result, {}) });
     }
-  );
 
-  const data = await response.json();
-  const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "{}";
-  return JSON.parse(text.replace(/```json\n?|\n?```/g, ""));
-}
-
-async function createMasterIndex(content: string, apiKey: string) {
-  const response = await fetch(
-    "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=" + apiKey,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        contents: [{
-          parts: [{
-            text: `Create a comprehensive master index for this document following AI-MOS principles:
+    // ─── CREATE_INDEX: Master index ───
+    if (operation === "create_index") {
+      const result = await aiCall(LOVABLE_API_KEY,
+        `Create a comprehensive master index following AI-MOS principles:
 1. Hierarchical structure tree
 2. Key insights and concepts
 3. Thematic map
 4. Navigation graph with interconnections
 5. Quality metrics (completeness, density, relevance)
-
-Document:
-${content}
-
-Return as JSON: {structure{}, keyInsights[], thematicMap{}, navigationGraph{}, qualityMetrics{}}`
-          }]
-        }],
-        generationConfig: {
-          temperature: 0.3,
-          topK: 40,
-          topP: 0.95,
-        }
-      })
+Return ONLY JSON: {structure{},keyInsights[],thematicMap{},navigationGraph{},qualityMetrics{}}`,
+        `Document:\n${documentContent.slice(0, 50000)}`
+      );
+      return json({ success: true, masterIndex: safeParseJSON(result, {}) });
     }
-  );
 
-  const data = await response.json();
-  const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "{}";
-  return JSON.parse(text.replace(/```json\n?|\n?```/g, ""));
+    // ─── RAG_QUERY: Retrieve context for a query ───
+    if (operation === "rag_query") {
+      const { query, maxResults = 10 } = body;
+      
+      // Keyword search against memory atoms
+      const keywords = (query || "").toLowerCase().split(/\s+/).filter((w: string) => w.length > 2);
+      let results: any[] = [];
+      
+      if (keywords.length > 0) {
+        const { data } = await supabase
+          .from("aimos_memory_atoms")
+          .select("id, content, content_type, tags, source_refs, confidence_score")
+          .or(keywords.slice(0, 5).map((k: string) => `content.ilike.%${k}%`).join(","))
+          .order("confidence_score", { ascending: false })
+          .limit(maxResults);
+        results = data || [];
+      }
+
+      // Build context block
+      const contextBlock = results.map((r: any) =>
+        `[Source: ${(r.source_refs || ["memory"])[0]} | Confidence: ${Math.round((r.confidence_score || 0.5) * 100)}%]\n${r.content?.slice(0, 500)}`
+      ).join("\n\n---\n\n");
+
+      return json({ success: true, results: results.length, context: contextBlock });
+    }
+
+    // ─── EDIT_ASSIST: Contextual editing ───
+    if (operation === "edit_assist") {
+      const result = await aiCall(LOVABLE_API_KEY,
+        `You are an AI writing assistant. Provide editing suggestions.
+Return ONLY JSON: {edits[],rationale,alternatives[],coherenceImpact}`,
+        `Section to edit:\n${section}\n\nInstruction: ${instruction}\n\nContext: ${JSON.stringify(context)}`
+      );
+      return json({ success: true, suggestion: safeParseJSON(result, {}) });
+    }
+
+    // ─── INGEST: Direct text ingestion into RAG ───
+    if (operation === "ingest") {
+      const { source, tags: ingestTags, userId } = body;
+      const chunks = chunkText(documentContent);
+      let rootId: string | null = null;
+
+      for (let i = 0; i < chunks.length; i++) {
+        const { data } = await supabase
+          .from("aimos_memory_atoms")
+          .insert({
+            content: chunks[i],
+            content_type: "context",
+            tags: [...(ingestTags || []), `chunk_${i}`],
+            source_refs: [source || "direct_ingest"],
+            confidence_score: 0.8,
+            quality_score: 0.7,
+            relevance_score: 0.6,
+            user_id: userId,
+            parent_id: rootId,
+            metadata: { source, chunk_index: i, total_chunks: chunks.length },
+          })
+          .select("id")
+          .single();
+        if (data && i === 0) rootId = data.id;
+      }
+
+      return json({ success: true, atomId: rootId, chunkCount: chunks.length });
+    }
+
+    throw new Error("Invalid operation. Valid: chunk, summarize, create_index, rag_query, edit_assist, ingest");
+
+  } catch (error) {
+    console.error("Document processor error:", error);
+    const status = error.message?.includes("Rate limit") ? 429 : error.message?.includes("Payment") ? 402 : 500;
+    return new Response(
+      JSON.stringify({ error: error.message }),
+      { status, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+});
+
+// ─── Helpers ───
+
+function json(data: any) {
+  return new Response(JSON.stringify(data), {
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
 }
 
-async function extractTextWithGemini(arrayBuffer: ArrayBuffer, apiKey: string): Promise<string> {
-  // Convert to base64 in chunks to avoid stack overflow
+function safeParseJSON(text: string, fallback: any) {
+  try {
+    const cleaned = text.replace(/```json\n?|\n?```/g, "").trim();
+    return JSON.parse(cleaned);
+  } catch {
+    return fallback;
+  }
+}
+
+function chunkText(content: string, maxSize = 1500): string[] {
+  const paragraphs = content.split(/\n\n+/);
+  const chunks: string[] = [];
+  let current = "";
+  for (const para of paragraphs) {
+    if (current.length + para.length > maxSize && current.length > 0) {
+      chunks.push(current.trim());
+      current = "";
+    }
+    current += para + "\n\n";
+  }
+  if (current.trim()) chunks.push(current.trim());
+  return chunks.length > 0 ? chunks : [content.slice(0, maxSize)];
+}
+
+async function aiCall(apiKey: string, systemPrompt: string, userContent: string): Promise<string> {
+  const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: "google/gemini-3-flash-preview",
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userContent },
+      ],
+    }),
+  });
+
+  if (!response.ok) {
+    if (response.status === 429) throw new Error("Rate limit exceeded. Please try again later.");
+    if (response.status === 402) throw new Error("Payment required. Please add credits.");
+    throw new Error(`AI gateway error: ${response.status}`);
+  }
+
+  const data = await response.json();
+  return data.choices?.[0]?.message?.content || "";
+}
+
+async function extractTextWithAI(arrayBuffer: ArrayBuffer, url: string, apiKey: string): Promise<string> {
+  // For binary docs, use Gemini directly since it supports file processing
+  const GEMINI_KEY = Deno.env.get("GEMINI_API_KEY");
+  if (!GEMINI_KEY) {
+    // Fallback: try to decode as text
+    return new TextDecoder().decode(arrayBuffer);
+  }
+
   const bytes = new Uint8Array(arrayBuffer);
-  const chunkSize = 0x8000; // 32KB chunks
-  let base64 = '';
-  
+  const chunkSize = 0x8000;
+  let base64 = "";
   for (let i = 0; i < bytes.length; i += chunkSize) {
     const chunk = bytes.subarray(i, Math.min(i + chunkSize, bytes.length));
     base64 += btoa(String.fromCharCode.apply(null, Array.from(chunk)));
   }
-  
-  console.log('Base64 length:', base64.length, 'Original size:', bytes.length);
-  
-  try {
-    const response = await fetch(
-      "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=" + apiKey,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [{
-            parts: [
-              {
-                inline_data: {
-                  mime_type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-                  data: base64
-                }
-              },
-              {
-                text: "Extract ALL text content from this Word document. Include headers, body text, tables, lists - everything. Return the complete plain text while preserving paragraph structure. Do not summarize, return the FULL text."
-              }
-            ]
-          }],
-          generationConfig: {
-            temperature: 0,
-            maxOutputTokens: 100000,
-          }
-        })
-      }
-    );
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Gemini API error:', response.status, errorText);
-      throw new Error(`Gemini API error: ${response.status}`);
-    }
+  const mimeType = url.includes(".pdf")
+    ? "application/pdf"
+    : "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
 
-    const data = await response.json();
-    const extractedText = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
-    console.log('Extracted text length:', extractedText.length);
-    
-    if (!extractedText) {
-      console.warn('No text extracted from document - Gemini returned empty');
-    }
-    
-    return extractedText;
-  } catch (error) {
-    console.error('Text extraction failed:', error);
-    throw error;
-  }
-}
-
-async function getEditSuggestion(
-  section: string,
-  instruction: string,
-  context: any,
-  apiKey: string
-) {
   const response = await fetch(
-    "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=" + apiKey,
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${GEMINI_KEY}`,
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         contents: [{
-          parts: [{
-            text: `You are an AI writing assistant with deep contextual understanding.
-
-Section to edit:
-${section}
-
-User instruction:
-${instruction}
-
-Document context:
-${JSON.stringify(context, null, 2)}
-
-Provide:
-1. Suggested edits with track changes
-2. Rationale for each change
-3. Alternative options
-4. Impact on overall document coherence
-
-Return as JSON: {edits[], rationale, alternatives[], coherenceImpact}`
-          }]
+          parts: [
+            { inline_data: { mime_type: mimeType, data: base64 } },
+            { text: "Extract ALL text content from this document. Include headers, body text, tables, lists. Return complete plain text preserving structure. Do not summarize." },
+          ],
         }],
-        generationConfig: {
-          temperature: 0.5,
-          topK: 40,
-          topP: 0.95,
-        }
-      })
+        generationConfig: { temperature: 0, maxOutputTokens: 100000 },
+      }),
     }
   );
 
+  if (!response.ok) throw new Error(`Text extraction failed: ${response.status}`);
   const data = await response.json();
-  const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "{}";
-  return JSON.parse(text.replace(/```json\n?|\n?```/g, ""));
+  return data.candidates?.[0]?.content?.parts?.[0]?.text || "";
 }

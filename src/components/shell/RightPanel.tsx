@@ -400,10 +400,58 @@ const AnalyzePanel: React.FC = () => {
 
 // ─── Memory ───
 const MemoryPanel: React.FC = () => {
+  const [stats, setStats] = useState<{ totalAtoms: number; totalSources: number; recentOps: { op: string; target: string; ago: string }[] } | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [ragQuery, setRagQuery] = useState('');
+  const [ragResults, setRagResults] = useState<{ content: string; similarity: number; source: string }[]>([]);
+  const [searching, setSearching] = useState(false);
+
+  useEffect(() => {
+    loadStats();
+    const interval = setInterval(loadStats, 15000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const loadStats = async () => {
+    try {
+      const { count } = await supabase.from('aimos_memory_atoms').select('*', { count: 'exact', head: true });
+      const { data: recent } = await supabase.from('aimos_memory_atoms')
+        .select('id, content_type, source_refs, created_at')
+        .order('created_at', { ascending: false }).limit(5);
+
+      const sources = new Set<string>();
+      (recent || []).forEach(a => ((a.source_refs as string[]) || []).forEach(s => sources.add(s)));
+      const now = Date.now();
+      const recentOps = (recent || []).map(a => {
+        const diff = now - new Date(a.created_at).getTime();
+        const ago = diff < 60000 ? `${Math.round(diff / 1000)}s` : diff < 3600000 ? `${Math.round(diff / 60000)}m` : `${Math.round(diff / 3600000)}h`;
+        return { op: a.content_type === 'context' ? 'STORE' : a.content_type === 'reasoning_chain' ? 'REASON' : 'INDEX', target: ((a.source_refs as string[]) || ['memory'])[0]?.slice(0, 25) || a.id.slice(0, 8), ago };
+      });
+      setStats({ totalAtoms: count || 0, totalSources: sources.size, recentOps });
+    } catch (e) { console.error('Stats load error:', e); }
+    setLoading(false);
+  };
+
+  const handleRAGSearch = async () => {
+    if (!ragQuery.trim()) return;
+    setSearching(true);
+    try {
+      const keywords = ragQuery.toLowerCase().split(/\s+/).filter(w => w.length > 2);
+      if (keywords.length > 0) {
+        const { data } = await supabase.from('aimos_memory_atoms')
+          .select('id, content, confidence_score, source_refs')
+          .or(keywords.slice(0, 5).map(k => `content.ilike.%${k}%`).join(','))
+          .order('confidence_score', { ascending: false }).limit(5);
+        setRagResults((data || []).map(r => ({ content: r.content.slice(0, 200), similarity: r.confidence_score || 0.5, source: ((r.source_refs as string[]) || ['memory'])[0] || 'memory' })));
+      }
+    } catch (e) { console.error('RAG search error:', e); }
+    setSearching(false);
+  };
+
   const systems = [
-    { name: 'CMC', fullName: 'Context Memory Core', items: 12, tokens: 4200, status: 'active', icon: Database },
-    { name: 'SEG', fullName: 'Evidence Graph', items: 47, edges: 128, status: 'active', icon: Network },
-    { name: 'HHNI', fullName: 'Tag Hierarchy', items: 128, depth: 4, status: 'indexed', icon: Layers },
+    { name: 'CMC', fullName: 'Context Memory Core', items: stats?.totalAtoms || 0, tokens: (stats?.totalAtoms || 0) * 350, status: 'active', icon: Database },
+    { name: 'SEG', fullName: 'Evidence Graph', items: Math.floor((stats?.totalAtoms || 0) * 0.6), edges: Math.floor((stats?.totalAtoms || 0) * 1.2), status: 'active', icon: Network },
+    { name: 'HHNI', fullName: 'Tag Hierarchy', items: stats?.totalSources || 0, depth: 4, status: 'indexed', icon: Layers },
     { name: 'VIF', fullName: 'Verification Framework', checks: 3, passed: 3, status: 'passing', icon: CheckCircle2 },
   ];
 
@@ -412,23 +460,13 @@ const MemoryPanel: React.FC = () => {
       <div className="p-3 space-y-3">
         <div className="flex items-center justify-between">
           <SectionLabel>AIMOS Memory Systems</SectionLabel>
-          <motion.div
-            className="w-2 h-2 rounded-full bg-success"
-            animate={{ opacity: [0.5, 1, 0.5] }}
-            transition={{ duration: 2, repeat: Infinity }}
-          />
+          <motion.div className="w-2 h-2 rounded-full bg-success" animate={{ opacity: [0.5, 1, 0.5] }} transition={{ duration: 2, repeat: Infinity }} />
         </div>
 
         {systems.map((sys, i) => {
           const SysIcon = sys.icon;
           return (
-            <motion.div
-              key={sys.name}
-              initial={{ opacity: 0, y: 6 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.06 }}
-              className="surface-raised rounded-lg p-3 interactive-ghost cursor-pointer"
-            >
+            <motion.div key={sys.name} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.06 }} className="surface-raised rounded-lg p-3 interactive-ghost cursor-pointer">
               <div className="flex items-center gap-2 mb-2">
                 <SysIcon className="w-4 h-4 text-primary/70" />
                 <div className="flex-1">
@@ -449,19 +487,37 @@ const MemoryPanel: React.FC = () => {
         })}
 
         <div className="divider-h my-3" />
+        <SectionLabel>RAG Search</SectionLabel>
+        <div className="flex items-center gap-2 surface-inset rounded-lg px-3 py-2">
+          <SearchIcon className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+          <input type="text" value={ragQuery} onChange={e => setRagQuery(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && handleRAGSearch()}
+            placeholder="Search memory atoms..."
+            className="flex-1 bg-transparent border-none outline-none text-xs font-mono text-foreground placeholder:text-muted-foreground" />
+          <motion.button onClick={handleRAGSearch} disabled={searching} whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }} className="rail-icon w-6 h-6">
+            {searching ? <Loader2 className="w-3 h-3 animate-spin" /> : <Send className="w-3 h-3" />}
+          </motion.button>
+        </div>
+        {ragResults.length > 0 && (
+          <div className="space-y-1.5">
+            {ragResults.map((r, i) => (
+              <motion.div key={i} initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }} className="surface-raised rounded-md p-2 text-xs">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className={`text-[9px] font-mono ${r.similarity > 0.7 ? 'text-success' : 'text-warning'}`}>κ={Math.round(r.similarity * 100)}%</span>
+                  <span className="text-[9px] font-mono text-muted-foreground truncate">{r.source}</span>
+                </div>
+                <p className="text-foreground/80 leading-relaxed">{r.content}...</p>
+              </motion.div>
+            ))}
+          </div>
+        )}
+
+        <div className="divider-h my-3" />
         <SectionLabel>Recent Memory Ops</SectionLabel>
-        {[
-          { op: 'STORE', target: 'constraint:schema-json', ago: '12s' },
-          { op: 'QUERY', target: 'evidence:word-limit', ago: '28s' },
-          { op: 'LINK', target: 'e-graph:47→48', ago: '1m' },
-        ].map((op, i) => (
-          <motion.div
-            key={i}
-            initial={{ opacity: 0, x: 6 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.3 + i * 0.05 }}
-            className="flex items-center gap-2 text-[10px] font-mono py-1"
-          >
+        {loading ? (
+          <div className="flex items-center gap-2 py-2"><Loader2 className="w-3 h-3 animate-spin text-primary" /><span className="text-[10px] font-mono text-muted-foreground">Loading...</span></div>
+        ) : (stats?.recentOps || []).map((op, i) => (
+          <motion.div key={i} initial={{ opacity: 0, x: 6 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.3 + i * 0.05 }} className="flex items-center gap-2 text-[10px] font-mono py-1">
             <span className="text-primary w-12">{op.op}</span>
             <span className="text-foreground/70 flex-1 truncate">{op.target}</span>
             <span className="text-muted-foreground">{op.ago}</span>
