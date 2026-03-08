@@ -535,11 +535,16 @@ export type Database = {
       }
       aimos_memory_atoms: {
         Row: {
+          access_count: number | null
+          compressed_from: string | null
+          compression_ratio: number | null
           confidence_score: number | null
           content: string
           content_type: string
           created_at: string
           id: string
+          last_accessed_at: string | null
+          memory_level: string | null
           metadata: Json | null
           parent_id: string | null
           quality_score: number | null
@@ -555,11 +560,16 @@ export type Database = {
           verification_status: string | null
         }
         Insert: {
+          access_count?: number | null
+          compressed_from?: string | null
+          compression_ratio?: number | null
           confidence_score?: number | null
           content: string
           content_type: string
           created_at?: string
           id?: string
+          last_accessed_at?: string | null
+          memory_level?: string | null
           metadata?: Json | null
           parent_id?: string | null
           quality_score?: number | null
@@ -575,11 +585,16 @@ export type Database = {
           verification_status?: string | null
         }
         Update: {
+          access_count?: number | null
+          compressed_from?: string | null
+          compression_ratio?: number | null
           confidence_score?: number | null
           content?: string
           content_type?: string
           created_at?: string
           id?: string
+          last_accessed_at?: string | null
+          memory_level?: string | null
           metadata?: Json | null
           parent_id?: string | null
           quality_score?: number | null
