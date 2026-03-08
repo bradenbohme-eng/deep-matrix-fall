@@ -20,6 +20,7 @@ const WORLDS: { id: WorldPage; label: string; icon: React.ElementType; accentHue
   { id: 'code', label: 'Code', icon: Code, accentHue: 200 },
   { id: 'intel', label: 'Intel', icon: Shield, accentHue: 0 },
   { id: 'docs', label: 'Docs', icon: FileText, accentHue: 270 },
+  { id: 'evolve', label: 'Evolve', icon: Dna, accentHue: 300 },
 ];
 
 const TopBar: React.FC<TopBarProps> = ({ activeWorld, onWorldChange, alertCount = 0 }) => {
