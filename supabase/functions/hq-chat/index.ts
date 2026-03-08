@@ -324,10 +324,50 @@ async function collectAndPostProcess(
       confidence: vifScore.kappa,
     });
 
+    // ── Update agent genomes — meta_observer always active, infer primary agent from query ──
+    const primaryAgent = inferPrimaryAgent(query);
+    const learnings = extractLearnings(fullResponse, query);
+    const estimatedTokens = Math.ceil(fullResponse.length / 4);
+    
+    await Promise.all([
+      updateAgentGenomePostTask(supabase, "meta_observer", vifScore.kappa, estimatedTokens, [`Processed query: "${query.slice(0, 60)}". κ=${vifScore.kappa.toFixed(2)}`], chainId),
+      primaryAgent !== "meta_observer" 
+        ? updateAgentGenomePostTask(supabase, primaryAgent, vifScore.kappa, estimatedTokens, learnings, chainId)
+        : Promise.resolve(),
+    ]);
+
   } catch (e) {
     console.error("[hq-chat] Post-processing error:", e);
     // Non-blocking — don't crash the response
   }
+}
+
+function inferPrimaryAgent(query: string): string {
+  const q = query.toLowerCase();
+  if (/plan|decompos|goal|task|schedul|priorit/i.test(q)) return "planner";
+  if (/search|find|research|evidence|retriev|gather/i.test(q)) return "researcher";
+  if (/build|code|implement|create|schema|function/i.test(q)) return "builder";
+  if (/verif|check|valid|confiden|hallucin|test/i.test(q)) return "verifier";
+  if (/audit|review|quality|assess|improv/i.test(q)) return "auditor";
+  if (/doc|write|spec|guide|summar/i.test(q)) return "documenter";
+  return "researcher"; // default
+}
+
+function extractLearnings(response: string, query: string): string[] {
+  const learnings: string[] = [];
+  // Extract key conclusions from the response
+  const sentences = response.split(/[.!?]+/).filter(s => s.trim().length > 20);
+  // Pick the most information-dense sentences
+  const scored = sentences.map(s => ({
+    text: s.trim(),
+    score: (s.match(/\b(is|are|means|requires|should|must|because|therefore|specifically)\b/gi) || []).length,
+  }));
+  scored.sort((a, b) => b.score - a.score);
+  for (const s of scored.slice(0, 3)) {
+    if (s.score > 0) learnings.push(s.text.slice(0, 200));
+  }
+  if (learnings.length === 0) learnings.push(`Handled query: "${query.slice(0, 100)}"`);
+  return learnings;
 }
 
 function computeLocalVIFScore(response: string, query: string, atoms: any[]): { kappa: number; tier: string } {
