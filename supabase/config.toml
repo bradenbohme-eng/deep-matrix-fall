@@ -32,3 +32,15 @@ verify_jwt = false
 
 [functions.hq-chat]
 verify_jwt = false
+
+[functions.cmc-engine]
+verify_jwt = false
+
+[functions.vif-engine]
+verify_jwt = false
+
+[functions.seg-engine]
+verify_jwt = false
+
+[functions.apoe-engine]
+verify_jwt = false
