@@ -1367,6 +1367,61 @@ async function handleGetAuditHistory(supabase: any, body: SelfEvolutionRequest):
   return jsonResponse({ success: !error, audits: data || [] });
 }
 
+// ═══════════════════════════════════════════════════════════════════
+// QUICK HEALTH CHECK (Phase F)
+// ═══════════════════════════════════════════════════════════════════
+
+async function handleQuickHealthCheck(supabase: any): Promise<Response> {
+  const start = performance.now();
+  const checks: { name: string; pass: boolean; detail: string }[] = [];
+
+  // CMC round-trip
+  try {
+    const testContent = `health_check_${Date.now()}`;
+    const { error: insertErr } = await supabase.from("aimos_memory_atoms").insert({
+      content: testContent, content_type: "health_check", tags: ["health"], memory_level: "hot", confidence_score: 0.5,
+    });
+    const { data } = await supabase.from("aimos_memory_atoms").select("id").ilike("content", `%${testContent}%`).limit(1);
+    const ok = !insertErr && data?.length > 0;
+    checks.push({ name: "CMC", pass: ok, detail: ok ? "Ingest+retrieve OK" : (insertErr?.message || "Retrieve failed") });
+    if (data?.[0]?.id) await supabase.from("aimos_memory_atoms").delete().eq("id", data[0].id);
+  } catch (e: any) { checks.push({ name: "CMC", pass: false, detail: e.message }); }
+
+  // VIF score check
+  try {
+    const { count } = await supabase.from("aimos_reasoning_chains").select("*", { count: "exact", head: true });
+    checks.push({ name: "VIF", pass: true, detail: `${count || 0} reasoning chains` });
+  } catch (e: any) { checks.push({ name: "VIF", pass: false, detail: e.message }); }
+
+  // SEG entity check
+  try {
+    const { count } = await supabase.from("aimos_entities").select("*", { count: "exact", head: true });
+    checks.push({ name: "SEG", pass: true, detail: `${count || 0} entities` });
+  } catch (e: any) { checks.push({ name: "SEG", pass: false, detail: e.message }); }
+
+  // Agent genomes
+  try {
+    const { data } = await supabase.from("agent_genomes").select("agent_role, avg_kappa, total_tasks_completed").order("elo_rating", { ascending: false }).limit(5);
+    checks.push({ name: "Agents", pass: true, detail: `${data?.length || 0} genomes active` });
+  } catch (e: any) { checks.push({ name: "Agents", pass: false, detail: e.message }); }
+
+  const passCount = checks.filter(c => c.pass).length;
+  const healthScore = passCount / checks.length;
+  const summary = `${passCount}/${checks.length} checks passed in ${Math.round(performance.now() - start)}ms`;
+
+  // Log to audit
+  await supabase.from("self_audit_log").insert({
+    audit_type: "quick_health_check",
+    system_health_score: healthScore,
+    findings: checks,
+    recommendations: checks.filter(c => !c.pass).map(c => `Fix ${c.name}: ${c.detail}`),
+  }).then(() => {});
+
+  return new Response(JSON.stringify({ healthScore, summary, checks, duration_ms: Math.round(performance.now() - start) }), {
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+}
+
 
 // HELPER FUNCTIONS
 // ═══════════════════════════════════════════════════════════════════
