@@ -1,16 +1,11 @@
 // TopBar — Canon §6: Global Identity and World Switching
-// "The top bar defines the world-level structure of the application."
+// Enhanced with framer-motion transitions
 
 import React from 'react';
+import { motion } from 'framer-motion';
 import {
-  Activity,
-  Code,
-  Shield,
-  FileText,
-  Zap,
-  Bell,
-  User,
-  Command,
+  Activity, Code, Shield, FileText,
+  Zap, Bell, User, Command,
 } from 'lucide-react';
 import type { WorldPage } from './types';
 
@@ -34,50 +29,61 @@ const TopBar: React.FC<TopBarProps> = ({ activeWorld, onWorldChange, alertCount 
       {/* Left: Project Identity */}
       <div className="flex items-center gap-3">
         <div className="flex items-center gap-2">
-          <div className="w-6 h-6 rounded bg-primary/20 flex items-center justify-center shadow-glow">
+          <motion.div
+            className="w-7 h-7 rounded-md bg-primary/15 flex items-center justify-center border border-primary/20"
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.95 }}
+            style={{ boxShadow: '0 0 12px hsl(120 100% 44% / 0.2)' }}
+          >
             <Command className="w-3.5 h-3.5 text-primary" />
-          </div>
-          <span className="font-display text-sm font-semibold tracking-wider text-foreground glow-text">
+          </motion.div>
+          <span className="font-display text-sm font-semibold tracking-[0.15em] text-foreground glow-text">
             MATRIX
           </span>
         </div>
         <div className="divider-v h-5 mx-1" />
       </div>
 
-      {/* Center: World Navigation (Canon §6.1) */}
+      {/* Center: World Navigation */}
       <nav className="flex items-center gap-0.5">
         {WORLDS.map(({ id, label, icon: Icon }) => {
           const isActive = activeWorld === id;
           return (
-            <button
+            <motion.button
               key={id}
               onClick={() => onWorldChange(id)}
               className={`
-                flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-mono
-                transition-all duration-150 relative
+                relative flex items-center gap-1.5 px-3.5 py-1.5 rounded-md text-xs font-mono
+                transition-colors
                 ${isActive
-                  ? 'text-primary bg-primary/10 shadow-glow'
+                  ? 'text-primary'
                   : 'text-muted-foreground hover:text-foreground hover:bg-surface-3'
                 }
               `}
-              title={label}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.97 }}
             >
-              <Icon className="w-3.5 h-3.5" />
-              <span className="font-medium">{label}</span>
               {isActive && (
-                <span className="absolute bottom-0 left-2 right-2 h-px bg-primary shadow-glow" />
+                <motion.div
+                  layoutId="world-indicator"
+                  className="absolute inset-0 rounded-md bg-primary/10 border border-primary/15"
+                  style={{ boxShadow: '0 0 16px hsl(120 100% 44% / 0.1)' }}
+                  transition={{ type: 'spring', stiffness: 500, damping: 35 }}
+                />
               )}
-            </button>
+              <Icon className="w-3.5 h-3.5 relative z-10" />
+              <span className="font-medium relative z-10">{label}</span>
+            </motion.button>
           );
         })}
       </nav>
 
       {/* Right: Global Actions */}
       <div className="flex items-center gap-1">
-        <button className="rail-icon" title="Quick Command (⌘K)">
+        <motion.button className="rail-icon" title="Quick Command (⌘K)" whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
           <Zap className="w-3.5 h-3.5" />
-        </button>
-        <button className="rail-icon relative" title="Alerts">
+        </motion.button>
+        <motion.button className="rail-icon relative" title="Alerts" whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
           <Bell className="w-3.5 h-3.5" />
           {alertCount > 0 && (
             <span className="absolute -top-0.5 -right-0.5 w-3.5 h-3.5 bg-destructive rounded-full 
@@ -85,10 +91,10 @@ const TopBar: React.FC<TopBarProps> = ({ activeWorld, onWorldChange, alertCount 
               {alertCount > 9 ? '9+' : alertCount}
             </span>
           )}
-        </button>
-        <button className="rail-icon" title="Profile">
+        </motion.button>
+        <motion.button className="rail-icon" title="Profile" whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
           <User className="w-3.5 h-3.5" />
-        </button>
+        </motion.button>
       </div>
     </header>
   );

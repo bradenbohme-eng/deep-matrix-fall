@@ -1,11 +1,9 @@
-// Orchestration Dashboard - Task Queue, Event Log, DAG View, Budget Meters
+// Orchestration Dashboard — Restyled to Canon Design System
+// All colors via semantic tokens, surface hierarchy, material effects
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   Play,
   Square,
@@ -21,6 +19,8 @@ import {
   ChevronRight,
   ChevronDown,
   BarChart3,
+  Clock,
+  AlertTriangle,
 } from 'lucide-react';
 import {
   getEventStore,
@@ -36,11 +36,7 @@ import {
 import DAGVisualization from './DAGVisualization';
 import TestResultsViewer from './TestResultsViewer';
 
-interface OrchestrationDashboardProps {
-  className?: string;
-}
-
-const OrchestrationDashboard: React.FC<OrchestrationDashboardProps> = ({ className }) => {
+const OrchestrationDashboard: React.FC<{ className?: string }> = ({ className }) => {
   const [events, setEvents] = useState<Event[]>([]);
   const [tasks, setTasks] = useState<Map<string, Task>>(new Map());
   const [dagState, setDagState] = useState<DAGState>({ nodes: [], edges: [], roots: [], leaves: [], ready: [] });
@@ -56,88 +52,38 @@ const OrchestrationDashboard: React.FC<OrchestrationDashboardProps> = ({ classNa
     checkpoint_interval: 5,
   });
   const [consumed, setConsumed] = useState({
-    wall_time_ms: 0,
-    output_tokens: 0,
-    tool_calls: 0,
-    iterations: 0,
-    llm_calls: 0,
-    risk_used: 0,
+    wall_time_ms: 0, output_tokens: 0, tool_calls: 0,
+    iterations: 0, llm_calls: 0, risk_used: 0,
   });
   const [kernel, setKernel] = useState<OrchestrationKernel | null>(null);
   const [selectedTab, setSelectedTab] = useState('queue');
 
-  // Initialize and subscribe to event store
   useEffect(() => {
     const store = getEventStore();
     setEvents(store.getEvents());
-    
     const materializer = new StateMaterializer();
     const state = materializer.materialize(store.getEvents());
     setTasks(state.tasks);
     setConsumed(state.budgetConsumed);
-    
     const unsubscribe = store.subscribe((event) => {
       setEvents(prev => [...prev, event]);
       const newState = materializer.materialize([...store.getEvents()]);
       setTasks(newState.tasks);
       setConsumed(newState.budgetConsumed);
     });
-    
     return unsubscribe;
   }, []);
 
-  // Create demo kernel for testing
   const initializeKernel = useCallback(() => {
     const newKernel = createKernel({ budgets });
     setKernel(newKernel);
-    
-    // Add some demo tasks
     const store = getEventStore();
     const queue = new TaskQueue(store);
-    
-    // Task 1: No dependencies
-    queue.createTask({
-      title: 'Initialize Project Structure',
-      prompt: 'Set up the base project structure with folders and config files',
-      priority: 90,
-      acceptance_criteria: [],
-    });
-    
-    // Task 2: Depends on Task 1
-    queue.createTask({
-      title: 'Implement Core Module',
-      prompt: 'Build the core functionality module with proper error handling',
-      priority: 80,
-      acceptance_criteria: [],
-      dependencies: ['Initialize Project Structure'],
-    });
-    
-    // Task 3: Depends on Task 2
-    queue.createTask({
-      title: 'Write Unit Tests',
-      prompt: 'Create comprehensive unit tests for all core functions',
-      priority: 70,
-      acceptance_criteria: [],
-      dependencies: ['Implement Core Module'],
-    });
-
-    // Task 4: Independent branch
-    queue.createTask({
-      title: 'Setup CI/CD Pipeline',
-      prompt: 'Configure continuous integration and deployment pipelines',
-      priority: 60,
-      acceptance_criteria: [],
-    });
-
-    // Task 5: Depends on Tasks 3 and 4
-    queue.createTask({
-      title: 'Deploy to Staging',
-      prompt: 'Deploy the application to staging environment',
-      priority: 50,
-      acceptance_criteria: [],
-      dependencies: ['Write Unit Tests', 'Setup CI/CD Pipeline'],
-    });
-    
+    queue.createTask({ title: 'Initialize Project Structure', prompt: 'Set up base project', priority: 90, acceptance_criteria: [] });
+    queue.createTask({ title: 'Implement Core Module', prompt: 'Build core functionality', priority: 80, acceptance_criteria: [], dependencies: ['Initialize Project Structure'] });
+    queue.createTask({ title: 'Write Unit Tests', prompt: 'Create comprehensive tests', priority: 70, acceptance_criteria: [], dependencies: ['Implement Core Module'] });
+    queue.createTask({ title: 'Setup CI/CD Pipeline', prompt: 'Configure CI/CD', priority: 60, acceptance_criteria: [] });
+    queue.createTask({ title: 'Deploy to Staging', prompt: 'Deploy to staging', priority: 50, acceptance_criteria: [], dependencies: ['Write Unit Tests', 'Setup CI/CD Pipeline'] });
     setEvents(store.getEvents());
     const materializer = new StateMaterializer();
     const state = materializer.materialize(store.getEvents());
@@ -147,20 +93,15 @@ const OrchestrationDashboard: React.FC<OrchestrationDashboardProps> = ({ classNa
 
   const handleStart = () => {
     setIsRunning(true);
-    // Simulate progress
     const interval = setInterval(() => {
       setConsumed(prev => ({
         ...prev,
         iterations: Math.min(prev.iterations + 1, budgets.max_iterations),
-        tool_calls: Math.min(prev.tool_calls + Math.random() > 0.7 ? 1 : 0, budgets.max_tool_calls),
-        llm_calls: Math.min(prev.llm_calls + Math.random() > 0.8 ? 1 : 0, budgets.max_llm_calls),
+        tool_calls: Math.min(prev.tool_calls + (Math.random() > 0.7 ? 1 : 0), budgets.max_tool_calls),
+        llm_calls: Math.min(prev.llm_calls + (Math.random() > 0.8 ? 1 : 0), budgets.max_llm_calls),
       }));
     }, 1000);
-    
-    setTimeout(() => {
-      clearInterval(interval);
-      setIsRunning(false);
-    }, 10000);
+    setTimeout(() => { clearInterval(interval); setIsRunning(false); }, 10000);
   };
 
   const handleStop = () => {
@@ -175,45 +116,7 @@ const OrchestrationDashboard: React.FC<OrchestrationDashboardProps> = ({ classNa
     store.clear();
     setEvents([]);
     setTasks(new Map());
-    setConsumed({
-      wall_time_ms: 0,
-      output_tokens: 0,
-      tool_calls: 0,
-      iterations: 0,
-      llm_calls: 0,
-      risk_used: 0,
-    });
-  };
-
-  const toggleEventExpand = (eventId: string) => {
-    setExpandedEvents(prev => {
-      const next = new Set(prev);
-      if (next.has(eventId)) {
-        next.delete(eventId);
-      } else {
-        next.add(eventId);
-      }
-      return next;
-    });
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'done': return 'text-green-500';
-      case 'active': return 'text-yellow-500';
-      case 'failed': return 'text-red-500';
-      case 'blocked': return 'text-orange-500';
-      default: return 'text-muted-foreground';
-    }
-  };
-
-  const getEventIcon = (type: string) => {
-    if (type.includes('TASK')) return <List className="w-3 h-3" />;
-    if (type.includes('VERIFICATION')) return <CheckCircle className="w-3 h-3" />;
-    if (type.includes('TOOL')) return <Zap className="w-3 h-3" />;
-    if (type.includes('LLM')) return <Activity className="w-3 h-3" />;
-    if (type.includes('ERROR')) return <XCircle className="w-3 h-3" />;
-    return <GitBranch className="w-3 h-3" />;
+    setConsumed({ wall_time_ms: 0, output_tokens: 0, tool_calls: 0, iterations: 0, llm_calls: 0, risk_used: 0 });
   };
 
   const exportRun = () => {
@@ -221,218 +124,261 @@ const OrchestrationDashboard: React.FC<OrchestrationDashboardProps> = ({ classNa
     const data = store.export();
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `orchestration-run-${data.runId}.json`;
-    a.click();
+    const a = document.createElement('a'); a.href = url;
+    a.download = `orchestration-run-${data.runId}.json`; a.click();
     URL.revokeObjectURL(url);
   };
 
+  const statusColor = (s: string) => {
+    const map: Record<string, string> = {
+      done: 'text-success', active: 'text-warning', failed: 'text-destructive',
+      blocked: 'text-warning', queued: 'text-muted-foreground',
+    };
+    return map[s] || 'text-muted-foreground';
+  };
+
+  const statusBg = (s: string) => {
+    const map: Record<string, string> = {
+      done: 'bg-success/15 text-success border-success/20',
+      active: 'bg-warning/15 text-warning border-warning/20',
+      failed: 'bg-destructive/15 text-destructive border-destructive/20',
+      blocked: 'bg-warning/10 text-warning border-warning/15',
+      queued: 'bg-muted text-muted-foreground border-border',
+    };
+    return map[s] || 'bg-muted text-muted-foreground border-border';
+  };
+
+  const TABS = [
+    { id: 'queue', icon: List, label: 'Queue', count: tasks.size },
+    { id: 'events', icon: Activity, label: 'Events', count: events.length },
+    { id: 'dag', icon: GitBranch, label: 'DAG' },
+    { id: 'results', icon: BarChart3, label: 'Results' },
+  ];
+
   return (
-    <div className={`h-full flex flex-col bg-background ${className}`}>
-      {/* Header Controls */}
-      <div className="flex items-center justify-between p-3 border-b border-border bg-muted/30">
-        <div className="flex items-center space-x-2">
-          <Activity className="w-5 h-5 text-primary" />
-          <span className="font-mono text-sm font-bold">ORCHESTRATION ENGINE</span>
-          <Badge variant={isRunning ? 'default' : 'secondary'}>
-            {isRunning ? 'RUNNING' : 'IDLE'}
-          </Badge>
+    <div className={`h-full flex flex-col ${className}`}>
+      {/* ─── Header ─── */}
+      <div className="flex items-center justify-between px-4 py-2.5 border-b border-border surface-raised">
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
+            <Activity className="w-4 h-4 text-primary" />
+            <span className="text-xs font-display uppercase tracking-widest text-foreground">
+              Orchestration
+            </span>
+          </div>
+          <span className={`badge-${isRunning ? 'live' : 'warn'}`}>
+            {isRunning ? '● RUNNING' : 'IDLE'}
+          </span>
         </div>
-        
-        <div className="flex items-center space-x-2">
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={initializeKernel}
-            className="h-7 text-xs"
-          >
-            <Upload className="w-3 h-3 mr-1" />
-            Init Demo
-          </Button>
-          <Button
-            size="sm"
-            variant={isRunning ? 'destructive' : 'default'}
+
+        <div className="flex items-center gap-1.5">
+          <ActionButton icon={Upload} label="Init" onClick={initializeKernel} />
+          <ActionButton
+            icon={isRunning ? Square : Play}
+            label={isRunning ? 'STOP' : 'Run'}
             onClick={isRunning ? handleStop : handleStart}
-            className="h-7 text-xs"
-          >
-            {isRunning ? (
-              <>
-                <Square className="w-3 h-3 mr-1" />
-                STOP
-              </>
-            ) : (
-              <>
-                <Play className="w-3 h-3 mr-1" />
-                Run
-              </>
-            )}
-          </Button>
-          <Button size="sm" variant="outline" onClick={handleReset} className="h-7 text-xs">
-            <RotateCcw className="w-3 h-3 mr-1" />
-            Reset
-          </Button>
-          <Button size="sm" variant="outline" onClick={exportRun} className="h-7 text-xs">
-            <Download className="w-3 h-3 mr-1" />
-            Export
-          </Button>
+            variant={isRunning ? 'danger' : 'primary'}
+          />
+          <ActionButton icon={RotateCcw} label="Reset" onClick={handleReset} />
+          <ActionButton icon={Download} label="Export" onClick={exportRun} />
         </div>
       </div>
 
-      {/* Budget Meters */}
-      <div className="grid grid-cols-6 gap-2 p-3 border-b border-border bg-muted/10">
+      {/* ─── Budget Meters ─── */}
+      <div className="grid grid-cols-6 gap-3 px-4 py-2.5 border-b border-border">
         {[
-          { label: 'Iterations', value: consumed.iterations, max: budgets.max_iterations },
-          { label: 'Tool Calls', value: consumed.tool_calls, max: budgets.max_tool_calls },
-          { label: 'LLM Calls', value: consumed.llm_calls, max: budgets.max_llm_calls },
-          { label: 'Tokens', value: consumed.output_tokens, max: budgets.max_output_tokens },
-          { label: 'Time (s)', value: Math.floor(consumed.wall_time_ms / 1000), max: Math.floor(budgets.max_wall_time_ms / 1000) },
-          { label: 'Risk', value: consumed.risk_used, max: budgets.risk_budget },
-        ].map((meter) => {
-          const percentage = (meter.value / meter.max) * 100;
-          const isWarning = percentage > 75;
-          const isDanger = percentage > 90;
-          
+          { label: 'Iterations', val: consumed.iterations, max: budgets.max_iterations, icon: Clock },
+          { label: 'Tool Calls', val: consumed.tool_calls, max: budgets.max_tool_calls, icon: Zap },
+          { label: 'LLM Calls', val: consumed.llm_calls, max: budgets.max_llm_calls, icon: Activity },
+          { label: 'Tokens', val: consumed.output_tokens, max: budgets.max_output_tokens, icon: List },
+          { label: 'Time (s)', val: Math.floor(consumed.wall_time_ms / 1000), max: Math.floor(budgets.max_wall_time_ms / 1000), icon: Clock },
+          { label: 'Risk', val: consumed.risk_used, max: budgets.risk_budget, icon: AlertTriangle },
+        ].map(m => {
+          const pct = (m.val / m.max) * 100;
+          const isDanger = pct > 90;
+          const isWarn = pct > 75;
           return (
-            <div key={meter.label} className="space-y-1">
-              <div className="flex justify-between text-[10px] font-mono">
-                <span className="text-muted-foreground">{meter.label}</span>
-                <span className={isDanger ? 'text-destructive' : isWarning ? 'text-yellow-500' : 'text-foreground'}>
-                  {meter.value}/{meter.max}
+            <div key={m.label} className="space-y-1">
+              <div className="flex justify-between">
+                <span className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider">{m.label}</span>
+                <span className={`text-[9px] font-mono ${isDanger ? 'text-destructive' : isWarn ? 'text-warning' : 'text-foreground'}`}>
+                  {m.val}/{m.max}
                 </span>
               </div>
-              <Progress 
-                value={percentage} 
-                className={`h-1 ${isDanger ? '[&>div]:bg-destructive' : isWarning ? '[&>div]:bg-yellow-500' : ''}`}
-              />
+              <div className="h-1 bg-surface-1 rounded-full overflow-hidden">
+                <motion.div
+                  className={`h-full rounded-full ${isDanger ? 'bg-destructive' : isWarn ? 'bg-warning' : 'bg-primary'}`}
+                  initial={{ width: 0 }}
+                  animate={{ width: `${Math.min(100, pct)}%` }}
+                  transition={{ duration: 0.5, ease: 'easeOut' }}
+                />
+              </div>
             </div>
           );
         })}
       </div>
 
-      {/* Main Content Tabs */}
-      <Tabs value={selectedTab} onValueChange={setSelectedTab} className="flex-1 flex flex-col">
-        <TabsList className="w-full justify-start rounded-none border-b border-border bg-transparent h-8">
-          <TabsTrigger value="queue" className="text-xs h-7">
-            <List className="w-3 h-3 mr-1" />
-            Task Queue ({tasks.size})
-          </TabsTrigger>
-          <TabsTrigger value="events" className="text-xs h-7">
-            <Activity className="w-3 h-3 mr-1" />
-            Events ({events.length})
-          </TabsTrigger>
-          <TabsTrigger value="dag" className="text-xs h-7">
-            <GitBranch className="w-3 h-3 mr-1" />
-            DAG View
-          </TabsTrigger>
-          <TabsTrigger value="results" className="text-xs h-7">
-            <BarChart3 className="w-3 h-3 mr-1" />
-            Test Results
-          </TabsTrigger>
-        </TabsList>
+      {/* ─── Tab Bar ─── */}
+      <div className="flex items-center gap-0.5 px-3 py-1 border-b border-border">
+        {TABS.map(t => (
+          <button
+            key={t.id}
+            onClick={() => setSelectedTab(t.id)}
+            className={`tab-button ${selectedTab === t.id ? 'active' : ''}`}
+          >
+            <t.icon className="w-3 h-3" />
+            {t.label}
+            {t.count !== undefined && (
+              <span className="text-[9px] opacity-60">({t.count})</span>
+            )}
+          </button>
+        ))}
+      </div>
 
-        {/* Task Queue */}
-        <TabsContent value="queue" className="flex-1 m-0">
-          <ScrollArea className="h-full">
-            <div className="p-2 space-y-1">
-              {Array.from(tasks.values()).length === 0 ? (
-                <div className="text-center text-muted-foreground py-8 text-sm">
-                  No tasks in queue. Click "Init Demo" to load sample tasks.
+      {/* ─── Content ─── */}
+      <div className="flex-1 overflow-hidden">
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={selectedTab}
+            initial={{ opacity: 0, y: 4 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -4 }}
+            transition={{ duration: 0.15 }}
+            className="h-full"
+          >
+            {selectedTab === 'queue' && (
+              <ScrollArea className="h-full custom-scrollbar">
+                <div className="p-3 space-y-1.5">
+                  {tasks.size === 0 ? (
+                    <EmptyState text='No tasks. Click "Init" to load demo.' />
+                  ) : (
+                    Array.from(tasks.values())
+                      .sort((a, b) => b.priority - a.priority)
+                      .map(task => (
+                        <motion.div
+                          key={task.task_id}
+                          initial={{ opacity: 0, x: -8 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          className="surface-raised rounded-md p-3 interactive-ghost cursor-pointer"
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className={`w-2 h-2 rounded-full ${statusColor(task.status).replace('text-', 'bg-')}`} />
+                            <div className="flex-1 min-w-0">
+                              <span className="text-xs font-mono text-foreground">{task.title}</span>
+                              <p className="text-[10px] font-mono text-muted-foreground truncate">{task.prompt}</p>
+                            </div>
+                            <span className="text-[9px] font-mono text-muted-foreground">P{task.priority}</span>
+                            <span className={`text-[9px] font-mono px-1.5 py-0.5 rounded border ${statusBg(task.status)}`}>
+                              {task.status}
+                            </span>
+                          </div>
+                        </motion.div>
+                      ))
+                  )}
                 </div>
-              ) : (
-                Array.from(tasks.values())
-                  .sort((a, b) => b.priority - a.priority)
-                  .map((task) => (
-                    <div
-                      key={task.task_id}
-                      className="flex items-center p-2 rounded bg-muted/20 hover:bg-muted/40 text-xs font-mono"
-                    >
-                      <div className={`w-2 h-2 rounded-full mr-2 ${getStatusColor(task.status)}`} />
-                      <div className="flex-1">
-                        <div className="font-bold">{task.title}</div>
-                        <div className="text-muted-foreground truncate">{task.prompt}</div>
-                      </div>
-                      <Badge variant="outline" className="ml-2 text-[10px]">
-                        P{task.priority}
-                      </Badge>
-                      <Badge 
-                        variant={task.status === 'done' ? 'default' : 'secondary'} 
-                        className="ml-2 text-[10px]"
-                      >
-                        {task.status}
-                      </Badge>
-                    </div>
-                  ))
-              )}
-            </div>
-          </ScrollArea>
-        </TabsContent>
+              </ScrollArea>
+            )}
 
-        {/* Event Log */}
-        <TabsContent value="events" className="flex-1 m-0">
-          <ScrollArea className="h-full">
-            <div className="p-2 space-y-1">
-              {events.length === 0 ? (
-                <div className="text-center text-muted-foreground py-8 text-sm">
-                  No events recorded yet.
-                </div>
-              ) : (
-                events.map((event) => (
-                  <div
-                    key={event.event_id}
-                    className="rounded bg-muted/20 hover:bg-muted/40 text-xs font-mono"
-                  >
-                    <div 
-                      className="flex items-center p-2 cursor-pointer"
-                      onClick={() => toggleEventExpand(event.event_id)}
-                    >
-                      {expandedEvents.has(event.event_id) ? (
-                        <ChevronDown className="w-3 h-3 mr-2 text-muted-foreground" />
-                      ) : (
-                        <ChevronRight className="w-3 h-3 mr-2 text-muted-foreground" />
-                      )}
-                      <span className="text-muted-foreground mr-2">
-                        [{new Date(event.timestamp).toLocaleTimeString()}]
-                      </span>
-                      <span className="mr-2">{getEventIcon(event.type)}</span>
-                      <span className="text-primary">{event.type}</span>
-                      <span className="ml-auto text-muted-foreground text-[10px]">
-                        #{event.sequence}
-                      </span>
-                    </div>
-                    {expandedEvents.has(event.event_id) && (
-                      <div className="px-6 pb-2 text-muted-foreground">
-                        <pre className="text-[10px] overflow-x-auto">
-                          {JSON.stringify(event.payload, null, 2)}
-                        </pre>
-                        <div className="mt-1 text-[10px]">
-                          Hash: {event.hash_self.slice(0, 8)}...
+            {selectedTab === 'events' && (
+              <ScrollArea className="h-full custom-scrollbar">
+                <div className="p-3 space-y-1">
+                  {events.length === 0 ? (
+                    <EmptyState text="No events recorded." />
+                  ) : (
+                    events.map(event => (
+                      <div key={event.event_id} className="surface-raised rounded-md text-xs font-mono overflow-hidden">
+                        <div
+                          className="flex items-center px-3 py-2 cursor-pointer interactive-ghost"
+                          onClick={() => {
+                            setExpandedEvents(prev => {
+                              const next = new Set(prev);
+                              next.has(event.event_id) ? next.delete(event.event_id) : next.add(event.event_id);
+                              return next;
+                            });
+                          }}
+                        >
+                          {expandedEvents.has(event.event_id) ? (
+                            <ChevronDown className="w-3 h-3 mr-2 text-muted-foreground" />
+                          ) : (
+                            <ChevronRight className="w-3 h-3 mr-2 text-muted-foreground" />
+                          )}
+                          <span className="text-muted-foreground mr-3 text-[10px]">
+                            {new Date(event.timestamp).toLocaleTimeString()}
+                          </span>
+                          <span className="text-primary">{event.type}</span>
+                          <span className="ml-auto text-muted-foreground text-[9px]">#{event.sequence}</span>
                         </div>
+                        <AnimatePresence>
+                          {expandedEvents.has(event.event_id) && (
+                            <motion.div
+                              initial={{ height: 0, opacity: 0 }}
+                              animate={{ height: 'auto', opacity: 1 }}
+                              exit={{ height: 0, opacity: 0 }}
+                              className="overflow-hidden"
+                            >
+                              <div className="px-8 pb-2.5 text-[10px] text-muted-foreground border-t border-border/50 pt-2">
+                                <pre className="overflow-x-auto whitespace-pre-wrap">
+                                  {JSON.stringify(event.payload, null, 2)}
+                                </pre>
+                                <div className="mt-1.5 text-[9px]">
+                                  Hash: <span className="text-primary/60">{event.hash_self.slice(0, 12)}...</span>
+                                </div>
+                              </div>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
                       </div>
-                    )}
-                  </div>
-                ))
-              )}
-            </div>
-          </ScrollArea>
-        </TabsContent>
+                    ))
+                  )}
+                </div>
+              </ScrollArea>
+            )}
 
-        {/* DAG View */}
-        <TabsContent value="dag" className="flex-1 m-0 overflow-hidden">
-          <DAGVisualization
-            tasks={tasks}
-            dagState={dagState}
-            onTaskSelect={(taskId) => console.log('Selected task:', taskId)}
-          />
-        </TabsContent>
+            {selectedTab === 'dag' && (
+              <DAGVisualization
+                tasks={tasks}
+                dagState={dagState}
+                onTaskSelect={(id) => console.log('Selected:', id)}
+              />
+            )}
 
-        {/* Test Results */}
-        <TabsContent value="results" className="flex-1 m-0 overflow-hidden">
-          <TestResultsViewer />
-        </TabsContent>
-      </Tabs>
+            {selectedTab === 'results' && <TestResultsViewer />}
+          </motion.div>
+        </AnimatePresence>
+      </div>
     </div>
   );
 };
+
+// ─── Helpers ───
+
+const ActionButton: React.FC<{
+  icon: React.ElementType;
+  label: string;
+  onClick: () => void;
+  variant?: 'default' | 'primary' | 'danger';
+}> = ({ icon: Icon, label, onClick, variant = 'default' }) => {
+  const styles = {
+    default: 'surface-raised interactive-ghost text-muted-foreground hover:text-foreground',
+    primary: 'bg-primary/15 text-primary hover:bg-primary/25 border border-primary/20',
+    danger: 'bg-destructive/15 text-destructive hover:bg-destructive/25 border border-destructive/20',
+  };
+  return (
+    <button
+      onClick={onClick}
+      className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-[10px] font-mono uppercase tracking-wider transition-all ${styles[variant]}`}
+    >
+      <Icon className="w-3 h-3" />
+      {label}
+    </button>
+  );
+};
+
+const EmptyState: React.FC<{ text: string }> = ({ text }) => (
+  <div className="flex flex-col items-center justify-center py-12">
+    <Activity className="w-8 h-8 text-muted-foreground opacity-15 mb-3" />
+    <span className="text-xs font-mono text-muted-foreground">{text}</span>
+  </div>
+);
 
 export default OrchestrationDashboard;
