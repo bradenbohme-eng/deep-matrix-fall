@@ -13,8 +13,10 @@ interface SystemHealth {
   atomCount: number;
   chainCount: number;
   planCount: number;
+  entityCount: number;
   pendingProposals: number;
-  avgCoherence: number;
+  avgKappa: number;
+  memoryLevels: { hot: number; warm: number; cold: number; frozen: number };
   aiOnline: boolean;
 }
 
