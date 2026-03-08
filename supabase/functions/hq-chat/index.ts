@@ -386,6 +386,7 @@ async function pruneContextBanks(supabase: any, agentRole: string) {
   } catch (e) {
     console.error("[hq-chat] Context pruning error:", e);
   }
+}
 
 function inferPrimaryAgent(query: string): string {
   const q = query.toLowerCase();
