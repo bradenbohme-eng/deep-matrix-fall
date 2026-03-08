@@ -44,6 +44,7 @@ import ScenariosPanel from './ScenariosPanel';
 import ConnectionsPanel from './ConnectionsPanel';
 import MetricsPanel from './MetricsPanel';
 import SystemProofDashboard from './SystemProofDashboard';
+import ContextSyncDashboard from './ContextSyncDashboard';
 
 interface EvolutionCenterProps {
   subPage: SubPage;
