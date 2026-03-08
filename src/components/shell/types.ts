@@ -83,6 +83,7 @@ export const WORLD_SUBPAGES: Record<WorldPage, { id: SubPage; label: string }[]>
     { id: 'sandbox', label: 'Sandbox' },
     { id: 'proposals', label: 'Proposals' },
     { id: 'proof', label: '⚡ System Proof' },
+    { id: 'context-sync', label: '🔗 Context Sync' },
   ],
 };
 

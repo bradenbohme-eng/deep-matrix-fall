@@ -90,6 +90,8 @@ const EvolutionCenter: React.FC<EvolutionCenterProps> = ({ subPage }) => {
       return <ProposalsPanel />;
     case 'proof':
       return <SystemProofDashboard />;
+    case 'context-sync':
+      return <ContextSyncDashboard />;
     default:
       return <AuditPanel />;
   }
