@@ -1,8 +1,11 @@
 // RightPanel — Canon §10: Persistent Intelligence and Contextual Inspection
-// Phase 3: Production-grade AI chat, rich inspector, reasoning viz, memory dashboard
+// Phase 4: Real AI streaming + rich inspector, reasoning viz, memory dashboard
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import ReactMarkdown from 'react-markdown';
+import { streamHQChat, type ChatMessage } from '@/lib/hqChatService';
+import { toast } from 'sonner';
 import MatrixRainCanvas from './effects/MatrixRainCanvas';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
@@ -102,10 +105,11 @@ const RightPanel: React.FC<RightPanelProps> = ({ mode, onModeChange, isOpen, wid
 // ─── AI Chat ───
 const AIChatPanel: React.FC = () => {
   const [input, setInput] = useState('');
-  const [isTyping, setIsTyping] = useState(false);
+  const [isStreaming, setIsStreaming] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
-  const [messages, setMessages] = useState<{ id: string; role: 'user' | 'ai'; content: string; timestamp: Date }[]>([
-    { id: '1', role: 'ai', content: 'HQ Intelligence online. Full orchestration context loaded — task queue, agent states, budget allocation, and reasoning chains are all available.\n\nHow can I assist?', timestamp: new Date() },
+  const abortRef = useRef<AbortController | null>(null);
+  const [messages, setMessages] = useState<{ id: string; role: 'user' | 'assistant'; content: string; timestamp: Date }[]>([
+    { id: '1', role: 'assistant', content: 'HQ Intelligence online. Full orchestration context loaded — task queue, agent states, budget allocation, and reasoning chains are all available.\n\nHow can I assist?', timestamp: new Date() },
   ]);
 
   useEffect(() => {
@@ -114,19 +118,61 @@ const AIChatPanel: React.FC = () => {
     }
   }, [messages]);
 
-  const handleSend = () => {
-    if (!input.trim()) return;
-    const q = input;
-    setMessages(prev => [...prev, { id: Date.now().toString(), role: 'user', content: q, timestamp: new Date() }]);
+  const handleSend = useCallback(async () => {
+    if (!input.trim() || isStreaming) return;
+    const userMsg = input.trim();
     setInput('');
-    setIsTyping(true);
-    setTimeout(() => {
-      setIsTyping(false);
-      setMessages(prev => [...prev, {
-        id: (Date.now() + 1).toString(), role: 'ai', timestamp: new Date(),
-        content: `**Analysis:** "${q}"\n\nPipeline status:\n• 3 tasks queued, 1 active (Generate Draft)\n• Budget utilization: 36%\n• No constraint violations detected\n\nRecommendation: Proceed with current plan. The active task has κ=92% confidence.`,
-      }]);
-    }, 800 + Math.random() * 600);
+
+    const userEntry = { id: Date.now().toString(), role: 'user' as const, content: userMsg, timestamp: new Date() };
+    setMessages(prev => [...prev, userEntry]);
+    setIsStreaming(true);
+
+    // Build history for API (exclude initial greeting for cleaner context)
+    const apiMessages: ChatMessage[] = [
+      ...messages.filter(m => m.id !== '1').map(m => ({ role: m.role, content: m.content })),
+      { role: 'user' as const, content: userMsg },
+    ];
+
+    let assistantSoFar = '';
+    const assistantId = (Date.now() + 1).toString();
+
+    const upsertAssistant = (chunk: string) => {
+      assistantSoFar += chunk;
+      setMessages(prev => {
+        const last = prev[prev.length - 1];
+        if (last?.role === 'assistant' && last.id === assistantId) {
+          return prev.map((m, i) => i === prev.length - 1 ? { ...m, content: assistantSoFar } : m);
+        }
+        return [...prev, { id: assistantId, role: 'assistant' as const, content: assistantSoFar, timestamp: new Date() }];
+      });
+    };
+
+    const controller = new AbortController();
+    abortRef.current = controller;
+
+    await streamHQChat({
+      messages: apiMessages,
+      onDelta: upsertAssistant,
+      onDone: () => {
+        setIsStreaming(false);
+        abortRef.current = null;
+      },
+      onError: (err) => {
+        setIsStreaming(false);
+        abortRef.current = null;
+        toast.error(err);
+        // Add error message to chat
+        setMessages(prev => [...prev, {
+          id: (Date.now() + 2).toString(), role: 'assistant', timestamp: new Date(),
+          content: `⚠️ **Error:** ${err}`,
+        }]);
+      },
+      signal: controller.signal,
+    });
+  }, [input, isStreaming, messages]);
+
+  const handleCancel = () => {
+    abortRef.current?.abort();
   };
 
   return (
@@ -138,12 +184,11 @@ const AIChatPanel: React.FC = () => {
               key={msg.id}
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i === messages.length - 1 ? 0 : 0 }}
               className={`rounded-lg ${msg.role === 'user' ? 'ml-6' : 'mr-2'}`}
             >
               <div className={`rounded-lg p-3 text-sm ${msg.role === 'user' ? 'surface-active' : 'surface-raised'}`}>
                 <div className="flex items-center gap-1.5 mb-2">
-                  {msg.role === 'ai' ? (
+                  {msg.role === 'assistant' ? (
                     <Bot className="w-3.5 h-3.5 text-primary" />
                   ) : null}
                   <span className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider">
@@ -153,11 +198,17 @@ const AIChatPanel: React.FC = () => {
                     {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                   </span>
                 </div>
-                <p className="whitespace-pre-wrap text-xs leading-relaxed text-foreground/90">{msg.content}</p>
+                {msg.role === 'assistant' ? (
+                  <div className="prose prose-xs prose-invert max-w-none text-xs leading-relaxed text-foreground/90 [&_p]:my-1 [&_ul]:my-1 [&_ol]:my-1 [&_li]:my-0.5 [&_code]:text-primary [&_code]:bg-surface-4 [&_code]:px-1 [&_code]:rounded [&_pre]:bg-surface-4 [&_pre]:p-2 [&_pre]:rounded-md [&_strong]:text-foreground [&_h1]:text-sm [&_h2]:text-xs [&_h3]:text-xs">
+                    <ReactMarkdown>{msg.content}</ReactMarkdown>
+                  </div>
+                ) : (
+                  <p className="whitespace-pre-wrap text-xs leading-relaxed text-foreground/90">{msg.content}</p>
+                )}
               </div>
             </motion.div>
           ))}
-          {isTyping && (
+          {isStreaming && messages[messages.length - 1]?.role !== 'assistant' && (
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -171,18 +222,29 @@ const AIChatPanel: React.FC = () => {
       </div>
 
       <div className="p-3 border-t border-border">
+        {isStreaming && (
+          <motion.button
+            initial={{ opacity: 0, y: 4 }}
+            animate={{ opacity: 1, y: 0 }}
+            onClick={handleCancel}
+            className="w-full mb-2 text-[10px] font-mono text-muted-foreground hover:text-foreground py-1 rounded bg-surface-3 hover:bg-surface-4 transition-colors"
+          >
+            ■ Stop generating
+          </motion.button>
+        )}
         <div className="flex items-center gap-2 surface-inset rounded-lg px-3 py-2 focus-within:ring-1 focus-within:ring-primary/30 transition-all">
           <Sparkles className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
           <input
             type="text" value={input} onChange={e => setInput(e.target.value)}
-            onKeyDown={e => e.key === 'Enter' && handleSend()}
+            onKeyDown={e => e.key === 'Enter' && !e.shiftKey && handleSend()}
             placeholder="Ask HQ Intelligence..."
             className="flex-1 bg-transparent border-none outline-none text-xs font-mono text-foreground placeholder:text-muted-foreground"
+            disabled={isStreaming}
           />
           <motion.button
             onClick={handleSend}
-            className={`rail-icon w-7 h-7 ${input.trim() ? 'text-primary' : ''}`}
-            disabled={!input.trim()}
+            className={`rail-icon w-7 h-7 ${input.trim() && !isStreaming ? 'text-primary' : ''}`}
+            disabled={!input.trim() || isStreaming}
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.9 }}
           >
