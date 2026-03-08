@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
+import { Progress } from '@/components/ui/progress';
 import {
   Select,
   SelectContent,
@@ -61,7 +62,15 @@ import {
   HardDrive,
   Shield,
   Loader2,
+  CheckCircle2,
+  XCircle,
+  AlertCircle,
+  Sparkles,
+  ArrowRight,
+  Server,
+  FileCode,
 } from 'lucide-react';
+import { toast } from 'sonner';
 
 // ─── Types ───
 
@@ -71,6 +80,7 @@ interface MethodConfig {
   description: string;
   icon: React.ReactNode;
   color: string;
+  backingStore: string;
 }
 
 interface PresetScenario {
@@ -108,13 +118,22 @@ interface TestRun {
   analysis: string;
 }
 
+interface SystemHealth {
+  bciCount: number;
+  atomCount: number;
+  chunkCount: number;
+  contextSyncOk: boolean | null;
+  cmcEngineOk: boolean | null;
+  loading: boolean;
+}
+
 // ─── Constants ───
 
 const METHODS: MethodConfig[] = [
-  { id: 'bci', name: 'BCI Context Sync', description: 'Utility-scored boundary views with token budgeting', icon: <Brain className="h-4 w-4" />, color: 'hsl(120, 100%, 44%)' },
-  { id: 'cmc', name: 'CMC Memory Atoms', description: 'Keyword-matched memory atoms via CMC engine', icon: <Database className="h-4 w-4" />, color: 'hsl(199, 89%, 48%)' },
-  { id: 'rag', name: 'RAG Chunk Search', description: 'Embedding or keyword-based chunk retrieval', icon: <Layers className="h-4 w-4" />, color: 'hsl(38, 92%, 50%)' },
-  { id: 'naive', name: 'Naive Keyword', description: 'Direct ILIKE search — baseline comparison', icon: <Target className="h-4 w-4" />, color: 'hsl(0, 72%, 51%)' },
+  { id: 'bci', name: 'BCI Context Sync', description: 'Utility-scored boundary views with token budgeting', icon: <Brain className="h-4 w-4" />, color: 'hsl(120, 100%, 44%)', backingStore: 'bci_entities' },
+  { id: 'cmc', name: 'CMC Memory Atoms', description: 'Keyword-matched memory atoms via CMC engine', icon: <Database className="h-4 w-4" />, color: 'hsl(199, 89%, 48%)', backingStore: 'aimos_memory_atoms' },
+  { id: 'rag', name: 'RAG Chunk Search', description: 'Embedding or keyword-based chunk retrieval', icon: <Layers className="h-4 w-4" />, color: 'hsl(38, 92%, 50%)', backingStore: 'chunks' },
+  { id: 'naive', name: 'Naive Keyword', description: 'Direct ILIKE search — baseline comparison', icon: <Target className="h-4 w-4" />, color: 'hsl(0, 72%, 51%)', backingStore: 'bci_entities + aimos_memory_atoms' },
 ];
 
 const PRESETS: PresetScenario[] = [
@@ -168,10 +187,20 @@ const PRESETS: PresetScenario[] = [
   },
 ];
 
+const SEED_ENTITIES = [
+  { entity_id: 'useShellStore', kind: 'function', path: 'src/components/shell/useShellStore.ts' },
+  { entity_id: 'AppShell', kind: 'module', path: 'src/components/shell/AppShell.tsx' },
+  { entity_id: 'ProductionIDE', kind: 'module', path: 'src/components/ide/ProductionIDE.tsx' },
+  { entity_id: 'ContextLab', kind: 'module', path: 'src/pages/ContextLab.tsx' },
+  { entity_id: 'ragService', kind: 'module', path: 'src/lib/ragService.ts' },
+  { entity_id: 'kernel', kind: 'module', path: 'src/lib/orchestration/kernel.ts' },
+  { entity_id: 'taskQueue', kind: 'module', path: 'src/lib/orchestration/taskQueue.ts' },
+  { entity_id: 'testHarness', kind: 'module', path: 'src/lib/orchestration/testHarness.ts' },
+];
+
 // ─── Retrieval Implementations ───
 
 async function runBCI(prompt: string, tokenBudget: number): Promise<{ results: any[]; tokens: number }> {
-  const start = performance.now();
   try {
     const { data, error } = await supabase.functions.invoke('context-sync', {
       body: { action: 'resolve_context', prompt, token_budget: tokenBudget, policy_profile: 'default' },
@@ -219,7 +248,6 @@ async function runCMC(prompt: string, tokenBudget: number): Promise<{ results: a
 }
 
 async function runRAG(prompt: string, tokenBudget: number): Promise<{ results: any[]; tokens: number }> {
-  // Try chunk search via ilike (embedding search requires vector)
   const words = prompt.toLowerCase().split(/\s+/).filter(w => w.length > 3).slice(0, 6);
   const { data } = await supabase
     .from('chunks')
@@ -235,7 +263,6 @@ async function runNaive(prompt: string, tokenBudget: number): Promise<{ results:
   const words = prompt.toLowerCase().split(/\s+/).filter(w => w.length > 3).slice(0, 4);
   if (words.length === 0) return { results: [], tokens: 0 };
 
-  // Search both BCI entities and memory atoms
   const [bciRes, atomRes] = await Promise.all([
     supabase
       .from('bci_entities')
@@ -312,7 +339,169 @@ function generateAnalysis(results: MethodResult[]): string {
   return parts.join(' ');
 }
 
-// ─── Component ───
+// ─── Health Check Component ───
+
+const SystemHealthPanel: React.FC<{ health: SystemHealth; onRefresh: () => void; onSeed: () => void; seeding: boolean }> = ({ health, onRefresh, onSeed, seeding }) => {
+  const StatusBadge = ({ count, label }: { count: number; label: string }) => (
+    <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-muted/30 border border-border">
+      {count > 0 ? (
+        <CheckCircle2 className="h-3.5 w-3.5 text-green-500" />
+      ) : (
+        <XCircle className="h-3.5 w-3.5 text-destructive" />
+      )}
+      <span className="text-xs font-medium">{label}</span>
+      <Badge variant={count > 0 ? 'default' : 'destructive'} className="text-[10px] h-5 px-1.5">
+        {count}
+      </Badge>
+    </div>
+  );
+
+  const FunctionBadge = ({ ok, label }: { ok: boolean | null; label: string }) => (
+    <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-muted/30 border border-border">
+      {ok === null ? (
+        <Loader2 className="h-3.5 w-3.5 text-muted-foreground animate-spin" />
+      ) : ok ? (
+        <CheckCircle2 className="h-3.5 w-3.5 text-green-500" />
+      ) : (
+        <AlertCircle className="h-3.5 w-3.5 text-yellow-500" />
+      )}
+      <span className="text-xs font-medium">{label}</span>
+      <Badge variant={ok === null ? 'outline' : ok ? 'default' : 'secondary'} className="text-[10px] h-5 px-1.5">
+        {ok === null ? '...' : ok ? 'OK' : 'N/A'}
+      </Badge>
+    </div>
+  );
+
+  return (
+    <Card className="border-border bg-card/50">
+      <CardHeader className="py-2.5 px-4">
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-xs font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+            <Server className="h-3.5 w-3.5" />
+            System Health
+          </CardTitle>
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" size="sm" className="h-6 text-[10px]" onClick={onRefresh} disabled={health.loading}>
+              {health.loading ? <Loader2 className="h-3 w-3 animate-spin" /> : <RefreshCw className="h-3 w-3" />}
+            </Button>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="h-6 text-[10px]" 
+              onClick={onSeed}
+              disabled={seeding || health.bciCount > 5}
+            >
+              {seeding ? (
+                <><Loader2 className="h-3 w-3 mr-1 animate-spin" /> Seeding...</>
+              ) : (
+                <><Sparkles className="h-3 w-3 mr-1" /> Seed Test Data</>
+              )}
+            </Button>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent className="px-4 pb-3">
+        <div className="flex flex-wrap gap-2">
+          <StatusBadge count={health.bciCount} label="BCI Entities" />
+          <StatusBadge count={health.atomCount} label="Memory Atoms" />
+          <StatusBadge count={health.chunkCount} label="RAG Chunks" />
+          <FunctionBadge ok={health.contextSyncOk} label="context-sync" />
+          <FunctionBadge ok={health.cmcEngineOk} label="cmc-engine" />
+        </div>
+        {(health.bciCount === 0 && health.atomCount === 0 && health.chunkCount === 0) && (
+          <div className="mt-3 p-2 rounded bg-yellow-500/10 border border-yellow-500/30">
+            <div className="flex items-start gap-2">
+              <AlertCircle className="h-4 w-4 text-yellow-500 mt-0.5 shrink-0" />
+              <p className="text-[11px] text-yellow-200/80">
+                All data stores are empty. Click <strong>"Seed Test Data"</strong> to populate sample entities, or use the main app to index your codebase.
+              </p>
+            </div>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+};
+
+// ─── Quick Start Guide ───
+
+const QuickStartGuide: React.FC<{ onPresetClick: () => void }> = ({ onPresetClick }) => (
+  <Card className="border-primary/30 bg-gradient-to-br from-primary/5 to-transparent">
+    <CardContent className="p-6">
+      <div className="flex items-start gap-4">
+        <div className="p-3 rounded-lg bg-primary/10">
+          <FlaskConical className="h-8 w-8 text-primary" />
+        </div>
+        <div className="flex-1 space-y-3">
+          <h2 className="text-lg font-bold text-foreground">Welcome to the Context Testing Laboratory</h2>
+          <p className="text-sm text-muted-foreground leading-relaxed">
+            Compare different context retrieval methods side-by-side. Test which approach returns the most relevant, comprehensive context for AI coding tasks.
+          </p>
+          <div className="space-y-2">
+            <div className="flex items-center gap-3 text-sm">
+              <div className="flex items-center justify-center w-6 h-6 rounded-full bg-primary/20 text-primary text-xs font-bold">1</div>
+              <span className="text-muted-foreground">Select a <strong className="text-foreground">preset scenario</strong> from the left sidebar</span>
+              <ArrowRight className="h-4 w-4 text-muted-foreground" />
+            </div>
+            <div className="flex items-center gap-3 text-sm">
+              <div className="flex items-center justify-center w-6 h-6 rounded-full bg-primary/20 text-primary text-xs font-bold">2</div>
+              <span className="text-muted-foreground">Or write your own prompt describing a coding task</span>
+            </div>
+            <div className="flex items-center gap-3 text-sm">
+              <div className="flex items-center justify-center w-6 h-6 rounded-full bg-primary/20 text-primary text-xs font-bold">3</div>
+              <span className="text-muted-foreground">Click <strong className="text-foreground">Run Comparison</strong> to see which method wins</span>
+            </div>
+          </div>
+          <div className="pt-2">
+            <Button variant="outline" size="sm" className="text-xs" onClick={onPresetClick}>
+              <Code className="h-3.5 w-3.5 mr-1.5" /> Try "Code Generation" Preset
+            </Button>
+          </div>
+        </div>
+      </div>
+    </CardContent>
+  </Card>
+);
+
+// ─── Empty Result Card ───
+
+const EmptyResultMessage: React.FC<{ methodId: string; backingStore: string }> = ({ methodId, backingStore }) => (
+  <div className="text-center py-4 px-2">
+    <FileCode className="h-6 w-6 text-muted-foreground/40 mx-auto mb-2" />
+    <p className="text-[10px] text-muted-foreground font-medium">No data found</p>
+    <p className="text-[9px] text-muted-foreground/60 mt-1 leading-relaxed">
+      The <strong>{backingStore}</strong> table is empty or has no matching entries. Seed test data to compare methods.
+    </p>
+  </div>
+);
+
+// ─── Winner Banner ───
+
+const WinnerBanner: React.FC<{ winner: MethodResult; analysis: string }> = ({ winner, analysis }) => {
+  const method = METHODS.find(m => m.id === winner.method_id);
+  return (
+    <Card className="border-2 border-primary bg-gradient-to-r from-primary/10 via-primary/5 to-transparent overflow-hidden">
+      <CardContent className="p-4">
+        <div className="flex items-center gap-4">
+          <div className="p-3 rounded-full bg-primary/20">
+            <Trophy className="h-8 w-8 text-primary" />
+          </div>
+          <div className="flex-1">
+            <div className="flex items-center gap-2 mb-1">
+              <h3 className="text-lg font-bold text-primary">{method?.name || winner.method_name} Wins!</h3>
+              <Badge className="text-xs bg-primary/20 text-primary border-primary/30">
+                Score: {winner.composite_score.toFixed(3)}
+              </Badge>
+            </div>
+            <p className="text-sm text-muted-foreground leading-relaxed">{analysis}</p>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
+
+// ─── Main Component ───
 
 const ContextLab: React.FC = () => {
   const navigate = useNavigate();
@@ -322,6 +511,8 @@ const ContextLab: React.FC = () => {
   const [targetEntities, setTargetEntities] = useState('');
   const [activePreset, setActivePreset] = useState<string | null>(null);
   const [isRunning, setIsRunning] = useState(false);
+  const [runProgress, setRunProgress] = useState(0);
+  const [runningMethod, setRunningMethod] = useState<string | null>(null);
   const [currentResults, setCurrentResults] = useState<MethodResult[]>([]);
   const [currentAnalysis, setCurrentAnalysis] = useState('');
   const [runHistory, setRunHistory] = useState<TestRun[]>(() => {
@@ -331,6 +522,86 @@ const ContextLab: React.FC = () => {
     } catch { return []; }
   });
   const [expandedResults, setExpandedResults] = useState<Set<string>>(new Set());
+  const [seeding, setSeeding] = useState(false);
+  
+  const [health, setHealth] = useState<SystemHealth>({
+    bciCount: 0,
+    atomCount: 0,
+    chunkCount: 0,
+    contextSyncOk: null,
+    cmcEngineOk: null,
+    loading: true,
+  });
+
+  // Fetch system health on mount
+  const refreshHealth = useCallback(async () => {
+    setHealth(prev => ({ ...prev, loading: true }));
+    
+    const [bciRes, atomRes, chunkRes] = await Promise.all([
+      supabase.from('bci_entities').select('*', { count: 'exact', head: true }),
+      supabase.from('aimos_memory_atoms').select('*', { count: 'exact', head: true }),
+      supabase.from('chunks').select('*', { count: 'exact', head: true }),
+    ]);
+
+    // Test edge functions with a lightweight ping
+    let contextSyncOk: boolean | null = null;
+    let cmcEngineOk: boolean | null = null;
+    
+    try {
+      const { error } = await supabase.functions.invoke('context-sync', {
+        body: { action: 'health_check' },
+      });
+      contextSyncOk = !error;
+    } catch { contextSyncOk = false; }
+
+    try {
+      const { error } = await supabase.functions.invoke('cmc-engine', {
+        body: { action: 'health_check' },
+      });
+      cmcEngineOk = !error;
+    } catch { cmcEngineOk = false; }
+
+    setHealth({
+      bciCount: bciRes.count || 0,
+      atomCount: atomRes.count || 0,
+      chunkCount: chunkRes.count || 0,
+      contextSyncOk,
+      cmcEngineOk,
+      loading: false,
+    });
+  }, []);
+
+  useEffect(() => {
+    refreshHealth();
+  }, [refreshHealth]);
+
+  // Seed test data
+  const seedTestData = async () => {
+    setSeeding(true);
+    let indexed = 0;
+    
+    for (const entity of SEED_ENTITIES) {
+      try {
+        await supabase.functions.invoke('context-sync', {
+          body: {
+            action: 'index_entity',
+            entity_id: entity.entity_id,
+            kind: entity.kind,
+            path: entity.path,
+            contract: { summary: `Module: ${entity.entity_id}` },
+            weights: { relevance: 0.7, recency: 0.5, utility: 0.6 },
+          },
+        });
+        indexed++;
+      } catch (err) {
+        console.warn(`Failed to seed ${entity.entity_id}:`, err);
+      }
+    }
+    
+    toast.success(`Seeded ${indexed} test entities`);
+    setSeeding(false);
+    refreshHealth();
+  };
 
   const toggleMethod = (id: string) => {
     setSelectedMethods(prev => {
@@ -352,55 +623,62 @@ const ContextLab: React.FC = () => {
     setIsRunning(true);
     setCurrentResults([]);
     setCurrentAnalysis('');
+    setRunProgress(0);
 
     const targets = targetEntities.split(',').map(t => t.trim()).filter(Boolean);
     const runners: Record<string, (p: string, b: number) => Promise<{ results: any[]; tokens: number }>> = {
       bci: runBCI, cmc: runCMC, rag: runRAG, naive: runNaive,
     };
 
+    const methodList = Array.from(selectedMethods);
     const methodResults: MethodResult[] = [];
+    const progressStep = 100 / methodList.length;
 
-    await Promise.all(
-      Array.from(selectedMethods).map(async (methodId) => {
-        const method = METHODS.find(m => m.id === methodId)!;
-        const runner = runners[methodId];
-        const start = performance.now();
-        try {
-          const { results, tokens } = await runner(prompt, tokenBudget);
-          const latency = Math.round(performance.now() - start);
-          const relevance = computeRelevance(prompt, results);
-          const coverage = computeCoverage(results, targets);
-          const depth = methodId === 'bci' ? Math.min(1, results.filter((r: any) => r.boundary_views).length / Math.max(1, results.length)) : 0;
-          const quality = methodId === 'bci'
-            ? results.reduce((sum: number, r: any) => sum + (r.confidence_score || 0), 0) / Math.max(1, results.length)
-            : relevance * 0.8;
+    for (let i = 0; i < methodList.length; i++) {
+      const methodId = methodList[i];
+      const method = METHODS.find(m => m.id === methodId)!;
+      const runner = runners[methodId];
+      
+      setRunningMethod(method.name);
+      const start = performance.now();
+      
+      try {
+        const { results, tokens } = await runner(prompt, tokenBudget);
+        const latency = Math.round(performance.now() - start);
+        const relevance = computeRelevance(prompt, results);
+        const coverage = computeCoverage(results, targets);
+        const depth = methodId === 'bci' ? Math.min(1, results.filter((r: any) => r.boundary_views).length / Math.max(1, results.length)) : 0;
+        const quality = methodId === 'bci'
+          ? results.reduce((sum: number, r: any) => sum + (r.confidence_score || 0), 0) / Math.max(1, results.length)
+          : relevance * 0.8;
 
-          methodResults.push({
-            method_id: methodId,
-            method_name: method.name,
-            latency_ms: latency,
-            entity_count: results.length,
-            token_cost: tokens,
-            coverage,
-            relevance_score: relevance,
-            depth_score: depth,
-            quality_score: quality,
-            composite_score: 0, // computed after all done
-            raw_results: results,
-          });
-        } catch (err: any) {
-          methodResults.push({
-            method_id: methodId,
-            method_name: method.name,
-            latency_ms: Math.round(performance.now() - start),
-            entity_count: 0, token_cost: 0, coverage: 0, relevance_score: 0,
-            depth_score: 0, quality_score: 0, composite_score: 0,
-            raw_results: [],
-            error: err.message || 'Unknown error',
-          });
-        }
-      })
-    );
+        methodResults.push({
+          method_id: methodId,
+          method_name: method.name,
+          latency_ms: latency,
+          entity_count: results.length,
+          token_cost: tokens,
+          coverage,
+          relevance_score: relevance,
+          depth_score: depth,
+          quality_score: quality,
+          composite_score: 0,
+          raw_results: results,
+        });
+      } catch (err: any) {
+        methodResults.push({
+          method_id: methodId,
+          method_name: method.name,
+          latency_ms: Math.round(performance.now() - start),
+          entity_count: 0, token_cost: 0, coverage: 0, relevance_score: 0,
+          depth_score: 0, quality_score: 0, composite_score: 0,
+          raw_results: [],
+          error: err.message || 'Unknown error',
+        });
+      }
+      
+      setRunProgress((i + 1) * progressStep);
+    }
 
     // Compute composite scores
     const maxLatency = Math.max(...methodResults.map(r => r.latency_ms), 1);
@@ -418,7 +696,7 @@ const ContextLab: React.FC = () => {
       prompt: prompt.slice(0, 120),
       token_budget: tokenBudget,
       preset: activePreset || undefined,
-      results: methodResults.map(r => ({ ...r, raw_results: [] })), // don't store raw in history
+      results: methodResults.map(r => ({ ...r, raw_results: [] })),
       winner,
       analysis,
     };
@@ -430,6 +708,8 @@ const ContextLab: React.FC = () => {
     setCurrentResults(methodResults);
     setCurrentAnalysis(analysis);
     setIsRunning(false);
+    setRunningMethod(null);
+    setRunProgress(100);
   }, [prompt, tokenBudget, selectedMethods, targetEntities, activePreset, runHistory]);
 
   const clearHistory = () => {
@@ -456,7 +736,12 @@ const ContextLab: React.FC = () => {
     return point;
   });
 
-  const methodColor = (id: string) => METHODS.find(m => m.id === id)?.color || 'hsl(var(--foreground))';
+  const getResultCardStyle = (index: number, totalResults: number) => {
+    if (totalResults === 0) return '';
+    if (index === 0) return 'ring-2 ring-primary shadow-[0_0_20px_hsl(var(--primary)/0.2)]';
+    if (index === 1) return 'ring-1 ring-yellow-500/50';
+    return 'opacity-70';
+  };
 
   return (
     <div className="h-screen flex flex-col bg-background text-foreground overflow-hidden">
@@ -561,6 +846,14 @@ const ContextLab: React.FC = () => {
         <main className="flex-1 overflow-auto">
           <ScrollArea className="h-full">
             <div className="p-4 space-y-4 max-w-[1400px] mx-auto">
+              {/* System Health Panel */}
+              <SystemHealthPanel 
+                health={health} 
+                onRefresh={refreshHealth} 
+                onSeed={seedTestData}
+                seeding={seeding}
+              />
+
               {/* Test Configuration */}
               <Card className="border-border bg-card/50">
                 <CardHeader className="py-3 px-4">
@@ -605,20 +898,36 @@ const ContextLab: React.FC = () => {
                       </Button>
                     </div>
                   </div>
+                  
+                  {/* Progress indicator */}
+                  {isRunning && (
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between text-[10px] text-muted-foreground">
+                        <span>Running: {runningMethod || '...'}</span>
+                        <span>{Math.round(runProgress)}%</span>
+                      </div>
+                      <Progress value={runProgress} className="h-1.5" />
+                    </div>
+                  )}
                 </CardContent>
               </Card>
 
               {/* Results Cards */}
               {currentResults.length > 0 && (
                 <>
+                  {/* Winner Banner */}
+                  <WinnerBanner winner={currentResults[0]} analysis={currentAnalysis} />
+
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                     {currentResults.map((r, i) => {
                       const method = METHODS.find(m => m.id === r.method_id)!;
                       const isWinner = i === 0;
+                      const isEmpty = r.entity_count === 0 && !r.error;
+                      
                       return (
                         <Card
                           key={r.method_id}
-                          className={`border-border bg-card/50 transition-all ${isWinner ? 'ring-1 ring-primary shadow-[0_0_15px_hsl(var(--primary)/0.15)]' : ''}`}
+                          className={`border-border bg-card/50 transition-all ${getResultCardStyle(i, currentResults.length)}`}
                         >
                           <CardHeader className="py-2.5 px-3">
                             <div className="flex items-center justify-between">
@@ -627,11 +936,17 @@ const ContextLab: React.FC = () => {
                                 <span className="text-xs font-bold">{method.name}</span>
                               </div>
                               {isWinner && <Trophy className="h-3.5 w-3.5 text-primary" />}
+                              {i === 1 && <Badge variant="outline" className="text-[8px] h-4 px-1">2nd</Badge>}
                             </div>
                           </CardHeader>
                           <CardContent className="px-3 pb-3 space-y-2">
                             {r.error ? (
-                              <p className="text-[10px] text-destructive">{r.error}</p>
+                              <div className="text-center py-4">
+                                <XCircle className="h-6 w-6 text-destructive mx-auto mb-2" />
+                                <p className="text-[10px] text-destructive">{r.error}</p>
+                              </div>
+                            ) : isEmpty ? (
+                              <EmptyResultMessage methodId={r.method_id} backingStore={method.backingStore} />
                             ) : (
                               <>
                                 <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-[10px]">
@@ -702,16 +1017,6 @@ const ContextLab: React.FC = () => {
                     })}
                   </div>
 
-                  {/* Winner Analysis */}
-                  <Card className="border-primary/30 bg-primary/5">
-                    <CardContent className="p-3">
-                      <div className="flex items-start gap-2">
-                        <Trophy className="h-4 w-4 text-primary mt-0.5 shrink-0" />
-                        <p className="text-xs text-foreground leading-relaxed">{currentAnalysis}</p>
-                      </div>
-                    </CardContent>
-                  </Card>
-
                   {/* Comparison Table */}
                   <Card className="border-border bg-card/50">
                     <CardHeader className="py-2.5 px-4">
@@ -733,9 +1038,14 @@ const ContextLab: React.FC = () => {
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {currentResults.map(r => (
-                            <TableRow key={r.method_id} className="border-border">
-                              <TableCell className="text-xs font-medium py-1.5">{r.method_name}</TableCell>
+                          {currentResults.map((r, i) => (
+                            <TableRow key={r.method_id} className={`border-border ${i === 0 ? 'bg-primary/5' : ''}`}>
+                              <TableCell className="text-xs font-medium py-1.5">
+                                <div className="flex items-center gap-1.5">
+                                  {i === 0 && <Trophy className="h-3 w-3 text-primary" />}
+                                  {r.method_name}
+                                </div>
+                              </TableCell>
                               <TableCell className="text-xs text-right font-mono py-1.5">{r.latency_ms}ms</TableCell>
                               <TableCell className="text-xs text-right font-mono py-1.5">{r.entity_count}</TableCell>
                               <TableCell className="text-xs text-right font-mono py-1.5">{r.token_cost.toLocaleString()}</TableCell>
@@ -817,13 +1127,9 @@ const ContextLab: React.FC = () => {
                 </Card>
               )}
 
-              {/* Empty state */}
+              {/* Quick Start / Empty state */}
               {currentResults.length === 0 && !isRunning && (
-                <div className="flex flex-col items-center justify-center py-20 text-muted-foreground/50">
-                  <FlaskConical className="h-12 w-12 mb-4" />
-                  <p className="text-sm font-medium">Configure a test and run comparison</p>
-                  <p className="text-xs mt-1">Select methods, choose a preset or write a prompt, then hit Run</p>
-                </div>
+                <QuickStartGuide onPresetClick={() => applyPreset(PRESETS[0])} />
               )}
             </div>
           </ScrollArea>
