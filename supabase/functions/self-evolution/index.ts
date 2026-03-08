@@ -1056,7 +1056,8 @@ function getAvailableActions(): string[] {
     'execute_sandbox', 'test_json_schema', 'test_prompt_chain',
     'calibrate_reasoning', 'calibrate_memory', 'calibrate_confidence', 'optimize_prompts',
     'run_diagnostics', 'benchmark_system', 'analyze_performance',
-    'suggest_evolution', 'apply_evolution', 'rollback_evolution', 'get_evolution_history'
+    'suggest_evolution', 'apply_evolution', 'rollback_evolution', 'get_evolution_history',
+    'self_audit', 'get_proposals', 'approve_proposal', 'reject_proposal', 'get_audit_history'
   ];
 }
 
