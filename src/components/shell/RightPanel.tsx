@@ -12,9 +12,11 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import {
   MessageCircle, Search as SearchIcon, BarChart3, Brain,
   Send, Sparkles, Bot, Cpu, CheckCircle2, AlertTriangle,
-  Database, Network, ArrowRight, Loader2, Layers,
+  Database, Network, ArrowRight, Loader2, Layers, Users,
 } from 'lucide-react';
 import type { RightPanelMode } from './types';
+import SwarmPanel from './SwarmPanel';
+import { createSwarmSimulation, type SwarmState } from '@/lib/agentSimulator';
 
 interface RightPanelProps {
   mode: RightPanelMode;
