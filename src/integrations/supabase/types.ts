@@ -114,17 +114,34 @@ export type Database = {
           avg_confidence: number | null
           avg_kappa: number | null
           capabilities: string[] | null
+          clearance_level: string | null
+          commendations: number | null
           created_at: string | null
+          demotions: number | null
           description: string | null
+          direct_reports: string[] | null
           display_name: string
+          division: string | null
+          domain_scope: string[] | null
+          elo_rating: number | null
           id: string
+          infractions: number | null
           last_active_at: string | null
           personality_traits: Json | null
           priority: number | null
+          promotion_points: number | null
+          protocols: Json | null
+          rank: string | null
+          rank_tier: number | null
+          reports_to: string | null
+          rules_of_engagement: string[] | null
           skill_levels: Json | null
+          standing_orders: string[] | null
           system_prompt_core: string
           total_tasks_completed: number | null
           total_tokens_used: number | null
+          tournament_losses: number | null
+          tournament_wins: number | null
           updated_at: string | null
         }
         Insert: {
@@ -132,17 +149,34 @@ export type Database = {
           avg_confidence?: number | null
           avg_kappa?: number | null
           capabilities?: string[] | null
+          clearance_level?: string | null
+          commendations?: number | null
           created_at?: string | null
+          demotions?: number | null
           description?: string | null
+          direct_reports?: string[] | null
           display_name: string
+          division?: string | null
+          domain_scope?: string[] | null
+          elo_rating?: number | null
           id?: string
+          infractions?: number | null
           last_active_at?: string | null
           personality_traits?: Json | null
           priority?: number | null
+          promotion_points?: number | null
+          protocols?: Json | null
+          rank?: string | null
+          rank_tier?: number | null
+          reports_to?: string | null
+          rules_of_engagement?: string[] | null
           skill_levels?: Json | null
+          standing_orders?: string[] | null
           system_prompt_core?: string
           total_tasks_completed?: number | null
           total_tokens_used?: number | null
+          tournament_losses?: number | null
+          tournament_wins?: number | null
           updated_at?: string | null
         }
         Update: {
@@ -150,17 +184,124 @@ export type Database = {
           avg_confidence?: number | null
           avg_kappa?: number | null
           capabilities?: string[] | null
+          clearance_level?: string | null
+          commendations?: number | null
           created_at?: string | null
+          demotions?: number | null
           description?: string | null
+          direct_reports?: string[] | null
           display_name?: string
+          division?: string | null
+          domain_scope?: string[] | null
+          elo_rating?: number | null
           id?: string
+          infractions?: number | null
           last_active_at?: string | null
           personality_traits?: Json | null
           priority?: number | null
+          promotion_points?: number | null
+          protocols?: Json | null
+          rank?: string | null
+          rank_tier?: number | null
+          reports_to?: string | null
+          rules_of_engagement?: string[] | null
           skill_levels?: Json | null
+          standing_orders?: string[] | null
           system_prompt_core?: string
           total_tasks_completed?: number | null
           total_tokens_used?: number | null
+          tournament_losses?: number | null
+          tournament_wins?: number | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      agent_protocols: {
+        Row: {
+          applies_to: string[] | null
+          created_at: string | null
+          description: string
+          enforcement_level: string | null
+          id: string
+          is_active: boolean | null
+          priority: number | null
+          protocol_name: string
+          protocol_type: string
+          updated_at: string | null
+          violation_consequence: string | null
+        }
+        Insert: {
+          applies_to?: string[] | null
+          created_at?: string | null
+          description: string
+          enforcement_level?: string | null
+          id?: string
+          is_active?: boolean | null
+          priority?: number | null
+          protocol_name: string
+          protocol_type: string
+          updated_at?: string | null
+          violation_consequence?: string | null
+        }
+        Update: {
+          applies_to?: string[] | null
+          created_at?: string | null
+          description?: string
+          enforcement_level?: string | null
+          id?: string
+          is_active?: boolean | null
+          priority?: number | null
+          protocol_name?: string
+          protocol_type?: string
+          updated_at?: string | null
+          violation_consequence?: string | null
+        }
+        Relationships: []
+      }
+      agent_relationships: {
+        Row: {
+          collaboration_count: number | null
+          conflict_count: number | null
+          created_at: string | null
+          id: string
+          last_interaction_at: string | null
+          notes: string | null
+          relationship_type: string
+          source_agent: string
+          successful_collaborations: number | null
+          target_agent: string
+          trust_delta_30d: number | null
+          trust_score: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          collaboration_count?: number | null
+          conflict_count?: number | null
+          created_at?: string | null
+          id?: string
+          last_interaction_at?: string | null
+          notes?: string | null
+          relationship_type: string
+          source_agent: string
+          successful_collaborations?: number | null
+          target_agent: string
+          trust_delta_30d?: number | null
+          trust_score?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          collaboration_count?: number | null
+          conflict_count?: number | null
+          created_at?: string | null
+          id?: string
+          last_interaction_at?: string | null
+          notes?: string | null
+          relationship_type?: string
+          source_agent?: string
+          successful_collaborations?: number | null
+          target_agent?: string
+          trust_delta_30d?: number | null
+          trust_score?: number | null
           updated_at?: string | null
         }
         Relationships: []
@@ -205,6 +346,119 @@ export type Database = {
             referencedColumns: ["agent_role"]
           },
         ]
+      }
+      agent_tournament_rounds: {
+        Row: {
+          agent_a: string
+          agent_a_response: string | null
+          agent_a_score: Json | null
+          agent_b: string
+          agent_b_response: string | null
+          agent_b_score: Json | null
+          completed_at: string | null
+          created_at: string | null
+          id: string
+          judge_analysis: string | null
+          prompt: string
+          round_number: number
+          round_type: string
+          started_at: string | null
+          tournament_id: string
+          winner: string | null
+        }
+        Insert: {
+          agent_a: string
+          agent_a_response?: string | null
+          agent_a_score?: Json | null
+          agent_b: string
+          agent_b_response?: string | null
+          agent_b_score?: Json | null
+          completed_at?: string | null
+          created_at?: string | null
+          id?: string
+          judge_analysis?: string | null
+          prompt: string
+          round_number: number
+          round_type: string
+          started_at?: string | null
+          tournament_id: string
+          winner?: string | null
+        }
+        Update: {
+          agent_a?: string
+          agent_a_response?: string | null
+          agent_a_score?: Json | null
+          agent_b?: string
+          agent_b_response?: string | null
+          agent_b_score?: Json | null
+          completed_at?: string | null
+          created_at?: string | null
+          id?: string
+          judge_analysis?: string | null
+          prompt?: string
+          round_number?: number
+          round_type?: string
+          started_at?: string | null
+          tournament_id?: string
+          winner?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_tournament_rounds_tournament_id_fkey"
+            columns: ["tournament_id"]
+            isOneToOne: false
+            referencedRelation: "agent_tournaments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      agent_tournaments: {
+        Row: {
+          completed_at: string | null
+          config: Json | null
+          created_at: string | null
+          id: string
+          participants: string[] | null
+          results: Json | null
+          rounds_completed: number | null
+          rounds_total: number | null
+          started_at: string | null
+          status: string | null
+          tournament_name: string
+          tournament_type: string
+          winner: string | null
+        }
+        Insert: {
+          completed_at?: string | null
+          config?: Json | null
+          created_at?: string | null
+          id?: string
+          participants?: string[] | null
+          results?: Json | null
+          rounds_completed?: number | null
+          rounds_total?: number | null
+          started_at?: string | null
+          status?: string | null
+          tournament_name: string
+          tournament_type: string
+          winner?: string | null
+        }
+        Update: {
+          completed_at?: string | null
+          config?: Json | null
+          created_at?: string | null
+          id?: string
+          participants?: string[] | null
+          results?: Json | null
+          rounds_completed?: number | null
+          rounds_total?: number | null
+          started_at?: string | null
+          status?: string | null
+          tournament_name?: string
+          tournament_type?: string
+          winner?: string | null
+        }
+        Relationships: []
       }
       ai_issue_detection: {
         Row: {

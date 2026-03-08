@@ -165,7 +165,7 @@ async function loadAgentGenomes(supabase: any): Promise<any[]> {
   try {
     const { data: genomes } = await supabase
       .from("agent_genomes")
-      .select("agent_role, display_name, system_prompt_core, capabilities, skill_levels, avg_kappa, total_tasks_completed")
+      .select("agent_role, display_name, system_prompt_core, capabilities, skill_levels, avg_kappa, total_tasks_completed, rank, clearance_level, division, reports_to, standing_orders, rules_of_engagement, domain_scope, elo_rating")
       .order("priority", { ascending: true });
 
     if (!genomes || genomes.length === 0) return [];
