@@ -87,6 +87,8 @@ const EvolutionCenter: React.FC<EvolutionCenterProps> = ({ subPage }) => {
       return <SandboxPanel />;
     case 'proposals':
       return <ProposalsPanel />;
+    case 'proof':
+      return <SystemProofDashboard />;
     default:
       return <AuditPanel />;
   }
