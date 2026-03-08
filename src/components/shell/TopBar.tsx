@@ -4,7 +4,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Activity, Code, Shield, FileText,
+  Activity, Code, Shield, FileText, Dna,
   Zap, Bell, User, Command, Search,
 } from 'lucide-react';
 import type { WorldPage } from './types';
