@@ -1,8 +1,11 @@
 // RightPanel — Canon §10: Persistent Intelligence and Contextual Inspection
-// Phase 3: Production-grade AI chat, rich inspector, reasoning viz, memory dashboard
+// Phase 4: Real AI streaming + rich inspector, reasoning viz, memory dashboard
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import ReactMarkdown from 'react-markdown';
+import { streamHQChat, type ChatMessage } from '@/lib/hqChatService';
+import { toast } from 'sonner';
 import MatrixRainCanvas from './effects/MatrixRainCanvas';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
