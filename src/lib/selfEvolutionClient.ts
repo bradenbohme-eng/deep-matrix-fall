@@ -366,6 +366,13 @@ export function useSelfEvolution(userId?: string) {
     applyEvolution: useCallback((id: string, params: Record<string, any>) => 
       execute(() => clientRef.current!.applyEvolution(id, params)), [execute]),
     rollbackEvolution: useCallback((id: string) => execute(() => clientRef.current!.rollbackEvolution(id)), [execute]),
-    getEvolutionHistory: useCallback(() => execute(() => clientRef.current!.getEvolutionHistory()), [execute])
+    getEvolutionHistory: useCallback(() => execute(() => clientRef.current!.getEvolutionHistory()), [execute]),
+    
+    // Self-Audit & Proposals (Approval-Gated)
+    selfAudit: useCallback((auditType?: string) => execute(() => clientRef.current!.selfAudit(auditType)), [execute]),
+    getProposals: useCallback((status?: string) => execute(() => clientRef.current!.getProposals(status)), [execute]),
+    approveProposal: useCallback((id: string, notes?: string) => execute(() => clientRef.current!.approveProposal(id, notes)), [execute]),
+    rejectProposal: useCallback((id: string, reason?: string) => execute(() => clientRef.current!.rejectProposal(id, reason)), [execute]),
+    getAuditHistory: useCallback(() => execute(() => clientRef.current!.getAuditHistory()), [execute])
   };
 }
