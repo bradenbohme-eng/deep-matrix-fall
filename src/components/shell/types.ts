@@ -76,6 +76,9 @@ export const WORLD_SUBPAGES: Record<WorldPage, { id: SubPage; label: string }[]>
   evolve: [
     { id: 'audit', label: 'Self-Audit' },
     { id: 'engines', label: 'Engine Tests' },
+    { id: 'scenarios', label: 'Scenarios' },
+    { id: 'connections', label: 'Connections' },
+    { id: 'metrics', label: 'Metrics' },
     { id: 'sandbox', label: 'Sandbox' },
     { id: 'proposals', label: 'Proposals' },
   ],
