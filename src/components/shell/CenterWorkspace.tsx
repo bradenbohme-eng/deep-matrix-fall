@@ -6,6 +6,7 @@ import type { WorldPage, SubPage } from './types';
 import OrchestrationDashboard from '@/components/hq/OrchestrationDashboard';
 import DAGVisualization from '@/components/hq/DAGVisualization';
 import TestHarnessPanel from '@/components/hq/TestHarnessPanel';
+import EvolutionCenter from './EvolutionCenter';
 import Editor from '@monaco-editor/react';
 import { useIDEStore } from '@/components/ide/useIDEStore';
 import type { Task, DAGState } from '@/lib/orchestration/types';
