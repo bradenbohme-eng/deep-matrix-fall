@@ -154,6 +154,7 @@ async function loadDynamicPrompts(supabase: any): Promise<string[]> {
   } catch (e) {
     console.error("[hq-chat] Failed to load dynamic prompts:", e);
     return [];
+  }
 }
 
 // ═══════════════════════════════════════════════════════════
