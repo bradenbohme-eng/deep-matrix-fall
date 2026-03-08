@@ -221,7 +221,7 @@ async function runCognitiveLoop(onUpdate: (steps: ScenarioStep[]) => void): Prom
   steps[5] = { ...steps[5], status: 'running', engine: 'vif-engine' };
   onUpdate([...steps]);
   const kappa = chain?.confidence_kappa || 0;
-  const kappaPass = kappa > 0.5;
+  const kappaPass = kappa > 0.6;
   steps[5] = { name: steps[5].name, engine: 'vif-engine', status: kappaPass ? 'pass' : 'fail', latency: 0, details: `κ=${kappa.toFixed(3)} ${kappaPass ? '> 0.5 ✓' : '≤ 0.5 ✗'}` };
   onUpdate([...steps]);
 
