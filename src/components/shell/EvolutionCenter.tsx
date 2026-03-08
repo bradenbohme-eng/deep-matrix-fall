@@ -43,6 +43,7 @@ import type { SubPage } from './types';
 import ScenariosPanel from './ScenariosPanel';
 import ConnectionsPanel from './ConnectionsPanel';
 import MetricsPanel from './MetricsPanel';
+import SystemProofDashboard from './SystemProofDashboard';
 
 interface EvolutionCenterProps {
   subPage: SubPage;
