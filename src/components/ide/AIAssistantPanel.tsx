@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -6,12 +6,13 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Bot, Send, Sparkles, Code, Zap, Bug, FileCode, RefreshCw,
-  Wand2, CheckCircle, Loader2, Copy, Plus, Shield, TestTube
+  Wand2, CheckCircle, Loader2, Copy, Plus, Shield, TestTube, StopCircle
 } from 'lucide-react';
 import { aiCodeAction, aiProjectAnalysis, aiGenerateComponent, AIAction, extractCodeFromResponse } from '@/lib/ideAIService';
 import { FileNode } from './types';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import ReactMarkdown from 'react-markdown';
 
 interface Message {
   id: string;
@@ -61,12 +62,51 @@ export const AIAssistantPanel: React.FC<AIAssistantPanelProps> = ({
   const [componentName, setComponentName] = useState('');
   const [componentDesc, setComponentDesc] = useState('');
   const scrollRef = useRef<HTMLDivElement>(null);
+  const abortRef = useRef<AbortController | null>(null);
+  const streamContentRef = useRef('');
 
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [messages, streamingContent]);
+
+  const stopStreaming = useCallback(() => {
+    abortRef.current?.abort();
+    abortRef.current = null;
+    if (streamContentRef.current) {
+      setMessages(prev => [...prev, {
+        id: (Date.now() + 1).toString(),
+        role: 'assistant',
+        content: streamContentRef.current,
+        timestamp: new Date(),
+      }]);
+    }
+    setIsLoading(false);
+    setStreamingContent('');
+    streamContentRef.current = '';
+  }, []);
+
+  const finishStream = useCallback(() => {
+    const content = streamContentRef.current;
+    if (content) {
+      setMessages(prev => [...prev, {
+        id: (Date.now() + 1).toString(),
+        role: 'assistant',
+        content,
+        timestamp: new Date(),
+      }]);
+    }
+    setIsLoading(false);
+    setStreamingContent('');
+    streamContentRef.current = '';
+    abortRef.current = null;
+  }, []);
+
+  const handleDelta = useCallback((delta: string) => {
+    streamContentRef.current += delta;
+    setStreamingContent(streamContentRef.current);
+  }, []);
 
   const getAllFiles = (nodes: FileNode[]): Array<{ path: string; content: string }> => {
     const result: Array<{ path: string; content: string }> = [];
@@ -91,35 +131,27 @@ export const AIAssistantPanel: React.FC<AIAssistantPanelProps> = ({
     const userMsg: Message = {
       id: Date.now().toString(),
       role: 'user',
-      content: `[${action.toUpperCase()}] Analyzing current file...`,
+      content: `[${action.toUpperCase()}] Analyzing ${activeFilePath || 'current file'}...`,
       action,
       timestamp: new Date(),
     };
     setMessages(prev => [...prev, userMsg]);
     setIsLoading(true);
     setStreamingContent('');
+    streamContentRef.current = '';
+
+    const controller = new AbortController();
+    abortRef.current = controller;
 
     try {
-      await aiCodeAction(
-        action,
-        activeFileContent,
-        activeFileLanguage,
-        undefined,
-        (delta) => setStreamingContent(prev => prev + delta)
-      );
-
-      const assistantMsg: Message = {
-        id: (Date.now() + 1).toString(),
-        role: 'assistant',
-        content: streamingContent || 'Analysis complete.',
-        timestamp: new Date(),
-      };
-      setMessages(prev => [...prev, assistantMsg]);
-    } catch (error) {
+      await aiCodeAction(action, activeFileContent, activeFileLanguage, undefined, handleDelta, controller.signal);
+      finishStream();
+    } catch (error: any) {
+      if (error?.name === 'AbortError') return;
       toast.error('AI action failed');
-    } finally {
       setIsLoading(false);
       setStreamingContent('');
+      streamContentRef.current = '';
     }
   };
 
@@ -136,30 +168,24 @@ export const AIAssistantPanel: React.FC<AIAssistantPanelProps> = ({
     setInput('');
     setIsLoading(true);
     setStreamingContent('');
+    streamContentRef.current = '';
+
+    const controller = new AbortController();
+    abortRef.current = controller;
 
     try {
-      const context = activeFileContent ? `Current file (${activeFilePath}):\n\`\`\`${activeFileLanguage}\n${activeFileContent.slice(0, 2000)}\n\`\`\`\n\n` : '';
-      
-      await aiCodeAction(
-        'generate',
-        context + input,
-        activeFileLanguage,
-        input,
-        (delta) => setStreamingContent(prev => prev + delta)
-      );
+      const context = activeFileContent
+        ? `Current file (${activeFilePath}):\n\`\`\`${activeFileLanguage}\n${activeFileContent.slice(0, 3000)}\n\`\`\`\n\n`
+        : '';
 
-      const assistantMsg: Message = {
-        id: (Date.now() + 1).toString(),
-        role: 'assistant',
-        content: streamingContent || 'I apologize, but I could not generate a response.',
-        timestamp: new Date(),
-      };
-      setMessages(prev => [...prev, assistantMsg]);
-    } catch (error) {
+      await aiCodeAction('generate', context + input, activeFileLanguage, input, handleDelta, controller.signal);
+      finishStream();
+    } catch (error: any) {
+      if (error?.name === 'AbortError') return;
       toast.error('Failed to get AI response');
-    } finally {
       setIsLoading(false);
       setStreamingContent('');
+      streamContentRef.current = '';
     }
   };
 
@@ -179,26 +205,20 @@ export const AIAssistantPanel: React.FC<AIAssistantPanelProps> = ({
     setMessages(prev => [...prev, userMsg]);
     setIsLoading(true);
     setStreamingContent('');
+    streamContentRef.current = '';
+
+    const controller = new AbortController();
+    abortRef.current = controller;
 
     try {
-      await aiProjectAnalysis(
-        allFiles,
-        type,
-        (delta) => setStreamingContent(prev => prev + delta)
-      );
-
-      const assistantMsg: Message = {
-        id: (Date.now() + 1).toString(),
-        role: 'assistant',
-        content: streamingContent || 'Analysis complete.',
-        timestamp: new Date(),
-      };
-      setMessages(prev => [...prev, assistantMsg]);
-    } catch (error) {
+      await aiProjectAnalysis(allFiles, type, handleDelta, controller.signal);
+      finishStream();
+    } catch (error: any) {
+      if (error?.name === 'AbortError') return;
       toast.error('Project analysis failed');
-    } finally {
       setIsLoading(false);
       setStreamingContent('');
+      streamContentRef.current = '';
     }
   };
 
@@ -217,29 +237,22 @@ export const AIAssistantPanel: React.FC<AIAssistantPanelProps> = ({
     setMessages(prev => [...prev, userMsg]);
     setIsLoading(true);
     setStreamingContent('');
+    streamContentRef.current = '';
+
+    const controller = new AbortController();
+    abortRef.current = controller;
 
     try {
-      const result = await aiGenerateComponent(
-        componentName,
-        componentDesc,
-        'react',
-        (delta) => setStreamingContent(prev => prev + delta)
-      );
-
-      const assistantMsg: Message = {
-        id: (Date.now() + 1).toString(),
-        role: 'assistant',
-        content: result.content || streamingContent || 'Component generated.',
-        timestamp: new Date(),
-      };
-      setMessages(prev => [...prev, assistantMsg]);
+      await aiGenerateComponent(componentName, componentDesc, 'react', handleDelta, controller.signal);
+      finishStream();
       setComponentName('');
       setComponentDesc('');
-    } catch (error) {
+    } catch (error: any) {
+      if (error?.name === 'AbortError') return;
       toast.error('Component generation failed');
-    } finally {
       setIsLoading(false);
       setStreamingContent('');
+      streamContentRef.current = '';
     }
   };
 
@@ -255,13 +268,44 @@ export const AIAssistantPanel: React.FC<AIAssistantPanelProps> = ({
     toast.success('Code inserted');
   };
 
+  const renderMarkdown = (content: string) => (
+    <div className="prose prose-sm prose-invert max-w-none text-foreground">
+      <ReactMarkdown
+        components={{
+          code({ className, children, ...props }) {
+            const isInline = !className;
+            if (isInline) {
+              return <code className="bg-muted px-1.5 py-0.5 rounded text-xs font-mono text-primary" {...props}>{children}</code>;
+            }
+            return (
+              <pre className="bg-muted/70 border border-border rounded-md p-3 overflow-x-auto my-2">
+                <code className="text-xs font-mono text-foreground" {...props}>{children}</code>
+              </pre>
+            );
+          },
+          p({ children }) {
+            return <p className="text-sm text-foreground/90 mb-2 leading-relaxed">{children}</p>;
+          },
+          h1({ children }) { return <h1 className="text-base font-bold text-primary mb-2 mt-3">{children}</h1>; },
+          h2({ children }) { return <h2 className="text-sm font-bold text-primary/90 mb-1.5 mt-2">{children}</h2>; },
+          h3({ children }) { return <h3 className="text-sm font-semibold text-foreground mb-1 mt-2">{children}</h3>; },
+          ul({ children }) { return <ul className="list-disc list-inside space-y-0.5 text-sm text-foreground/85 mb-2">{children}</ul>; },
+          ol({ children }) { return <ol className="list-decimal list-inside space-y-0.5 text-sm text-foreground/85 mb-2">{children}</ol>; },
+          strong({ children }) { return <strong className="font-bold text-primary">{children}</strong>; },
+        }}
+      >
+        {content}
+      </ReactMarkdown>
+    </div>
+  );
+
   const renderMessage = (msg: Message) => (
     <div
       key={msg.id}
       className={cn(
         "p-3 rounded-lg mb-2",
-        msg.role === 'user' 
-          ? "bg-primary/10 border border-primary/20 ml-8" 
+        msg.role === 'user'
+          ? "bg-primary/10 border border-primary/20 ml-8"
           : "bg-muted/50 border border-border mr-4"
       )}
     >
@@ -276,7 +320,9 @@ export const AIAssistantPanel: React.FC<AIAssistantPanelProps> = ({
           </Badge>
         )}
       </div>
-      <div className="text-sm whitespace-pre-wrap font-mono">{msg.content}</div>
+      {msg.role === 'assistant' ? renderMarkdown(msg.content) : (
+        <div className="text-sm whitespace-pre-wrap font-mono">{msg.content}</div>
+      )}
       {msg.role === 'assistant' && msg.content.includes('```') && (
         <div className="flex gap-2 mt-2">
           <Button size="sm" variant="outline" className="h-6 text-xs" onClick={() => copyCode(msg.content)}>
@@ -297,6 +343,7 @@ export const AIAssistantPanel: React.FC<AIAssistantPanelProps> = ({
       <div className="flex items-center gap-2 px-3 py-2 border-b border-border bg-muted/30">
         <Bot className="w-5 h-5 text-primary" />
         <span className="font-mono text-sm font-bold text-primary">AI Code Assistant</span>
+        <Badge variant="outline" className="ml-auto text-[9px] py-0 text-muted-foreground">gemini-3-flash</Badge>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
@@ -312,6 +359,7 @@ export const AIAssistantPanel: React.FC<AIAssistantPanelProps> = ({
               <div className="text-center text-muted-foreground py-8">
                 <Bot className="w-12 h-12 mx-auto mb-2 opacity-50" />
                 <p className="text-sm">Ask me anything about your code!</p>
+                <p className="text-xs mt-1 opacity-60">Powered by Gemini 3 Flash via Lovable AI</p>
               </div>
             )}
             {messages.map(renderMessage)}
@@ -321,12 +369,19 @@ export const AIAssistantPanel: React.FC<AIAssistantPanelProps> = ({
                   <Loader2 className="w-4 h-4 text-primary animate-spin" />
                   <span className="text-xs text-muted-foreground">AI Assistant</span>
                 </div>
-                <div className="text-sm whitespace-pre-wrap font-mono">{streamingContent}</div>
+                {renderMarkdown(streamingContent)}
               </div>
             )}
           </ScrollArea>
 
           <div className="p-2 border-t border-border">
+            {isLoading && (
+              <div className="flex justify-center mb-2">
+                <Button size="sm" variant="outline" className="h-6 text-xs" onClick={stopStreaming}>
+                  <StopCircle className="w-3 h-3 mr-1" /> Stop generating
+                </Button>
+              </div>
+            )}
             <div className="flex gap-2">
               <Textarea
                 value={input}
