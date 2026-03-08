@@ -389,14 +389,16 @@ async function runSelfEvolution(onUpdate: (steps: ScenarioStep[]) => void): Prom
   const { data: d2, error: e2, latency: l2 } = await runStep('self-evolution', {
     action: 'suggest_evolution',
   });
-  steps[1] = { name: steps[1].name, engine: 'self-evolution', status: e2 ? 'fail' : 'pass', latency: l2, details: e2 ? e2.message : `${d2?.suggestions?.length || 0} proposals generated`, output: d2 };
+  const suggestionCount = d2?.evolutionSuggestions?.length || 0;
+  steps[1] = { name: steps[1].name, engine: 'self-evolution', status: e2 ? 'fail' : 'pass', latency: l2, details: e2 ? e2.message : `${suggestionCount} proposals generated`, output: d2 };
   onUpdate([...steps]);
 
   // Step 3: Get pending proposals
   steps[2] = { ...steps[2], status: 'running', engine: 'self-evolution' };
   onUpdate([...steps]);
   const { data: d3, error: e3, latency: l3 } = await runStep('self-evolution', {
-    action: 'get_proposals', status: 'pending',
+    action: 'get_proposals',
+    payload: { status: 'pending' },
   });
   const proposals = d3?.proposals || [];
   steps[2] = { name: steps[2].name, engine: 'self-evolution', status: e3 ? 'fail' : 'pass', latency: l3, details: e3 ? e3.message : `${proposals.length} pending proposals found`, output: d3 };
@@ -407,7 +409,8 @@ async function runSelfEvolution(onUpdate: (steps: ScenarioStep[]) => void): Prom
   onUpdate([...steps]);
   if (proposals.length > 0) {
     const { data: d4, error: e4, latency: l4 } = await runStep('self-evolution', {
-      action: 'approve_proposal', proposalId: proposals[0].id,
+      action: 'approve_proposal',
+      payload: { proposalId: proposals[0].id },
     });
     steps[3] = { name: steps[3].name, engine: 'self-evolution', status: e4 ? 'fail' : 'pass', latency: l4, details: e4 ? e4.message : `Approved: ${proposals[0].title?.slice(0, 40)}`, output: d4 };
   } else {
