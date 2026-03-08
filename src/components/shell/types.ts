@@ -1,7 +1,7 @@
 // Shell Type System — Canon-grade persistent cognitive shell
 
 // ─── World Pages (Canon §6 - Top Bar Territories) ───
-export type WorldPage = 'orchestration' | 'code' | 'intel' | 'docs';
+export type WorldPage = 'orchestration' | 'code' | 'intel' | 'docs' | 'evolve';
 
 // ─── Sub-Pages per World (Canon §7) ───
 export type OrchestrationSubPage = 'command' | 'pipeline' | 'events' | 'tests';
