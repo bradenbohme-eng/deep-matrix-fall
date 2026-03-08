@@ -24,6 +24,8 @@ serve(async (req) => {
     const body = await req.json();
 
     switch (body.action) {
+      case "health_check":
+        return json({ status: "ok", engine: "vif", timestamp: new Date().toISOString(), actions: ["pregate", "verify", "score"] });
       case "pregate":
         return await handlePregate(supabase, body);
       case "verify":
@@ -31,7 +33,7 @@ serve(async (req) => {
       case "score":
         return await handleScore(supabase, body);
       default:
-        return json({ error: "Unknown action", actions: ["pregate", "verify", "score"] }, 400);
+        return json({ error: "Unknown action", actions: ["health_check", "pregate", "verify", "score"] }, 400);
     }
   } catch (e) {
     console.error("[VIF] Error:", e);
