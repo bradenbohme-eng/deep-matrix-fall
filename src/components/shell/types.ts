@@ -8,7 +8,7 @@ export type OrchestrationSubPage = 'command' | 'pipeline' | 'events' | 'tests' |
 export type CodeSubPage = 'editor' | 'preview' | 'diff';
 export type IntelSubPage = 'feeds' | 'network' | 'threats';
 export type DocsSubPage = 'edit' | 'outline' | 'versions';
-export type EvolveSubPage = 'audit' | 'engines' | 'scenarios' | 'connections' | 'metrics' | 'sandbox' | 'proposals';
+export type EvolveSubPage = 'audit' | 'engines' | 'scenarios' | 'connections' | 'metrics' | 'sandbox' | 'proposals' | 'proof';
 
 export type SubPage = OrchestrationSubPage | CodeSubPage | IntelSubPage | DocsSubPage | EvolveSubPage;
 
