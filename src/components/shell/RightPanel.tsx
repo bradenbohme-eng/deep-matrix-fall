@@ -144,6 +144,9 @@ const AIChatPanel: React.FC<{ onSwarmTrigger?: (query: string) => void }> = ({ o
     setMessages(prev => [...prev, userEntry]);
     setIsStreaming(true);
 
+    // Trigger agent swarm simulation alongside real AI
+    onSwarmTrigger?.(userMsg);
+
     // Build history for API (exclude initial greeting for cleaner context)
     const apiMessages: ChatMessage[] = [
       ...messages.filter(m => m.id !== '1').map(m => ({ role: m.role, content: m.content })),
