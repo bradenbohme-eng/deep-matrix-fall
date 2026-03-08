@@ -610,6 +610,58 @@ const EngineTestPanel: React.FC = () => {
 
       <ScrollArea className="flex-1">
         <div className="p-4 space-y-3">
+          {/* Full Pipeline Integration Test */}
+          <Card className="border-primary/20 bg-primary/5">
+            <CardContent className="py-3 px-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Zap className="w-4 h-4 text-primary" />
+                  <span className="text-sm font-mono font-bold text-foreground">Full Pipeline Test</span>
+                  <span className="text-[10px] text-muted-foreground">CMC → SEG → VIF → APOE</span>
+                </div>
+                <Button onClick={runFullPipeline} disabled={pipelineRunning || running} size="sm" className="text-xs">
+                  {pipelineRunning ? <RefreshCw className="w-3.5 h-3.5 mr-1.5 animate-spin" /> : <Play className="w-3.5 h-3.5 mr-1.5" />}
+                  {pipelineRunning ? 'Running...' : 'Run Pipeline'}
+                </Button>
+              </div>
+
+              {pipelineResults.length > 0 && (
+                <div className="space-y-1.5">
+                  {pipelineResults.map((step, i) => (
+                    <div key={i} className={`flex items-center justify-between p-2 rounded text-xs border ${
+                      step.status === 'pass' ? 'bg-primary/5 border-primary/20' :
+                      step.status === 'fail' ? 'bg-destructive/5 border-destructive/20' :
+                      'bg-warning/5 border-warning/20'
+                    }`}>
+                      <div className="flex items-center gap-2 flex-1 min-w-0">
+                        {step.status === 'pass' && <CheckCircle className="w-3.5 h-3.5 text-primary shrink-0" />}
+                        {step.status === 'fail' && <XCircle className="w-3.5 h-3.5 text-destructive shrink-0" />}
+                        {step.status === 'running' && <RefreshCw className="w-3.5 h-3.5 text-warning animate-spin shrink-0" />}
+                        <span className="font-mono font-medium shrink-0">{step.step}</span>
+                        <span className="text-muted-foreground truncate">{step.details}</span>
+                      </div>
+                      <span className="text-[10px] font-mono text-muted-foreground ml-2 shrink-0">
+                        {step.latency > 0 ? `${step.latency.toFixed(0)}ms` : '...'}
+                      </span>
+                    </div>
+                  ))}
+                  {!pipelineRunning && pipelineResults.length > 0 && (
+                    <div className="flex items-center justify-between pt-1 px-1 text-xs font-mono">
+                      <span className="text-muted-foreground">
+                        Total: {pipelineResults.reduce((s, r) => s + r.latency, 0).toFixed(0)}ms
+                      </span>
+                      <span className={pipelineResults.every(r => r.status === 'pass') ? 'text-primary' : 'text-warning'}>
+                        {pipelineResults.filter(r => r.status === 'pass').length}/{pipelineResults.length} PASSED
+                      </span>
+                    </div>
+                  )}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <Separator className="bg-border/30" />
+
           {engines.map(engine => {
             const result = results.find(r => r.engine === engine.name);
             const Icon = engine.icon;
