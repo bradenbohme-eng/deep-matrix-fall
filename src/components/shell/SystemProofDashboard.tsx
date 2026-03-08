@@ -1085,7 +1085,7 @@ const SystemProofDashboard: React.FC = () => {
                   <span className="text-xs font-mono font-bold text-destructive">Quality Regression Detected</span>
                 </div>
                 <p className="text-[10px] font-mono text-muted-foreground mt-1">
-                  Average κ dropped from {(regression.fromAvg * 100).toFixed(0)}% to {(regression.toAvg * 100).toFixed(0)}% (>{'>'}15% decline over last 10 chains)
+                  Average κ dropped from {(regression.fromAvg * 100).toFixed(0)}% to {(regression.toAvg * 100).toFixed(0)}% ({'>'} 15% decline over last 10 chains)
                 </p>
               </CardContent>
             </Card>
