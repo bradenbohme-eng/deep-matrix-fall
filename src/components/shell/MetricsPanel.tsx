@@ -49,7 +49,7 @@ const MetricsPanel: React.FC = () => {
         .order('started_at', { ascending: false })
         .limit(50);
 
-      const rows = (data || []) as TestRunRow[];
+      const rows = (data || []) as unknown as TestRunRow[];
       setRuns(rows);
 
       // Compute summary

@@ -60,7 +60,7 @@ const ConnectionsPanel: React.FC = () => {
       .from('aimos_vm_connections' as any)
       .select('*')
       .order('created_at', { ascending: false });
-    if (data) setConnections(data as any);
+    if (data) setConnections(data as unknown as VMConnection[]);
   }, []);
 
   useEffect(() => { loadConnections(); }, [loadConnections]);
