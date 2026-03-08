@@ -1,14 +1,19 @@
-// MetricsPanel — Historical test metrics and regression tracking
-// Phase D: Trend charts, κ tracking, latency trends, regression detection
-
+// MetricsPanel — Phase D: Per-scenario trends, κ tracking, regression detection, health check
 import React, { useState, useCallback, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
   BarChart3, TrendingUp, TrendingDown, RefreshCw, Download,
-  Activity, Shield, Timer, CheckCircle, XCircle,
+  Activity, Shield, Timer, CheckCircle, XCircle, HeartPulse,
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -35,10 +40,62 @@ interface MetricSummary {
   kappaTrend: 'up' | 'down' | 'stable';
 }
 
+// ═══════════════════════════════════════════════════════════════
+// SUMMARY CARDS
+// ═══════════════════════════════════════════════════════════════
+
+const SummaryCards: React.FC<{ summary: MetricSummary }> = ({ summary }) => (
+  <div className="grid grid-cols-4 gap-2">
+    <Card className="border-border/50">
+      <CardContent className="py-3 px-3 text-center">
+        <Activity className="w-4 h-4 mx-auto mb-1 text-muted-foreground" />
+        <div className="text-lg font-mono text-foreground">{summary.totalRuns}</div>
+        <div className="text-[10px] text-muted-foreground">Total Runs</div>
+      </CardContent>
+    </Card>
+    <Card className="border-border/50">
+      <CardContent className="py-3 px-3 text-center">
+        <CheckCircle className="w-4 h-4 mx-auto mb-1 text-primary" />
+        <div className="text-lg font-mono text-foreground">{(summary.passRate * 100).toFixed(0)}%</div>
+        <div className="text-[10px] text-muted-foreground">Pass Rate</div>
+      </CardContent>
+    </Card>
+    <Card className="border-border/50">
+      <CardContent className="py-3 px-3 text-center">
+        <div className="flex items-center justify-center gap-1 mb-1">
+          <Timer className="w-4 h-4 text-muted-foreground" />
+          {summary.latencyTrend === 'up' && <TrendingUp className="w-3 h-3 text-destructive" />}
+          {summary.latencyTrend === 'down' && <TrendingDown className="w-3 h-3 text-primary" />}
+        </div>
+        <div className="text-lg font-mono text-foreground">{Math.round(summary.avgLatency)}ms</div>
+        <div className="text-[10px] text-muted-foreground">Avg Latency</div>
+      </CardContent>
+    </Card>
+    <Card className="border-border/50">
+      <CardContent className="py-3 px-3 text-center">
+        <div className="flex items-center justify-center gap-1 mb-1">
+          <Shield className="w-4 h-4 text-muted-foreground" />
+          {summary.kappaTrend === 'up' && <TrendingUp className="w-3 h-3 text-primary" />}
+          {summary.kappaTrend === 'down' && <TrendingDown className="w-3 h-3 text-destructive" />}
+        </div>
+        <div className="text-lg font-mono text-foreground">{(summary.avgKappa * 100).toFixed(0)}%</div>
+        <div className="text-[10px] text-muted-foreground">Avg Pass Rate</div>
+      </CardContent>
+    </Card>
+  </div>
+);
+
+// ═══════════════════════════════════════════════════════════════
+// MAIN PANEL
+// ═══════════════════════════════════════════════════════════════
+
 const MetricsPanel: React.FC = () => {
   const [runs, setRuns] = useState<TestRunRow[]>([]);
   const [summary, setSummary] = useState<MetricSummary | null>(null);
   const [loading, setLoading] = useState(false);
+  const [healthLoading, setHealthLoading] = useState(false);
+  const [scenarioFilter, setScenarioFilter] = useState<string>('all');
+  const [availableScenarios, setAvailableScenarios] = useState<string[]>([]);
 
   const loadMetrics = useCallback(async () => {
     setLoading(true);
@@ -47,12 +104,28 @@ const MetricsPanel: React.FC = () => {
         .from('aimos_test_runs' as any)
         .select('*')
         .order('started_at', { ascending: false })
-        .limit(50);
+        .limit(100);
 
-      const rows = (data || []) as unknown as TestRunRow[];
+      const allRows = (data || []) as unknown as TestRunRow[];
+
+      // Extract available scenarios
+      const scenarioSet = new Set<string>();
+      for (const r of allRows) {
+        const m = typeof r.metrics === 'string' ? JSON.parse(r.metrics) : r.metrics;
+        if (m?.scenario) scenarioSet.add(m.scenario);
+      }
+      setAvailableScenarios(Array.from(scenarioSet));
+
+      // Filter by scenario
+      const rows = scenarioFilter === 'all'
+        ? allRows
+        : allRows.filter(r => {
+            const m = typeof r.metrics === 'string' ? JSON.parse(r.metrics) : r.metrics;
+            return m?.scenario === scenarioFilter;
+          });
+
       setRuns(rows);
 
-      // Compute summary
       if (rows.length > 0) {
         const passCount = rows.filter(r => r.status === 'pass').length;
         const latencies = rows.map(r => {
@@ -67,7 +140,6 @@ const MetricsPanel: React.FC = () => {
         const avgLatency = latencies.length > 0 ? latencies.reduce((s, l) => s + l, 0) / latencies.length : 0;
         const avgKappa = kappas.length > 0 ? kappas.reduce((s, k) => s + k, 0) / kappas.length : 0;
 
-        // Trend: compare last 5 vs previous 5
         const recent = latencies.slice(0, 5);
         const previous = latencies.slice(5, 10);
         const recentAvg = recent.length > 0 ? recent.reduce((s, l) => s + l, 0) / recent.length : 0;
@@ -85,18 +157,36 @@ const MetricsPanel: React.FC = () => {
           passRate: passCount / rows.length,
           avgLatency,
           avgKappa,
-          latencyTrend,
-          kappaTrend,
+          latencyTrend: latencyTrend as any,
+          kappaTrend: kappaTrend as any,
         });
+      } else {
+        setSummary(null);
       }
     } catch (e) {
       toast.error('Failed to load metrics');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [scenarioFilter]);
 
   useEffect(() => { loadMetrics(); }, [loadMetrics]);
+
+  const runHealthCheck = useCallback(async () => {
+    setHealthLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('self-evolution', {
+        body: { action: 'quick_health_check' },
+      });
+      if (error) throw error;
+      const score = data?.healthScore || 0;
+      toast[score > 0.7 ? 'success' : 'warning'](`Health: ${(score * 100).toFixed(0)}% — ${data?.summary || 'Check complete'}`);
+    } catch (e: any) {
+      toast.error(`Health check failed: ${e.message}`);
+    } finally {
+      setHealthLoading(false);
+    }
+  }, []);
 
   const chartData = runs
     .slice(0, 20)
@@ -114,6 +204,7 @@ const MetricsPanel: React.FC = () => {
   const exportReport = () => {
     const report = {
       generated: new Date().toISOString(),
+      scenarioFilter,
       summary,
       runs: runs.map(r => ({
         id: r.id,
@@ -143,6 +234,9 @@ const MetricsPanel: React.FC = () => {
           </span>
         </div>
         <div className="flex gap-1.5">
+          <Button onClick={runHealthCheck} disabled={healthLoading} size="sm" variant="outline" className="text-xs">
+            <HeartPulse className={`w-3 h-3 mr-1 ${healthLoading ? 'animate-pulse' : ''}`} /> Health
+          </Button>
           <Button onClick={loadMetrics} disabled={loading} size="sm" variant="outline" className="text-xs">
             <RefreshCw className={`w-3 h-3 mr-1 ${loading ? 'animate-spin' : ''}`} /> Refresh
           </Button>
@@ -154,47 +248,23 @@ const MetricsPanel: React.FC = () => {
 
       <ScrollArea className="flex-1">
         <div className="p-4 space-y-4">
-          {/* Summary Cards */}
-          {summary && (
-            <div className="grid grid-cols-4 gap-2">
-              <Card className="border-border/50">
-                <CardContent className="py-3 px-3 text-center">
-                  <Activity className="w-4 h-4 mx-auto mb-1 text-muted-foreground" />
-                  <div className="text-lg font-mono text-foreground">{summary.totalRuns}</div>
-                  <div className="text-[10px] text-muted-foreground">Total Runs</div>
-                </CardContent>
-              </Card>
-              <Card className="border-border/50">
-                <CardContent className="py-3 px-3 text-center">
-                  <CheckCircle className="w-4 h-4 mx-auto mb-1 text-primary" />
-                  <div className="text-lg font-mono text-foreground">{(summary.passRate * 100).toFixed(0)}%</div>
-                  <div className="text-[10px] text-muted-foreground">Pass Rate</div>
-                </CardContent>
-              </Card>
-              <Card className="border-border/50">
-                <CardContent className="py-3 px-3 text-center">
-                  <div className="flex items-center justify-center gap-1 mb-1">
-                    <Timer className="w-4 h-4 text-muted-foreground" />
-                    {summary.latencyTrend === 'up' && <TrendingUp className="w-3 h-3 text-destructive" />}
-                    {summary.latencyTrend === 'down' && <TrendingDown className="w-3 h-3 text-primary" />}
-                  </div>
-                  <div className="text-lg font-mono text-foreground">{Math.round(summary.avgLatency)}ms</div>
-                  <div className="text-[10px] text-muted-foreground">Avg Latency</div>
-                </CardContent>
-              </Card>
-              <Card className="border-border/50">
-                <CardContent className="py-3 px-3 text-center">
-                  <div className="flex items-center justify-center gap-1 mb-1">
-                    <Shield className="w-4 h-4 text-muted-foreground" />
-                    {summary.kappaTrend === 'up' && <TrendingUp className="w-3 h-3 text-primary" />}
-                    {summary.kappaTrend === 'down' && <TrendingDown className="w-3 h-3 text-destructive" />}
-                  </div>
-                  <div className="text-lg font-mono text-foreground">{(summary.avgKappa * 100).toFixed(0)}%</div>
-                  <div className="text-[10px] text-muted-foreground">Avg Pass Rate</div>
-                </CardContent>
-              </Card>
-            </div>
-          )}
+          {/* Scenario Filter */}
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] text-muted-foreground font-mono">FILTER:</span>
+            <Select value={scenarioFilter} onValueChange={setScenarioFilter}>
+              <SelectTrigger className="h-7 text-[11px] w-44 font-mono">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Scenarios</SelectItem>
+                {availableScenarios.map(s => (
+                  <SelectItem key={s} value={s}>{s.replace(/_/g, ' ')}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {summary && <SummaryCards summary={summary} />}
 
           {/* Latency Trend Chart */}
           {chartData.length > 1 && (
@@ -202,6 +272,7 @@ const MetricsPanel: React.FC = () => {
               <CardHeader className="py-2 px-3">
                 <CardTitle className="text-xs font-mono flex items-center gap-2">
                   <Timer className="w-3.5 h-3.5" /> Latency Trend (ms)
+                  {scenarioFilter !== 'all' && <Badge variant="outline" className="text-[9px]">{scenarioFilter}</Badge>}
                 </CardTitle>
               </CardHeader>
               <CardContent className="py-2 px-3">
@@ -230,6 +301,7 @@ const MetricsPanel: React.FC = () => {
               <CardHeader className="py-2 px-3">
                 <CardTitle className="text-xs font-mono flex items-center gap-2">
                   <CheckCircle className="w-3.5 h-3.5" /> Pass Rate (%)
+                  {scenarioFilter !== 'all' && <Badge variant="outline" className="text-[9px]">{scenarioFilter}</Badge>}
                 </CardTitle>
               </CardHeader>
               <CardContent className="py-2 px-3">
@@ -288,6 +360,7 @@ const MetricsPanel: React.FC = () => {
                           <span className="font-mono text-muted-foreground">
                             {new Date(run.started_at).toLocaleString()}
                           </span>
+                          {m?.scenario && <Badge variant="outline" className="text-[8px]">{m.scenario.replace(/_/g, ' ')}</Badge>}
                         </div>
                         <div className="flex items-center gap-3 text-[10px] font-mono text-muted-foreground">
                           <span>{Math.round(m?.totalLatency || 0)}ms</span>

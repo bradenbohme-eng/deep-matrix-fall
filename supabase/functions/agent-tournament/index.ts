@@ -9,7 +9,7 @@ const corsHeaders = {
 
 // ═══════════════════════════════════════════════════════════
 // AGENT TOURNAMENT ENGINE
-// Head-to-head duels, Red vs Blue, Stress tests, Memory challenges
+// Phase B: Tournament → Genome Feedback Loop
 // ═══════════════════════════════════════════════════════════
 
 serve(async (req) => {
@@ -76,12 +76,19 @@ const MEMORY_CHALLENGES = [
   { setup: "Protocol SIGMA-7 requires: (1) dual verification, (2) 48-hour cooling period, (3) commander approval. Exceptions: Code Red scenarios bypass cooling period.", question: "Under what conditions can the SIGMA-7 cooling period be bypassed, and what other requirements remain?" },
 ];
 
+// Map round types to skill domains
+const ROUND_TYPE_SKILLS: Record<string, string> = {
+  duel: "strategic_analysis",
+  red_vs_blue: "verification",
+  stress: "planning",
+  memory: "memory_retrieval",
+};
+
 // ── Create Tournament ──
 
 async function createTournament(supabase: any, config: any) {
   const { tournament_type, participants, tournament_name, rounds_total } = config;
 
-  // If no participants specified, use all agents
   let agents = participants;
   if (!agents || agents.length === 0) {
     const { data } = await supabase.from("agent_genomes").select("agent_role").order("priority");
@@ -99,22 +106,16 @@ async function createTournament(supabase: any, config: any) {
 
   if (error) throw error;
 
-  // Pre-generate rounds based on tournament type
   const rounds: any[] = [];
   const numRounds = rounds_total || 3;
 
   if (tournament_type === "head_to_head") {
-    // Round-robin pairing
     for (let r = 0; r < numRounds && r < DUEL_PROMPTS.length; r++) {
       for (let i = 0; i < agents.length; i++) {
         for (let j = i + 1; j < agents.length; j++) {
           rounds.push({
-            tournament_id: tournament.id,
-            round_number: r + 1,
-            round_type: "duel",
-            agent_a: agents[i],
-            agent_b: agents[j],
-            prompt: DUEL_PROMPTS[r],
+            tournament_id: tournament.id, round_number: r + 1, round_type: "duel",
+            agent_a: agents[i], agent_b: agents[j], prompt: DUEL_PROMPTS[r],
           });
         }
       }
@@ -124,12 +125,8 @@ async function createTournament(supabase: any, config: any) {
     for (let i = 0; i < agents.length; i += 2) {
       if (i + 1 < agents.length) {
         rounds.push({
-          tournament_id: tournament.id,
-          round_number: 1,
-          round_type: "red_vs_blue",
-          agent_a: agents[i],
-          agent_b: agents[i + 1],
-          prompt: JSON.stringify(scenario),
+          tournament_id: tournament.id, round_number: 1, round_type: "red_vs_blue",
+          agent_a: agents[i], agent_b: agents[i + 1], prompt: JSON.stringify(scenario),
         });
       }
     }
@@ -137,12 +134,8 @@ async function createTournament(supabase: any, config: any) {
     for (const agent of agents) {
       for (let r = 0; r < Math.min(numRounds, STRESS_PROMPTS.length); r++) {
         rounds.push({
-          tournament_id: tournament.id,
-          round_number: r + 1,
-          round_type: "stress",
-          agent_a: agent,
-          agent_b: agent, // self-competition
-          prompt: STRESS_PROMPTS[r],
+          tournament_id: tournament.id, round_number: r + 1, round_type: "stress",
+          agent_a: agent, agent_b: agent, prompt: STRESS_PROMPTS[r],
         });
       }
     }
@@ -150,12 +143,8 @@ async function createTournament(supabase: any, config: any) {
     const challenge = MEMORY_CHALLENGES[Math.floor(Math.random() * MEMORY_CHALLENGES.length)];
     for (const agent of agents) {
       rounds.push({
-        tournament_id: tournament.id,
-        round_number: 1,
-        round_type: "memory",
-        agent_a: agent,
-        agent_b: agent,
-        prompt: JSON.stringify(challenge),
+        tournament_id: tournament.id, round_number: 1, round_type: "memory",
+        agent_a: agent, agent_b: agent, prompt: JSON.stringify(challenge),
       });
     }
   }
@@ -170,7 +159,6 @@ async function createTournament(supabase: any, config: any) {
 // ── Run Single Round ──
 
 async function runRound(supabase: any, tournamentId: string, apiKey: string) {
-  // Get next unplayed round
   const { data: round } = await supabase
     .from("agent_tournament_rounds")
     .select("*")
@@ -182,7 +170,6 @@ async function runRound(supabase: any, tournamentId: string, apiKey: string) {
 
   if (!round) return { status: "all_rounds_complete" };
 
-  // Load agent genomes for both agents
   const { data: genomes } = await supabase
     .from("agent_genomes")
     .select("agent_role, display_name, system_prompt_core, capabilities, skill_levels, standing_orders, rules_of_engagement, domain_scope, rank, clearance_level")
@@ -191,7 +178,6 @@ async function runRound(supabase: any, tournamentId: string, apiKey: string) {
   const genomeA = genomes?.find((g: any) => g.agent_role === round.agent_a);
   const genomeB = genomes?.find((g: any) => g.agent_role === round.agent_b);
 
-  // Load agent context banks
   const { data: contextA } = await supabase
     .from("agent_context_bank")
     .select("content, context_type, importance")
@@ -206,7 +192,6 @@ async function runRound(supabase: any, tournamentId: string, apiKey: string) {
     .order("importance", { ascending: false })
     .limit(5);
 
-  // Build agent-specific prompts
   const buildAgentPrompt = (genome: any, context: any[]) => {
     let prompt = `${genome.system_prompt_core}\n\n`;
     prompt += `## Your Identity\n- Role: ${genome.display_name} (${genome.agent_role})\n- Rank: ${genome.rank}\n- Clearance: ${genome.clearance_level}\n`;
@@ -227,31 +212,26 @@ async function runRound(supabase: any, tournamentId: string, apiKey: string) {
   const promptA = buildAgentPrompt(genomeA, contextA || []);
   const promptB = buildAgentPrompt(genomeB, contextB || []);
 
-  // Determine the actual task prompt
   let taskPrompt = round.prompt;
   if (round.round_type === "red_vs_blue") {
     const scenario = JSON.parse(round.prompt);
-    taskPrompt = scenario.red; // Agent A is red team
+    taskPrompt = scenario.red;
   } else if (round.round_type === "memory") {
     const challenge = JSON.parse(round.prompt);
     taskPrompt = `First, memorize this: "${challenge.setup}"\n\nNow answer: ${challenge.question}`;
   }
 
-  // Update round as started
   await supabase.from("agent_tournament_rounds")
     .update({ started_at: new Date().toISOString() })
     .eq("id", round.id);
 
-  // Run both agents in parallel
   const [responseA, responseB] = await Promise.all([
     callAgent(apiKey, promptA, round.round_type === "red_vs_blue" ? JSON.parse(round.prompt).red : taskPrompt),
     callAgent(apiKey, promptB, round.round_type === "red_vs_blue" ? JSON.parse(round.prompt).blue : taskPrompt),
   ]);
 
-  // Judge the responses
   const judgeResult = await judgeResponses(apiKey, round.round_type, taskPrompt, responseA, responseB, genomeA, genomeB);
 
-  // Update round with results
   await supabase.from("agent_tournament_rounds").update({
     agent_a_response: responseA.slice(0, 3000),
     agent_b_response: responseB.slice(0, 3000),
@@ -264,6 +244,9 @@ async function runRound(supabase: any, tournamentId: string, apiKey: string) {
 
   // Update ELO ratings
   await updateEloRatings(supabase, round.agent_a, round.agent_b, judgeResult.winner);
+
+  // Phase B: Feed learnings back into genomes
+  await feedbackToGenomes(supabase, round, judgeResult, responseA, responseB, genomeA, genomeB);
 
   // Log to Agent Discord
   await supabase.from("aimos_agent_discord").insert({
@@ -296,20 +279,101 @@ async function runRound(supabase: any, tournamentId: string, apiKey: string) {
   };
 }
 
+// ── Phase B: Tournament → Genome Feedback ──
+
+async function feedbackToGenomes(
+  supabase: any, round: any, judgeResult: any,
+  responseA: string, responseB: string,
+  genomeA: any, genomeB: any
+) {
+  try {
+    const winner = judgeResult.winner;
+    const loser = winner === round.agent_a ? round.agent_b : round.agent_a;
+    const winnerResponse = winner === round.agent_a ? responseA : responseB;
+    const loserResponse = winner === round.agent_a ? responseB : responseA;
+    const winnerScore = winner === round.agent_a ? judgeResult.scoreA : judgeResult.scoreB;
+    const loserScore = winner === round.agent_a ? judgeResult.scoreB : judgeResult.scoreA;
+
+    const skillDomain = ROUND_TYPE_SKILLS[round.round_type] || "general";
+
+    // Write winner insights to context bank
+    await supabase.from("agent_context_bank").insert({
+      agent_role: winner,
+      context_type: "tournament_win",
+      content: `Won ${round.round_type} round (score: ${winnerScore.total.toFixed(2)}). Key strength: ${judgeResult.analysis?.slice(0, 150) || 'Superior performance'}`,
+      importance: Math.min(1, winnerScore.total),
+      tags: ["tournament", round.round_type, skillDomain],
+      metadata: { round_id: round.id, score: winnerScore },
+    });
+
+    // Write loser lessons to context bank
+    await supabase.from("agent_context_bank").insert({
+      agent_role: loser,
+      context_type: "tournament_loss",
+      content: `Lost ${round.round_type} round (score: ${loserScore.total.toFixed(2)}). Improvement area: ${judgeResult.analysis?.slice(0, 150) || 'Needs improvement'}`,
+      importance: Math.min(0.8, loserScore.total),
+      tags: ["tournament", round.round_type, skillDomain],
+      metadata: { round_id: round.id, score: loserScore },
+    });
+
+    // Update skill_levels on winner genome
+    const { data: winnerGenome } = await supabase.from("agent_genomes")
+      .select("skill_levels").eq("agent_role", winner).single();
+    if (winnerGenome) {
+      const skills = winnerGenome.skill_levels || {};
+      const oldSkill = skills[skillDomain] || 0.5;
+      const newSkill = Math.min(1, oldSkill + 0.03);
+      skills[skillDomain] = newSkill;
+      await supabase.from("agent_genomes").update({ skill_levels: skills }).eq("agent_role", winner);
+
+      // Log skill change
+      await supabase.from("agent_skill_log").insert({
+        agent_role: winner,
+        skill_name: skillDomain,
+        proficiency_before: oldSkill,
+        proficiency_after: newSkill,
+        trigger_event: "tournament_win",
+        details: `Won ${round.round_type} round, score: ${winnerScore.total.toFixed(2)}`,
+      });
+    }
+
+    // Update skill_levels on loser genome (slight decrease)
+    const { data: loserGenome } = await supabase.from("agent_genomes")
+      .select("skill_levels").eq("agent_role", loser).single();
+    if (loserGenome) {
+      const skills = loserGenome.skill_levels || {};
+      const oldSkill = skills[skillDomain] || 0.5;
+      const newSkill = Math.max(0.1, oldSkill - 0.01);
+      skills[skillDomain] = newSkill;
+      await supabase.from("agent_genomes").update({ skill_levels: skills }).eq("agent_role", loser);
+
+      await supabase.from("agent_skill_log").insert({
+        agent_role: loser,
+        skill_name: skillDomain,
+        proficiency_before: oldSkill,
+        proficiency_after: newSkill,
+        trigger_event: "tournament_loss",
+        details: `Lost ${round.round_type} round, score: ${loserScore.total.toFixed(2)}`,
+      });
+    }
+  } catch (e) {
+    console.error("[tournament] Feedback error:", e);
+  }
+}
+
 // ── Run Full Tournament ──
 
 async function runFullTournament(supabase: any, tournamentId: string, apiKey: string) {
   await supabase.from("agent_tournaments").update({ status: "running", started_at: new Date().toISOString() }).eq("id", tournamentId);
 
   const results = [];
-  let maxRounds = 50; // safety limit
+  let maxRounds = 50;
   while (maxRounds-- > 0) {
     const result = await runRound(supabase, tournamentId, apiKey);
     if (result.status === "all_rounds_complete") break;
     results.push(result);
   }
 
-  // Determine overall winner
   const wins: Record<string, number> = {};
   for (const r of results) {
     if (r.winner) wins[r.winner] = (wins[r.winner] || 0) + 1;
@@ -323,14 +387,7 @@ async function runFullTournament(supabase: any, tournamentId: string, apiKey: st
     results: { round_results: results, win_counts: wins },
   }).eq("id", tournamentId);
 
-  // Award commendations/update genomes
   if (overallWinner) {
-    await supabase.from("agent_genomes").update({
-      tournament_wins: supabase.rpc ? undefined : undefined, // handled below
-      commendations: supabase.rpc ? undefined : undefined,
-    }).eq("agent_role", overallWinner);
-
-    // Manual increment
     const { data: genome } = await supabase.from("agent_genomes").select("tournament_wins, commendations, promotion_points").eq("agent_role", overallWinner).single();
     if (genome) {
       await supabase.from("agent_genomes").update({
@@ -391,18 +448,15 @@ Respond in this EXACT JSON format:
 
   try {
     const response = await callAgent(apiKey, "You are a strict, impartial judge. Respond ONLY with valid JSON.", judgePrompt);
-    // Extract JSON from response
     const jsonMatch = response.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
       const result = JSON.parse(jsonMatch[0]);
-      // Calculate totals if missing
       for (const key of ["scoreA", "scoreB"]) {
         const s = result[key];
         if (s && !s.total) {
           s.total = ((s.accuracy || 0) + (s.depth || 0) + (s.relevance || 0) + (s.domain_mastery || 0) + (s.protocol_compliance || 0)) / 5;
         }
       }
-      // Determine winner
       if (!result.winner || result.winner === "agent_role_here") {
         result.winner = result.scoreA.total >= result.scoreB.total ? genomeA?.agent_role : genomeB?.agent_role;
       }
@@ -412,7 +466,6 @@ Respond in this EXACT JSON format:
     console.error("[tournament] Judge parse error:", e);
   }
 
-  // Fallback scoring
   const scoreA = { accuracy: 0.5, depth: 0.5, relevance: 0.5, domain_mastery: 0.5, protocol_compliance: 0.5, total: 0.5 };
   const scoreB = { accuracy: 0.5, depth: 0.5, relevance: 0.5, domain_mastery: 0.5, protocol_compliance: 0.5, total: 0.5 };
   return { scoreA, scoreB, winner: responseA.length > responseB.length ? genomeA?.agent_role : genomeB?.agent_role, analysis: "Fallback scoring applied." };
@@ -448,7 +501,6 @@ async function updateEloRatings(supabase: any, agentA: string, agentB: string, w
     supabase.from("agent_genomes").update({ elo_rating: newB }).eq("agent_role", agentB),
   ]);
 
-  // Log skill changes
   await supabase.from("agent_skill_log").insert([
     { agent_role: agentA, skill_name: "elo_rating", proficiency_before: rA / 2400, proficiency_after: newA / 2400, trigger_event: "tournament", details: `ELO: ${rA} → ${newA}` },
     { agent_role: agentB, skill_name: "elo_rating", proficiency_before: rB / 2400, proficiency_after: newB / 2400, trigger_event: "tournament", details: `ELO: ${rB} → ${newB}` },
