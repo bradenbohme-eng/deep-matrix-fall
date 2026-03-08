@@ -249,39 +249,46 @@ export class SelfEvolutionClient {
   // EVOLUTION METHODS
   // ═══════════════════════════════════════════════════════════════
 
-  /**
-   * Get AI-generated evolution suggestions
-   */
   async suggestEvolutions(): Promise<{ suggestions: EvolutionSuggestion[]; systemState: any }> {
     const result = await this.invoke('suggest_evolution');
-    return {
-      suggestions: result.evolutionSuggestions,
-      systemState: result.systemState
-    };
+    return { suggestions: result.evolutionSuggestions, systemState: result.systemState };
   }
 
-  /**
-   * Apply an evolution (records the change)
-   */
   async applyEvolution(evolutionId: string, parameters: Record<string, any>): Promise<any> {
-    const result = await this.invoke('apply_evolution', { evolutionId, parameters });
-    return result;
+    return await this.invoke('apply_evolution', { evolutionId, parameters });
   }
 
-  /**
-   * Rollback an evolution
-   */
   async rollbackEvolution(evolutionId: string): Promise<any> {
-    const result = await this.invoke('rollback_evolution', { evolutionId });
-    return result;
+    return await this.invoke('rollback_evolution', { evolutionId });
   }
 
-  /**
-   * Get evolution history
-   */
   async getEvolutionHistory(): Promise<any[]> {
     const result = await this.invoke('get_evolution_history');
     return result.evolutionHistory;
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // SELF-AUDIT & PROPOSAL METHODS (APPROVAL-GATED)
+  // ═══════════════════════════════════════════════════════════════
+
+  async selfAudit(auditType: string = 'full'): Promise<any> {
+    return await this.invoke('self_audit', { auditType });
+  }
+
+  async getProposals(status?: string): Promise<any> {
+    return await this.invoke('get_proposals', status ? { status } : {});
+  }
+
+  async approveProposal(proposalId: string, notes?: string): Promise<any> {
+    return await this.invoke('approve_proposal', { proposalId, notes });
+  }
+
+  async rejectProposal(proposalId: string, reason?: string): Promise<any> {
+    return await this.invoke('reject_proposal', { proposalId, reason });
+  }
+
+  async getAuditHistory(): Promise<any> {
+    return await this.invoke('get_audit_history');
   }
 }
 
