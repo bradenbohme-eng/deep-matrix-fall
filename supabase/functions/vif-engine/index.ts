@@ -42,8 +42,22 @@ serve(async (req) => {
 });
 
 // ── PRE-GATE: Check context quality before AI call ──
+// Now supports both inline contextAtoms AND contextAtomIds (fetched from DB)
 async function handlePregate(supabase: any, body: any) {
-  const { contextAtoms = [] } = body;
+  let contextAtoms = body.contextAtoms || [];
+  const contextAtomIds = body.contextAtomIds || [];
+
+  // If atom IDs provided, fetch them from the database
+  if (contextAtomIds.length > 0 && contextAtoms.length === 0) {
+    const { data: fetchedAtoms } = await supabase
+      .from("aimos_memory_atoms")
+      .select("id, content, confidence_score, content_type, tags")
+      .in("id", contextAtomIds);
+    
+    if (fetchedAtoms) {
+      contextAtoms = fetchedAtoms;
+    }
+  }
 
   const atomCount = contextAtoms.length;
   const avgConfidence = atomCount > 0
@@ -57,9 +71,10 @@ async function handlePregate(supabase: any, body: any) {
     success: true,
     pregate: {
       atomCount,
-      avgConfidence,
+      avgConfidence: Math.round(avgConfidence * 1000) / 1000,
       quality,
       shouldHedge,
+      atomIds: contextAtoms.map((a: any) => a.id),
       instruction: shouldHedge
         ? "You have limited context. State what you know and what you're uncertain about. Hedge appropriately."
         : null,
@@ -69,8 +84,18 @@ async function handlePregate(supabase: any, body: any) {
 
 // ── VERIFY: Post-response verification with claim extraction ──
 async function handleVerify(supabase: any, lovableKey: string | undefined, body: any) {
-  const { response, contextAtoms = [], chainId, query } = body;
+  const { response, contextAtoms = [], contextAtomIds = [], chainId, query } = body;
   if (!response) return json({ error: "response required" }, 400);
+
+  // Fetch atoms if IDs provided
+  let atoms = contextAtoms;
+  if (contextAtomIds.length > 0 && atoms.length === 0) {
+    const { data: fetchedAtoms } = await supabase
+      .from("aimos_memory_atoms")
+      .select("id, content, confidence_score")
+      .in("id", contextAtomIds);
+    if (fetchedAtoms) atoms = fetchedAtoms;
+  }
 
   // Extract claims using AI
   let claims: any[] = [];
@@ -132,8 +157,17 @@ async function handleVerify(supabase: any, lovableKey: string | undefined, body:
     }
   }
 
+  // If no AI available, do basic claim extraction via heuristics
+  if (claims.length === 0) {
+    const sentences = response.split(/[.!]+/).filter((s: string) => s.trim().length > 20);
+    claims = sentences.slice(0, 5).map((s: string) => ({
+      claim: s.trim(),
+      type: s.toLowerCase().includes("might") || s.toLowerCase().includes("could") ? "inference" : "factual",
+    }));
+  }
+
   // Cross-reference claims against CMC atoms
-  const contextText = contextAtoms.map((a: any) => a.content || "").join("\n").toLowerCase();
+  const contextText = atoms.map((a: any) => a.content || "").join("\n").toLowerCase();
   const verifiedClaims = claims.map((c: any) => {
     const claimWords = c.claim.toLowerCase().split(/\s+/).filter((w: string) => w.length > 3);
     const matchCount = claimWords.filter((w: string) => contextText.includes(w)).length;
@@ -148,8 +182,8 @@ async function handleVerify(supabase: any, lovableKey: string | undefined, body:
       claim: c.claim,
       type: c.type,
       status,
-      matchRatio,
-      confidence: matchRatio * 0.8 + (c.type === "factual" ? 0.1 : 0),
+      matchRatio: Math.round(matchRatio * 1000) / 1000,
+      confidence: Math.round((matchRatio * 0.8 + (c.type === "factual" ? 0.1 : 0)) * 1000) / 1000,
     };
   });
 
@@ -165,13 +199,12 @@ async function handleVerify(supabase: any, lovableKey: string | undefined, body:
     }
   }
 
-  // Compute overall scores
   const verified = verifiedClaims.filter((c: any) => c.status === "verified").length;
   const contradicted = verifiedClaims.filter((c: any) => c.status === "contradicted").length;
   const total = verifiedClaims.length || 1;
 
-  const factualAccuracy = verified / total;
-  const hallucinationRisk = contradicted / total;
+  const factualAccuracy = Math.round((verified / total) * 1000) / 1000;
+  const hallucinationRisk = Math.round((contradicted / total) * 1000) / 1000;
 
   return json({
     success: true,
@@ -224,7 +257,7 @@ async function handleScore(supabase: any, body: any) {
   return json({
     success: true,
     score: {
-      kappa,
+      kappa: Math.round(kappa * 1000) / 1000,
       qualityTier,
       components: { factualAccuracy, consistency, completeness, relevance, freshness },
       shouldHedge: qualityTier === "orange" || qualityTier === "red",
