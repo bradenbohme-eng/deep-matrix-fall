@@ -120,7 +120,7 @@ const RightPanel: React.FC<RightPanelProps> = ({ mode, onModeChange, isOpen, wid
 };
 
 // ─── AI Chat ───
-const AIChatPanel: React.FC = () => {
+const AIChatPanel: React.FC<{ onSwarmTrigger?: (query: string) => void }> = ({ onSwarmTrigger }) => {
   const [input, setInput] = useState('');
   const [isStreaming, setIsStreaming] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
