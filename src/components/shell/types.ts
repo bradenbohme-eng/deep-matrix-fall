@@ -17,8 +17,9 @@ export type OrchestrationLeftTab = 'tasks' | 'agents' | 'context' | 'budgets' | 
 export type CodeLeftTab = 'explorer' | 'search' | 'git' | 'extensions';
 export type IntelLeftTab = 'sources' | 'red-team' | 'blue-team' | 'network';
 export type DocsLeftTab = 'outline' | 'sources' | 'templates';
+export type EvolveLeftTab = 'status' | 'history' | 'config';
 
-export type LeftTab = OrchestrationLeftTab | CodeLeftTab | IntelLeftTab | DocsLeftTab;
+export type LeftTab = OrchestrationLeftTab | CodeLeftTab | IntelLeftTab | DocsLeftTab | EvolveLeftTab;
 
 // ─── Right Panel Modes (Canon §10 - Toggled Domain Separation) ───
 export type RightPanelMode = 'ai' | 'swarm' | 'inspect' | 'analyze' | 'memory';
