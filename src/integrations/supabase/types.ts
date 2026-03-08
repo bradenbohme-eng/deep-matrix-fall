@@ -350,6 +350,47 @@ export type Database = {
         }
         Relationships: []
       }
+      aimos_config: {
+        Row: {
+          config_key: string
+          config_value: Json
+          created_at: string | null
+          description: string | null
+          id: string
+          proposal_id: string | null
+          updated_at: string | null
+          updated_by: string | null
+        }
+        Insert: {
+          config_key: string
+          config_value?: Json
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          proposal_id?: string | null
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Update: {
+          config_key?: string
+          config_value?: Json
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          proposal_id?: string | null
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "aimos_config_proposal_id_fkey"
+            columns: ["proposal_id"]
+            isOneToOne: false
+            referencedRelation: "evolution_proposals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       aimos_consciousness_metrics: {
         Row: {
           coherence_score: number | null
@@ -5475,6 +5516,50 @@ export type Database = {
           symbol?: string
         }
         Relationships: []
+      }
+      system_prompts: {
+        Row: {
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          priority: number | null
+          prompt_key: string
+          prompt_text: string
+          proposal_id: string | null
+          source: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          priority?: number | null
+          prompt_key: string
+          prompt_text: string
+          proposal_id?: string | null
+          source?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          priority?: number | null
+          prompt_key?: string
+          prompt_text?: string
+          proposal_id?: string | null
+          source?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "system_prompts_proposal_id_fkey"
+            columns: ["proposal_id"]
+            isOneToOne: false
+            referencedRelation: "evolution_proposals"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       testing_sessions: {
         Row: {

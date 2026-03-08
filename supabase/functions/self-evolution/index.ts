@@ -1214,18 +1214,129 @@ async function handleApproveProposal(supabase: any, lovableApiKey: string | unde
     })
     .eq('id', proposalId);
   
+  // ── PHASE 4: Actually APPLY the proposal ──
+  const applied = await applyProposal(supabase, proposal);
+  
   // Record in consciousness metrics
   await supabase.from('aimos_consciousness_metrics').insert({
-    metric_type: 'evolution_approved',
+    metric_type: 'evolution_applied',
     coherence_score: 1.0,
-    metadata: { proposalId, title: proposal.title, priority: proposal.priority }
+    metadata: { proposalId, title: proposal.title, priority: proposal.priority, applied }
+  });
+
+  // Log to Agent Discord
+  await supabase.from('aimos_agent_discord').insert({
+    agent_role: 'self_evolution',
+    message_type: 'DECISION',
+    content: `Proposal APPLIED: "${proposal.title}" — ${applied.actions.join(', ')}`,
+    confidence: 0.95,
+    metadata: { proposalId, applied },
   });
   
   return jsonResponse({
     success: !error,
-    message: `Proposal "${proposal.title}" approved. Implementation plan ready.`,
-    proposal: { ...proposal, status: 'approved' }
+    message: `Proposal "${proposal.title}" approved and applied. ${applied.actions.length} actions executed.`,
+    proposal: { ...proposal, status: 'approved' },
+    applied,
   });
+}
+
+async function applyProposal(supabase: any, proposal: any): Promise<{ actions: string[] }> {
+  const actions: string[] = [];
+  const plan = proposal.implementation_plan || {};
+  const title = (proposal.title || '').toLowerCase();
+  const desc = (proposal.description || '').toLowerCase();
+
+  try {
+    // Detect proposal type and apply accordingly
+    if (title.includes('prompt') || desc.includes('prompt') || desc.includes('system instruction')) {
+      // Store as a dynamic system prompt
+      await supabase.from('system_prompts').upsert({
+        prompt_key: `evolution_${proposal.id.slice(0, 8)}`,
+        prompt_text: proposal.description || proposal.expected_impact || '',
+        priority: proposal.priority === 'high' ? 10 : proposal.priority === 'medium' ? 5 : 1,
+        is_active: true,
+        source: 'evolution',
+        proposal_id: proposal.id,
+      }, { onConflict: 'prompt_key' });
+      actions.push('system_prompt_updated');
+    }
+
+    if (title.includes('threshold') || title.includes('confidence') || desc.includes('threshold') || desc.includes('kappa')) {
+      // Update config thresholds
+      const newThreshold = extractNumber(desc) || 0.7;
+      await supabase.from('aimos_config').upsert({
+        config_key: 'vif_kappa_threshold',
+        config_value: { value: newThreshold },
+        description: `Updated by proposal: ${proposal.title}`,
+        updated_by: 'self_evolution',
+        proposal_id: proposal.id,
+      }, { onConflict: 'config_key' });
+      actions.push(`vif_kappa_threshold→${newThreshold}`);
+    }
+
+    if (title.includes('memory') || title.includes('decay') || title.includes('compress') || desc.includes('memory policy')) {
+      // Update memory config
+      if (desc.includes('compress')) {
+        const ratio = extractNumber(desc) || 0.3;
+        await supabase.from('aimos_config').upsert({
+          config_key: 'cmc_compression_target',
+          config_value: { value: ratio },
+          description: `Updated by proposal: ${proposal.title}`,
+          updated_by: 'self_evolution',
+          proposal_id: proposal.id,
+        }, { onConflict: 'config_key' });
+        actions.push(`cmc_compression_target→${ratio}`);
+      }
+      if (desc.includes('decay') || desc.includes('interval')) {
+        const hours = extractNumber(desc) || 24;
+        await supabase.from('aimos_config').upsert({
+          config_key: 'cmc_decay_interval_hours',
+          config_value: { value: hours },
+          description: `Updated by proposal: ${proposal.title}`,
+          updated_by: 'self_evolution',
+          proposal_id: proposal.id,
+        }, { onConflict: 'config_key' });
+        actions.push(`cmc_decay_interval_hours→${hours}`);
+      }
+      actions.push('memory_policy_updated');
+    }
+
+    if (title.includes('retrieval') || desc.includes('retrieval') || desc.includes('context window')) {
+      const limit = extractNumber(desc) || 10;
+      await supabase.from('aimos_config').upsert({
+        config_key: 'memory_retrieval_limit',
+        config_value: { value: Math.min(20, Math.max(3, limit)) },
+        description: `Updated by proposal: ${proposal.title}`,
+        updated_by: 'self_evolution',
+        proposal_id: proposal.id,
+      }, { onConflict: 'config_key' });
+      actions.push(`memory_retrieval_limit→${limit}`);
+    }
+
+    // If no specific type matched, store as a generic directive
+    if (actions.length === 0) {
+      await supabase.from('system_prompts').upsert({
+        prompt_key: `directive_${proposal.id.slice(0, 8)}`,
+        prompt_text: `[Evolution Directive] ${proposal.title}: ${proposal.description || ''}`,
+        priority: 1,
+        is_active: true,
+        source: 'evolution',
+        proposal_id: proposal.id,
+      }, { onConflict: 'prompt_key' });
+      actions.push('generic_directive_stored');
+    }
+  } catch (e) {
+    console.error("[SELF-EVOLUTION] Apply proposal error:", e);
+    actions.push(`error: ${e.message}`);
+  }
+
+  return { actions };
+}
+
+function extractNumber(text: string): number | null {
+  const match = text.match(/(\d+\.?\d*)/);
+  return match ? parseFloat(match[1]) : null;
 }
 
 async function handleRejectProposal(supabase: any, body: SelfEvolutionRequest): Promise<Response> {
