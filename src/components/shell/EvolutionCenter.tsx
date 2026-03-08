@@ -1,5 +1,5 @@
 // EvolutionCenter — AI Systems Test & Evolution Dashboard
-// Provides testing, self-audit, engine validation, sandbox, and proposal management
+// Provides testing, self-audit, engine validation, scenarios, connections, metrics, sandbox, and proposal management
 
 import React, { useState, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -40,6 +40,9 @@ import { useSelfEvolution } from '@/lib/selfEvolutionClient';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import type { SubPage } from './types';
+import ScenariosPanel from './ScenariosPanel';
+import ConnectionsPanel from './ConnectionsPanel';
+import MetricsPanel from './MetricsPanel';
 
 interface EvolutionCenterProps {
   subPage: SubPage;
