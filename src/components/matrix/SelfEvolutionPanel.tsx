@@ -151,8 +151,8 @@ const SelfEvolutionPanel: React.FC = () => {
           <TabsTrigger value="calibration" className="text-xs data-[state=active]:bg-primary/20">
             <Target className="w-3 h-3 mr-1" /> Calibrate
           </TabsTrigger>
-          <TabsTrigger value="evolution" className="text-xs data-[state=active]:bg-primary/20">
-            <Sparkles className="w-3 h-3 mr-1" /> Evolve
+          <TabsTrigger value="audit" className="text-xs data-[state=active]:bg-primary/20">
+            <Sparkles className="w-3 h-3 mr-1" /> Audit & Evolve
           </TabsTrigger>
         </TabsList>
 
