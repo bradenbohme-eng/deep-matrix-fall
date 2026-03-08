@@ -426,35 +426,122 @@ const SelfEvolutionPanel: React.FC = () => {
             </Card>
           </TabsContent>
 
-          {/* EVOLUTION TAB */}
-          <TabsContent value="evolution" className="p-4 space-y-4 m-0">
-            <Button onClick={handleEvolutions} disabled={isLoading} size="sm" className="w-full">
-              <Sparkles className="w-4 h-4 mr-2" /> Generate Evolution Suggestions
-            </Button>
+          {/* AUDIT & EVOLVE TAB (APPROVAL-GATED) */}
+          <TabsContent value="audit" className="p-4 space-y-4 m-0">
+            <div className="flex gap-2">
+              <Button onClick={async () => {
+                const result = await selfAudit('full');
+                if (result) { setAuditResult(result); toast.success(`Audit complete: ${result.proposalsGenerated} proposals generated`); }
+              }} disabled={isLoading} size="sm" className="flex-1">
+                <Brain className="w-4 h-4 mr-2" /> Run Self-Audit
+              </Button>
+              <Button onClick={async () => {
+                const result = await getProposals('pending');
+                if (result) setProposals(result.proposals || []);
+              }} disabled={isLoading} size="sm" variant="outline">
+                <RefreshCw className="w-4 h-4 mr-2" /> Refresh
+              </Button>
+            </div>
 
-            {evolutions && (
+            {auditResult && (
+              <Card className="border-primary/20">
+                <CardContent className="py-3 px-3 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium">Latest Audit</span>
+                    <Badge variant="outline" className="text-xs">
+                      Health: {Math.round((auditResult.healthScore || 0) * 100)}%
+                    </Badge>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2 text-xs">
+                    <div className="p-2 rounded bg-muted/50 text-center">
+                      <div className="text-muted-foreground">Findings</div>
+                      <div className="text-lg font-mono">{auditResult.findings?.length || 0}</div>
+                    </div>
+                    <div className="p-2 rounded bg-muted/50 text-center">
+                      <div className="text-muted-foreground">Proposals</div>
+                      <div className="text-lg font-mono">{auditResult.proposalsGenerated || 0}</div>
+                    </div>
+                    <div className="p-2 rounded bg-muted/50 text-center">
+                      <div className="text-muted-foreground">Duration</div>
+                      <div className="text-lg font-mono">{Math.round(auditResult.duration_ms || 0)}ms</div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Pending Proposals - Approve/Reject */}
+            {(proposals.length > 0 || auditResult?.proposals?.length > 0) && (
               <div className="space-y-2">
-                {evolutions.map((evo, i) => (
-                  <Card key={i} className="border-primary/20">
+                <h3 className="text-sm font-medium flex items-center gap-2">
+                  <AlertTriangle className="w-4 h-4 text-yellow-500" /> 
+                  Pending Proposals (Requires Approval)
+                </h3>
+                {(proposals.length > 0 ? proposals : auditResult?.proposals || []).map((p: any) => (
+                  <Card key={p.id} className="border-yellow-500/20">
                     <CardContent className="py-3 px-3 space-y-2">
                       <div className="flex items-center justify-between">
-                        <span className="font-medium text-sm">{evo.type.replace(/_/g, ' ')}</span>
-                        <Badge className={getPriorityColor(evo.priority)}>{evo.priority}</Badge>
+                        <span className="font-medium text-sm">{p.title}</span>
+                        <Badge className={getPriorityColor(p.priority)}>{p.priority}</Badge>
                       </div>
-                      <p className="text-xs text-muted-foreground">{evo.description}</p>
+                      <p className="text-xs text-muted-foreground">{p.description}</p>
+                      {p.expected_impact && (
+                        <p className="text-xs text-green-400">Expected: {p.expected_impact}</p>
+                      )}
+                      {p.implementation_plan?.steps && (
+                        <div className="text-xs space-y-1">
+                          <span className="text-muted-foreground">Implementation:</span>
+                          <ul className="list-disc pl-4 text-muted-foreground">
+                            {p.implementation_plan.steps.slice(0, 3).map((s: string, i: number) => (
+                              <li key={i}>{s}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
                       <Separator className="bg-primary/10" />
-                      <div className="text-xs">
-                        <p className="text-muted-foreground">Implementation:</p>
-                        <p className="text-primary">{evo.implementation}</p>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-xs text-green-400">Expected: {evo.expectedImpact}</span>
-                        <Button size="sm" variant="ghost" className="h-6 text-xs">
-                          Apply
+                      <div className="flex gap-2">
+                        <Button size="sm" className="flex-1 h-7 text-xs bg-green-600 hover:bg-green-700" onClick={async () => {
+                          const result = await approveProposal(p.id);
+                          if (result) {
+                            toast.success(`Approved: ${p.title}`);
+                            setProposals(prev => prev.filter(x => x.id !== p.id));
+                          }
+                        }} disabled={isLoading || p.status !== 'pending'}>
+                          <CheckCircle className="w-3 h-3 mr-1" /> Approve
+                        </Button>
+                        <Button size="sm" variant="destructive" className="flex-1 h-7 text-xs" onClick={async () => {
+                          const result = await rejectProposal(p.id, 'User rejected');
+                          if (result) {
+                            toast.info(`Rejected: ${p.title}`);
+                            setProposals(prev => prev.filter(x => x.id !== p.id));
+                          }
+                        }} disabled={isLoading || p.status !== 'pending'}>
+                          <XCircle className="w-3 h-3 mr-1" /> Reject
                         </Button>
                       </div>
                     </CardContent>
                   </Card>
+                ))}
+              </div>
+            )}
+
+            {/* Audit History */}
+            <Button onClick={async () => {
+              const result = await getAuditHistory();
+              if (result) setAuditHistory(result.audits || []);
+            }} disabled={isLoading} size="sm" variant="ghost" className="w-full">
+              <History className="w-4 h-4 mr-2" /> Load Audit History
+            </Button>
+            {auditHistory.length > 0 && (
+              <div className="space-y-1">
+                {auditHistory.map((a: any) => (
+                  <div key={a.id} className="flex items-center justify-between p-2 rounded bg-muted/50 text-xs">
+                    <span>{new Date(a.started_at).toLocaleString()}</span>
+                    <div className="flex gap-2">
+                      <span>Health: {Math.round((a.system_health_score || 0) * 100)}%</span>
+                      <span>Proposals: {a.proposals_generated}</span>
+                    </div>
+                  </div>
                 ))}
               </div>
             )}
