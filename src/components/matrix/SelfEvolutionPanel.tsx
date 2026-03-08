@@ -30,6 +30,7 @@ import {
   Layers
 } from 'lucide-react';
 import { useSelfEvolution, IntrospectionResult, DiagnosticResult, EvolutionSuggestion } from '@/lib/selfEvolutionClient';
+import { toast } from 'sonner';
 
 const SelfEvolutionPanel: React.FC = () => {
   const [activeTab, setActiveTab] = useState('introspection');
@@ -42,6 +43,9 @@ const SelfEvolutionPanel: React.FC = () => {
   const [promptChain, setPromptChain] = useState('');
   const [chainResult, setChainResult] = useState<any>(null);
   const [benchmarks, setBenchmarks] = useState<any>(null);
+  const [proposals, setProposals] = useState<any[]>([]);
+  const [auditResult, setAuditResult] = useState<any>(null);
+  const [auditHistory, setAuditHistory] = useState<any[]>([]);
 
   const {
     isLoading,
@@ -55,7 +59,12 @@ const SelfEvolutionPanel: React.FC = () => {
     testPromptChain,
     calibrateReasoning,
     calibrateMemory,
-    calibrateConfidence
+    calibrateConfidence,
+    selfAudit,
+    getProposals,
+    approveProposal,
+    rejectProposal,
+    getAuditHistory
   } = useSelfEvolution();
 
   const handleIntrospect = async () => {
