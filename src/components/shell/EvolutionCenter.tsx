@@ -370,10 +370,11 @@ const EngineTestPanel: React.FC = () => {
     const checks: { name: string; passed: boolean; value?: string }[] = [];
 
     try {
-      // Test invocation
-      const { data, error } = await supabase.functions.invoke(engine.fn, {
-        body: { action: 'health_check', test: true },
-      });
+      // Test invocation — hq-chat expects messages, others use action
+      const body = engine.id === 'hq-chat'
+        ? { messages: [{ role: 'user', content: 'health check ping' }] }
+        : { action: 'health_check', test: true };
+      const { data, error } = await supabase.functions.invoke(engine.fn, { body });
 
       const latency = performance.now() - start;
       checks.push({ name: 'Reachable', passed: !error, value: error ? error.message : 'OK' });
