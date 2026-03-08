@@ -214,6 +214,91 @@ export type Database = {
         }
         Relationships: []
       }
+      aimos_agent_discord: {
+        Row: {
+          agent_role: string
+          confidence: number | null
+          content: string
+          created_at: string | null
+          id: string
+          message_type: string
+          metadata: Json | null
+          plan_id: string | null
+          thread_id: string | null
+        }
+        Insert: {
+          agent_role: string
+          confidence?: number | null
+          content: string
+          created_at?: string | null
+          id?: string
+          message_type: string
+          metadata?: Json | null
+          plan_id?: string | null
+          thread_id?: string | null
+        }
+        Update: {
+          agent_role?: string
+          confidence?: number | null
+          content?: string
+          created_at?: string | null
+          id?: string
+          message_type?: string
+          metadata?: Json | null
+          plan_id?: string | null
+          thread_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "aimos_agent_discord_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "aimos_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      aimos_claim_verification: {
+        Row: {
+          chain_id: string | null
+          claim_text: string
+          confidence: number | null
+          contradicting_atom_ids: string[] | null
+          created_at: string | null
+          id: string
+          status: string | null
+          supporting_atom_ids: string[] | null
+        }
+        Insert: {
+          chain_id?: string | null
+          claim_text: string
+          confidence?: number | null
+          contradicting_atom_ids?: string[] | null
+          created_at?: string | null
+          id?: string
+          status?: string | null
+          supporting_atom_ids?: string[] | null
+        }
+        Update: {
+          chain_id?: string | null
+          claim_text?: string
+          confidence?: number | null
+          contradicting_atom_ids?: string[] | null
+          created_at?: string | null
+          id?: string
+          status?: string | null
+          supporting_atom_ids?: string[] | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "aimos_claim_verification_chain_id_fkey"
+            columns: ["chain_id"]
+            isOneToOne: false
+            referencedRelation: "aimos_reasoning_chains"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       aimos_confidence_metrics: {
         Row: {
           completeness: number | null
@@ -306,6 +391,93 @@ export type Database = {
           self_validation_score?: number | null
         }
         Relationships: []
+      }
+      aimos_entities: {
+        Row: {
+          aliases: string[] | null
+          confidence: number | null
+          created_at: string | null
+          description: string | null
+          entity_type: string
+          id: string
+          metadata: Json | null
+          name: string
+          source_atom_ids: string[] | null
+          updated_at: string | null
+        }
+        Insert: {
+          aliases?: string[] | null
+          confidence?: number | null
+          created_at?: string | null
+          description?: string | null
+          entity_type: string
+          id?: string
+          metadata?: Json | null
+          name: string
+          source_atom_ids?: string[] | null
+          updated_at?: string | null
+        }
+        Update: {
+          aliases?: string[] | null
+          confidence?: number | null
+          created_at?: string | null
+          description?: string | null
+          entity_type?: string
+          id?: string
+          metadata?: Json | null
+          name?: string
+          source_atom_ids?: string[] | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      aimos_entity_relationships: {
+        Row: {
+          created_at: string | null
+          evidence_atom_ids: string[] | null
+          id: string
+          metadata: Json | null
+          relationship_type: string
+          source_entity_id: string | null
+          strength: number | null
+          target_entity_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          evidence_atom_ids?: string[] | null
+          id?: string
+          metadata?: Json | null
+          relationship_type: string
+          source_entity_id?: string | null
+          strength?: number | null
+          target_entity_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          evidence_atom_ids?: string[] | null
+          id?: string
+          metadata?: Json | null
+          relationship_type?: string
+          source_entity_id?: string | null
+          strength?: number | null
+          target_entity_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "aimos_entity_relationships_source_entity_id_fkey"
+            columns: ["source_entity_id"]
+            isOneToOne: false
+            referencedRelation: "aimos_entities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "aimos_entity_relationships_target_entity_id_fkey"
+            columns: ["target_entity_id"]
+            isOneToOne: false
+            referencedRelation: "aimos_entities"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       aimos_evidence_graph: {
         Row: {
@@ -588,48 +760,92 @@ export type Database = {
           coherence_score: number | null
           completeness_score: number | null
           complexity: string | null
+          confidence_kappa: number | null
           conversation_id: string
           created_at: string
           depth: number
           evidence_atom_ids: string[] | null
           final_answer: string
           id: string
+          quality_tier: string | null
           reasoning_steps: Json
           response_type: string
           source_refs: string[] | null
           user_query: string
+          verification_report: Json | null
         }
         Insert: {
           coherence_score?: number | null
           completeness_score?: number | null
           complexity?: string | null
+          confidence_kappa?: number | null
           conversation_id: string
           created_at?: string
           depth: number
           evidence_atom_ids?: string[] | null
           final_answer: string
           id?: string
+          quality_tier?: string | null
           reasoning_steps: Json
           response_type: string
           source_refs?: string[] | null
           user_query: string
+          verification_report?: Json | null
         }
         Update: {
           coherence_score?: number | null
           completeness_score?: number | null
           complexity?: string | null
+          confidence_kappa?: number | null
           conversation_id?: string
           created_at?: string
           depth?: number
           evidence_atom_ids?: string[] | null
           final_answer?: string
           id?: string
+          quality_tier?: string | null
           reasoning_steps?: Json
           response_type?: string
           source_refs?: string[] | null
           user_query?: string
+          verification_report?: Json | null
         }
         Relationships: []
+      }
+      aimos_system_snapshots: {
+        Row: {
+          config_state: Json | null
+          created_at: string | null
+          id: string
+          metrics: Json
+          proposal_id: string | null
+          snapshot_type: string | null
+        }
+        Insert: {
+          config_state?: Json | null
+          created_at?: string | null
+          id?: string
+          metrics: Json
+          proposal_id?: string | null
+          snapshot_type?: string | null
+        }
+        Update: {
+          config_state?: Json | null
+          created_at?: string | null
+          id?: string
+          metrics?: Json
+          proposal_id?: string | null
+          snapshot_type?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "aimos_system_snapshots_proposal_id_fkey"
+            columns: ["proposal_id"]
+            isOneToOne: false
+            referencedRelation: "evolution_proposals"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       aimos_tag_hierarchy: {
         Row: {
@@ -660,6 +876,62 @@ export type Database = {
           tag_name?: string
         }
         Relationships: []
+      }
+      aimos_task_queue: {
+        Row: {
+          agent_role: string
+          completed_at: string | null
+          confidence: number | null
+          created_at: string | null
+          dependencies: string[] | null
+          id: string
+          input: Json
+          output: Json | null
+          plan_id: string | null
+          retry_count: number | null
+          started_at: string | null
+          status: string | null
+          tier: string
+        }
+        Insert: {
+          agent_role: string
+          completed_at?: string | null
+          confidence?: number | null
+          created_at?: string | null
+          dependencies?: string[] | null
+          id?: string
+          input: Json
+          output?: Json | null
+          plan_id?: string | null
+          retry_count?: number | null
+          started_at?: string | null
+          status?: string | null
+          tier: string
+        }
+        Update: {
+          agent_role?: string
+          completed_at?: string | null
+          confidence?: number | null
+          created_at?: string | null
+          dependencies?: string[] | null
+          id?: string
+          input?: Json
+          output?: Json | null
+          plan_id?: string | null
+          retry_count?: number | null
+          started_at?: string | null
+          status?: string | null
+          tier?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "aimos_task_queue_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "aimos_plans"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       assets: {
         Row: {
@@ -1917,61 +2189,79 @@ export type Database = {
       }
       evolution_proposals: {
         Row: {
+          affected_systems: string[] | null
           applied_at: string | null
           applied_changes: Json | null
           created_at: string
           description: string
           expected_impact: string | null
+          expected_metrics: Json | null
           id: string
           implementation_plan: Json
+          monitoring_results: Json | null
+          monitoring_window_hours: number | null
           priority: string
           proposal_type: string
           review_notes: string | null
           reviewed_at: string | null
+          risk_assessment: string | null
           rollback_plan: Json | null
           rolled_back_at: string | null
           source_audit_id: string | null
           status: string
           system_state_snapshot: Json | null
           title: string
+          trigger_metrics: Json | null
         }
         Insert: {
+          affected_systems?: string[] | null
           applied_at?: string | null
           applied_changes?: Json | null
           created_at?: string
           description: string
           expected_impact?: string | null
+          expected_metrics?: Json | null
           id?: string
           implementation_plan?: Json
+          monitoring_results?: Json | null
+          monitoring_window_hours?: number | null
           priority?: string
           proposal_type?: string
           review_notes?: string | null
           reviewed_at?: string | null
+          risk_assessment?: string | null
           rollback_plan?: Json | null
           rolled_back_at?: string | null
           source_audit_id?: string | null
           status?: string
           system_state_snapshot?: Json | null
           title: string
+          trigger_metrics?: Json | null
         }
         Update: {
+          affected_systems?: string[] | null
           applied_at?: string | null
           applied_changes?: Json | null
           created_at?: string
           description?: string
           expected_impact?: string | null
+          expected_metrics?: Json | null
           id?: string
           implementation_plan?: Json
+          monitoring_results?: Json | null
+          monitoring_window_hours?: number | null
           priority?: string
           proposal_type?: string
           review_notes?: string | null
           reviewed_at?: string | null
+          risk_assessment?: string | null
           rollback_plan?: Json | null
           rolled_back_at?: string | null
           source_audit_id?: string | null
           status?: string
           system_state_snapshot?: Json | null
           title?: string
+          trigger_metrics?: Json | null
         }
         Relationships: []
       }
