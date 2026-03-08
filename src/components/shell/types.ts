@@ -17,7 +17,7 @@ export type OrchestrationLeftTab = 'tasks' | 'agents' | 'context' | 'budgets' | 
 export type CodeLeftTab = 'explorer' | 'search' | 'git' | 'extensions';
 export type IntelLeftTab = 'sources' | 'red-team' | 'blue-team' | 'network';
 export type DocsLeftTab = 'outline' | 'sources' | 'templates';
-export type EvolveLeftTab = 'status' | 'history' | 'config';
+export type EvolveLeftTab = 'status' | 'history' | 'config' | 'connections';
 
 export type LeftTab = OrchestrationLeftTab | CodeLeftTab | IntelLeftTab | DocsLeftTab | EvolveLeftTab;
 
