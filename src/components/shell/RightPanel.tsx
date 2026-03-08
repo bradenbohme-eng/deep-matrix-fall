@@ -413,7 +413,4 @@ const MiniStat: React.FC<{ label: string; value: string }> = ({ label, value }) 
   </div>
 );
 
-// Need Layers import for MemoryPanel
-import { Layers } from 'lucide-react';
-
 export default RightPanel;
