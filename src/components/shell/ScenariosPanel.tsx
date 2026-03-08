@@ -523,6 +523,8 @@ const AgentDiscordFeed: React.FC<{ expanded: boolean; onToggle: () => void }> = 
   const [messages, setMessages] = useState<AgentDiscordMessage[]>([]);
   const [roleFilter, setRoleFilter] = useState<string>('all');
   const [typeFilter, setTypeFilter] = useState<string>('all');
+  const [planFilter, setPlanFilter] = useState<string>('all');
+  const [availablePlans, setAvailablePlans] = useState<string[]>([]);
 
   const fetchMessages = useCallback(async () => {
     let q = supabase
