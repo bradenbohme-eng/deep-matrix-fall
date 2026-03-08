@@ -12,9 +12,11 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import {
   MessageCircle, Search as SearchIcon, BarChart3, Brain,
   Send, Sparkles, Bot, Cpu, CheckCircle2, AlertTriangle,
-  Database, Network, ArrowRight, Loader2, Layers,
+  Database, Network, ArrowRight, Loader2, Layers, Users,
 } from 'lucide-react';
 import type { RightPanelMode } from './types';
+import SwarmPanel from './SwarmPanel';
+import { createSwarmSimulation, type SwarmState } from '@/lib/agentSimulator';
 
 interface RightPanelProps {
   mode: RightPanelMode;
@@ -25,12 +27,26 @@ interface RightPanelProps {
 
 const MODE_TABS: { id: RightPanelMode; icon: React.ElementType; label: string }[] = [
   { id: 'ai', icon: MessageCircle, label: 'AI' },
+  { id: 'swarm', icon: Users, label: 'Swarm' },
   { id: 'inspect', icon: SearchIcon, label: 'Inspect' },
   { id: 'analyze', icon: BarChart3, label: 'Analyze' },
   { id: 'memory', icon: Brain, label: 'Memory' },
 ];
 
 const RightPanel: React.FC<RightPanelProps> = ({ mode, onModeChange, isOpen, width }) => {
+  const [swarmState, setSwarmState] = useState<SwarmState | null>(null);
+
+  // Expose swarm state setter for the chat panel to trigger
+  const triggerSwarm = useCallback((query: string) => {
+    const sim = createSwarmSimulation(query);
+    const interval = setInterval(() => {
+      const active = sim.tick();
+      setSwarmState(sim.getState());
+      if (!active) clearInterval(interval);
+    }, 180);
+    return () => clearInterval(interval);
+  }, []);
+
   if (!isOpen) return null;
 
   return (
@@ -38,7 +54,7 @@ const RightPanel: React.FC<RightPanelProps> = ({ mode, onModeChange, isOpen, wid
       {/* Content Panel */}
       <div className="h-full bg-surface-2 border-l border-border flex flex-col overflow-hidden" style={{ width: `${width}px` }}>
         {/* Mode Header */}
-        <div className="px-3 py-2 border-b border-border flex items-center gap-1">
+        <div className="px-3 py-2 border-b border-border flex items-center gap-1 flex-wrap">
           {MODE_TABS.map(({ id, icon: Icon }) => (
             <motion.button
               key={id}
@@ -64,7 +80,8 @@ const RightPanel: React.FC<RightPanelProps> = ({ mode, onModeChange, isOpen, wid
               transition={{ duration: 0.15 }}
               className="h-full"
             >
-              {mode === 'ai' && <AIChatPanel />}
+              {mode === 'ai' && <AIChatPanel onSwarmTrigger={triggerSwarm} />}
+              {mode === 'swarm' && <SwarmPanel state={swarmState} />}
               {mode === 'inspect' && <InspectPanel />}
               {mode === 'analyze' && <AnalyzePanel />}
               {mode === 'memory' && <MemoryPanel />}
@@ -103,7 +120,7 @@ const RightPanel: React.FC<RightPanelProps> = ({ mode, onModeChange, isOpen, wid
 };
 
 // ─── AI Chat ───
-const AIChatPanel: React.FC = () => {
+const AIChatPanel: React.FC<{ onSwarmTrigger?: (query: string) => void }> = ({ onSwarmTrigger }) => {
   const [input, setInput] = useState('');
   const [isStreaming, setIsStreaming] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -126,6 +143,9 @@ const AIChatPanel: React.FC = () => {
     const userEntry = { id: Date.now().toString(), role: 'user' as const, content: userMsg, timestamp: new Date() };
     setMessages(prev => [...prev, userEntry]);
     setIsStreaming(true);
+
+    // Trigger agent swarm simulation alongside real AI
+    onSwarmTrigger?.(userMsg);
 
     // Build history for API (exclude initial greeting for cleaner context)
     const apiMessages: ChatMessage[] = [

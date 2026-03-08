@@ -20,7 +20,7 @@ export type DocsLeftTab = 'outline' | 'sources' | 'templates';
 export type LeftTab = OrchestrationLeftTab | CodeLeftTab | IntelLeftTab | DocsLeftTab;
 
 // ─── Right Panel Modes (Canon §10 - Toggled Domain Separation) ───
-export type RightPanelMode = 'ai' | 'inspect' | 'analyze' | 'memory';
+export type RightPanelMode = 'ai' | 'swarm' | 'inspect' | 'analyze' | 'memory';
 
 // ─── Bottom Dock Tabs (Canon §11 - Time, Process, History) ───
 export type BottomDockTab = 'timeline' | 'terminal' | 'history' | 'jobs' | 'tests';
