@@ -1,5 +1,5 @@
 // SystemProofDashboard — Live visual proof that all backend cognitive systems are operational
-// Deep self-reflection, seeding, live cognitive tests, history, and process controls
+// Deep self-reflection, seeding, live cognitive tests, history, quality timeline, and process controls
 
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -9,8 +9,6 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
 import { Input } from '@/components/ui/input';
-import { Slider } from '@/components/ui/slider';
-import { Label } from '@/components/ui/label';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import {
   Activity, Database, Brain, Shield, Network, Eye, RefreshCw,
@@ -18,13 +16,14 @@ import {
   CheckCircle, XCircle, Clock, Cpu, Search, GitCompare,
   AlertTriangle, BarChart3, Sparkles, HeartPulse, Play,
   Loader2, ChevronDown, ChevronRight, Settings, Download,
-  FlaskConical, History,
+  FlaskConical, History, TrendingDown, ShieldCheck, ArrowUpRight,
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
-  ResponsiveContainer, BarChart, Bar,
+  ResponsiveContainer, BarChart, Bar, Area, AreaChart,
+  ReferenceLine,
 } from 'recharts';
 
 // ═══════════════════════════════════════════════════════════════
@@ -60,6 +59,21 @@ interface LiveTestStep {
   afterCount?: number;
 }
 
+interface QualityDataPoint {
+  time: string;
+  kappa: number;
+  tier: string;
+  responseLength: number;
+}
+
+interface IntegrityScore {
+  overall: number;
+  verifiedAtoms: number;
+  advancedPlans: number;
+  appliedProposals: number;
+  avgKappa: number;
+}
+
 // ═══════════════════════════════════════════════════════════════
 // SUBSYSTEM PROBES
 // ═══════════════════════════════════════════════════════════════
@@ -87,16 +101,27 @@ async function probeMemoryAtoms(): Promise<SubsystemProof> {
   try {
     const [{ count }, { data: recent }, { data: tiers }] = await Promise.all([
       supabase.from('aimos_memory_atoms').select('*', { count: 'exact', head: true }),
-      supabase.from('aimos_memory_atoms').select('id, content, memory_level, confidence_score, content_type, tags, created_at').order('created_at', { ascending: false }).limit(5),
-      supabase.from('aimos_memory_atoms').select('memory_level').limit(500),
+      supabase.from('aimos_memory_atoms').select('id, content, memory_level, confidence_score, content_type, tags, verification_status, created_at').order('created_at', { ascending: false }).limit(5),
+      supabase.from('aimos_memory_atoms').select('memory_level, verification_status').limit(500),
     ]);
     const tierCounts: Record<string, number> = {};
-    (tiers || []).forEach((r: any) => { tierCounts[r.memory_level || 'unknown'] = (tierCounts[r.memory_level || 'unknown'] || 0) + 1; });
+    let verifiedCount = 0;
+    let pendingCount = 0;
+    (tiers || []).forEach((r: any) => {
+      tierCounts[r.memory_level || 'unknown'] = (tierCounts[r.memory_level || 'unknown'] || 0) + 1;
+      if (r.verification_status === 'verified') verifiedCount++;
+      else pendingCount++;
+    });
     return {
       name: 'CMC Memory Core', table: 'aimos_memory_atoms', icon: Database,
       count: count || 0, recentItems: recent || [], status: (count || 0) > 0 ? 'healthy' : 'empty',
       latencyMs: performance.now() - start,
-      details: { tierDistribution: tierCounts, avgConfidence: recent?.length ? (recent.reduce((s: number, r: any) => s + (r.confidence_score || 0), 0) / recent.length).toFixed(3) : 0 },
+      details: {
+        tierDistribution: tierCounts,
+        verified: verifiedCount,
+        pending: pendingCount,
+        avgConfidence: recent?.length ? (recent.reduce((s: number, r: any) => s + (r.confidence_score || 0), 0) / recent.length).toFixed(3) : 0,
+      },
     };
   } catch (e: any) {
     return { name: 'CMC Memory Core', table: 'aimos_memory_atoms', icon: Database, count: 0, recentItems: [], status: 'error', latencyMs: performance.now() - start, details: { error: e.message } };
@@ -108,7 +133,7 @@ async function probeReasoningChains(): Promise<SubsystemProof> {
   try {
     const [{ count }, { data: recent }] = await Promise.all([
       supabase.from('aimos_reasoning_chains').select('*', { count: 'exact', head: true }),
-      supabase.from('aimos_reasoning_chains').select('id, user_query, final_answer, confidence_kappa, quality_tier, depth, response_type, created_at').order('created_at', { ascending: false }).limit(5),
+      supabase.from('aimos_reasoning_chains').select('id, user_query, final_answer, confidence_kappa, quality_tier, depth, response_type, completeness_score, created_at').order('created_at', { ascending: false }).limit(5),
     ]);
     const avgKappa = recent?.length ? recent.reduce((s: number, r: any) => s + (r.confidence_kappa || 0), 0) / recent.length : 0;
     return {
@@ -146,14 +171,15 @@ async function probePlans(): Promise<SubsystemProof> {
   try {
     const [{ count }, { data: recent }, { count: taskCount }] = await Promise.all([
       supabase.from('aimos_plans').select('*', { count: 'exact', head: true }),
-      supabase.from('aimos_plans').select('id, title, objective, status, current_step, created_at').order('created_at', { ascending: false }).limit(5),
+      supabase.from('aimos_plans').select('id, title, objective, status, current_step, steps, created_at').order('created_at', { ascending: false }).limit(5),
       supabase.from('aimos_task_queue').select('*', { count: 'exact', head: true }),
     ]);
+    const advancedPlans = (recent || []).filter((p: any) => (p.current_step || 0) > 0).length;
     return {
       name: 'APOE Plans & Tasks', table: 'aimos_plans', icon: Target,
       count: count || 0, recentItems: recent || [], status: (count || 0) > 0 ? 'healthy' : 'empty',
       latencyMs: performance.now() - start,
-      details: { taskQueueSize: taskCount || 0 },
+      details: { taskQueueSize: taskCount || 0, advancedPlans },
     };
   } catch (e: any) {
     return { name: 'APOE Plans & Tasks', table: 'aimos_plans', icon: Target, count: 0, recentItems: [], status: 'error', latencyMs: performance.now() - start, details: { error: e.message } };
@@ -196,14 +222,15 @@ async function probeEvolutionProposals(): Promise<SubsystemProof> {
   try {
     const [{ count }, { data: recent }, { count: auditCount }] = await Promise.all([
       supabase.from('evolution_proposals').select('*', { count: 'exact', head: true }),
-      supabase.from('evolution_proposals').select('id, title, status, priority, created_at').order('created_at', { ascending: false }).limit(5),
+      supabase.from('evolution_proposals').select('id, title, status, priority, applied_at, created_at').order('created_at', { ascending: false }).limit(5),
       supabase.from('self_audit_log' as any).select('*', { count: 'exact', head: true }),
     ]);
+    const appliedCount = (recent || []).filter((p: any) => p.applied_at).length;
     return {
       name: 'Evolution & Self-Audit', table: 'evolution_proposals', icon: Sparkles,
       count: count || 0, recentItems: recent || [], status: (count || 0) > 0 ? 'healthy' : 'empty',
       latencyMs: performance.now() - start,
-      details: { auditLogEntries: auditCount || 0 },
+      details: { auditLogEntries: auditCount || 0, applied: appliedCount },
     };
   } catch (e: any) {
     return { name: 'Evolution & Self-Audit', table: 'evolution_proposals', icon: Sparkles, count: 0, recentItems: [], status: 'error', latencyMs: performance.now() - start, details: { error: e.message } };
@@ -220,6 +247,73 @@ async function probeTagHierarchy(): Promise<SubsystemProof> {
 
 async function probeConfidenceMetrics(): Promise<SubsystemProof> {
   return probeTable('VIF Confidence Scores', 'aimos_confidence_metrics', BarChart3, 'id, entity_type, overall_confidence, factual_accuracy, consistency, completeness, relevance, validation_count, created_at');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// QUALITY TIMELINE & INTEGRITY SCORE (Phase 5)
+// ═══════════════════════════════════════════════════════════════
+
+async function loadQualityTimeline(): Promise<QualityDataPoint[]> {
+  const { data } = await supabase
+    .from('aimos_reasoning_chains')
+    .select('confidence_kappa, quality_tier, final_answer, created_at')
+    .order('created_at', { ascending: true })
+    .limit(30);
+
+  return (data || []).map((c: any) => ({
+    time: new Date(c.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    kappa: Math.round((c.confidence_kappa || 0) * 1000) / 1000,
+    tier: c.quality_tier || 'unknown',
+    responseLength: (c.final_answer || '').length,
+  }));
+}
+
+async function computeIntegrityScore(): Promise<IntegrityScore> {
+  const [
+    { data: atoms },
+    { data: plans },
+    { data: proposals },
+    { data: chains },
+  ] = await Promise.all([
+    supabase.from('aimos_memory_atoms').select('verification_status').limit(200),
+    supabase.from('aimos_plans').select('current_step, status').limit(50),
+    supabase.from('evolution_proposals').select('status, applied_at').limit(50),
+    supabase.from('aimos_reasoning_chains').select('confidence_kappa').order('created_at', { ascending: false }).limit(20),
+  ]);
+
+  const totalAtoms = (atoms || []).length;
+  const verifiedAtoms = totalAtoms > 0
+    ? (atoms || []).filter((a: any) => a.verification_status !== 'pending').length / totalAtoms
+    : 0;
+
+  const totalPlans = (plans || []).length;
+  const advancedPlans = totalPlans > 0
+    ? (plans || []).filter((p: any) => (p.current_step || 0) > 0 || p.status === 'completed').length / totalPlans
+    : 0;
+
+  const totalProposals = (proposals || []).length;
+  const appliedProposals = totalProposals > 0
+    ? (proposals || []).filter((p: any) => p.applied_at != null || p.status === 'applied').length / totalProposals
+    : 0;
+
+  const kappaValues = (chains || []).filter((c: any) => c.confidence_kappa != null).map((c: any) => c.confidence_kappa as number);
+  const avgKappa = kappaValues.length > 0 ? kappaValues.reduce((a, b) => a + b, 0) / kappaValues.length : 0;
+
+  const overall = (verifiedAtoms * 0.25 + advancedPlans * 0.25 + appliedProposals * 0.25 + avgKappa * 0.25);
+
+  return { overall, verifiedAtoms, advancedPlans, appliedProposals, avgKappa };
+}
+
+function detectRegression(data: QualityDataPoint[]): { detected: boolean; fromAvg: number; toAvg: number } | null {
+  if (data.length < 10) return null;
+  const recent5 = data.slice(-5).map(d => d.kappa);
+  const prev5 = data.slice(-10, -5).map(d => d.kappa);
+  const recentAvg = recent5.reduce((a, b) => a + b, 0) / recent5.length;
+  const prevAvg = prev5.reduce((a, b) => a + b, 0) / prev5.length;
+  if (prevAvg > 0 && (prevAvg - recentAvg) / prevAvg > 0.15) {
+    return { detected: true, fromAvg: prevAvg, toAvg: recentAvg };
+  }
+  return null;
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -319,7 +413,11 @@ function renderDataRow(table: string, item: any): React.ReactNode {
       return (
         <div className="space-y-0.5">
           <div className="flex items-center justify-between">
-            <Badge variant="outline" className="text-[8px]">{item.memory_level || 'hot'}</Badge>
+            <div className="flex items-center gap-1">
+              <Badge variant="outline" className="text-[8px]">{item.memory_level || 'hot'}</Badge>
+              {item.verification_status === 'verified' && <ShieldCheck className="w-3 h-3 text-emerald-400" />}
+              {item.verification_status === 'pending' && <Clock className="w-3 h-3 text-muted-foreground" />}
+            </div>
             <span className="text-muted-foreground">{item.content_type} · κ={((item.confidence_score || 0) * 100).toFixed(0)}%</span>
           </div>
           <p className="text-foreground leading-relaxed truncate">{(item.content || '').slice(0, 120)}</p>
@@ -350,8 +448,11 @@ function renderDataRow(table: string, item: any): React.ReactNode {
       return (
         <div className="space-y-0.5">
           <div className="flex items-center justify-between">
-            <Badge variant={item.status === 'active' ? 'default' : 'outline'} className="text-[8px]">{item.status}</Badge>
-            <span className="text-muted-foreground">step {item.current_step || 0}</span>
+            <Badge variant={item.status === 'completed' ? 'default' : item.status === 'active' ? 'default' : 'outline'} className="text-[8px]">{item.status}</Badge>
+            <div className="flex items-center gap-1">
+              <span className="text-muted-foreground">step {item.current_step || 0}/{Array.isArray(item.steps) ? item.steps.length : '?'}</span>
+              {(item.current_step || 0) > 0 && <ArrowUpRight className="w-3 h-3 text-emerald-400" />}
+            </div>
           </div>
           <p className="text-foreground truncate">{item.title || item.objective?.slice(0, 80)}</p>
         </div>
@@ -361,7 +462,7 @@ function renderDataRow(table: string, item: any): React.ReactNode {
         <div className="space-y-0.5">
           <div className="flex items-center gap-2">
             <Badge variant="outline" className="text-[8px]">{item.agent_role}</Badge>
-            <Badge variant="outline" className="text-[8px]">{item.message_type}</Badge>
+            <Badge variant={item.message_type === 'PROPOSAL_APPLIED' ? 'default' : item.message_type === 'PLAN_ADVANCE' ? 'default' : 'outline'} className="text-[8px]">{item.message_type}</Badge>
           </div>
           <p className="text-foreground truncate">{item.content?.slice(0, 100)}</p>
         </div>
@@ -380,10 +481,13 @@ function renderDataRow(table: string, item: any): React.ReactNode {
       return (
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Badge variant={item.status === 'approved' ? 'default' : 'outline'} className="text-[8px]">{item.status}</Badge>
+            <Badge variant={item.status === 'applied' ? 'default' : item.status === 'approved' ? 'default' : 'outline'} className="text-[8px]">{item.status}</Badge>
             <span className="text-foreground truncate">{item.title?.slice(0, 60)}</span>
           </div>
-          <span className="text-muted-foreground">pri={item.priority}</span>
+          <div className="flex items-center gap-1">
+            <span className="text-muted-foreground">pri={item.priority}</span>
+            {item.applied_at && <CheckCircle className="w-3 h-3 text-emerald-400" />}
+          </div>
         </div>
       );
     default:
@@ -392,7 +496,7 @@ function renderDataRow(table: string, item: any): React.ReactNode {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// SEEDING FUNCTIONS — Cross-populate empty tables from existing data
+// SEEDING FUNCTIONS
 // ═══════════════════════════════════════════════════════════════
 
 async function seedClaimVerification(): Promise<number> {
@@ -430,11 +534,8 @@ async function seedConfidenceMetrics(): Promise<number> {
 }
 
 async function seedEvidenceGraph(): Promise<number> {
-  const { data: entities } = await supabase.from('aimos_entities')
-    .select('id').limit(20);
-  const { data: atoms } = await supabase.from('aimos_memory_atoms')
-    .select('id').limit(20);
-  if (!entities?.length || !atoms?.length) return 0;
+  const { data: atoms } = await supabase.from('aimos_memory_atoms').select('id').limit(20);
+  if (!atoms?.length || atoms.length < 2) return 0;
   const edges: any[] = [];
   for (let i = 0; i < Math.min(atoms.length - 1, 8); i++) {
     edges.push({
@@ -449,43 +550,8 @@ async function seedEvidenceGraph(): Promise<number> {
   return error ? 0 : edges.length;
 }
 
-async function seedSkillLog(): Promise<number> {
-  const { data: agents } = await supabase.from('agent_genomes')
-    .select('agent_role, skill_levels').limit(7);
-  if (!agents?.length) return 0;
-  const logs: any[] = [];
-  for (const agent of agents) {
-    const skills = typeof agent.skill_levels === 'object' && agent.skill_levels ? agent.skill_levels : {};
-    for (const [skill, level] of Object.entries(skills).slice(0, 2)) {
-      logs.push({
-        agent_role: agent.agent_role,
-        skill_name: skill,
-        proficiency_before: Math.max(0, (level as number || 50) - 5),
-        proficiency_after: level as number || 50,
-        trigger_event: 'system_proof_snapshot',
-        details: `Initial skill snapshot from SystemProofDashboard`,
-      });
-    }
-  }
-  if (!logs.length) {
-    // No skills exist yet — create baseline entries
-    for (const agent of agents.slice(0, 3)) {
-      logs.push({
-        agent_role: agent.agent_role,
-        skill_name: 'reasoning',
-        proficiency_before: 40,
-        proficiency_after: 50,
-        trigger_event: 'system_proof_baseline',
-        details: 'Baseline skill entry created by System Proof Dashboard',
-      });
-    }
-  }
-  const { error } = await supabase.from('agent_skill_log').insert(logs);
-  return error ? 0 : logs.length;
-}
-
 // ═══════════════════════════════════════════════════════════════
-// LIVE COGNITIVE TEST — E2E loop with visual timeline
+// LIVE COGNITIVE TEST
 // ═══════════════════════════════════════════════════════════════
 
 async function runLiveCognitiveTest(onStep: (steps: LiveTestStep[]) => void): Promise<LiveTestStep[]> {
@@ -520,7 +586,6 @@ async function runLiveCognitiveTest(onStep: (steps: LiveTestStep[]) => void): Pr
     steps[0].detail = `Atom ${atomId.slice(0, 8)}... stored`;
     steps[0].beforeCount = beforeCount || 0;
     steps[0].afterCount = afterCount || 0;
-    steps[0].data = { id: atomId, content: testFact.slice(0, 60) };
   } catch (e: any) {
     steps[0].status = 'fail'; steps[0].detail = e.message;
   }
@@ -536,28 +601,22 @@ async function runLiveCognitiveTest(onStep: (steps: LiveTestStep[]) => void): Pr
     if (error || !data) throw error || new Error('Not found');
     steps[1].status = 'pass';
     steps[1].detail = `Retrieved: ${data.content.slice(0, 50)}...`;
-    steps[1].data = data;
   } catch (e: any) {
     steps[1].status = 'fail'; steps[1].detail = e.message;
   }
   update();
 
-  // Step 3: Reason — Call hq-chat
+  // Step 3: Reason
   steps[2].status = 'running'; update();
-  let reasoningAnswer = '';
   try {
     const { count: beforeChains } = await supabase.from('aimos_reasoning_chains').select('*', { count: 'exact', head: true });
     const start = performance.now();
     const { data, error } = await supabase.functions.invoke('hq-chat', {
-      body: {
-        messages: [{ role: 'user', content: `Analyze this fact and explain its significance: "${testFact}"` }],
-      },
+      body: { messages: [{ role: 'user', content: `Analyze this fact and explain its significance: "${testFact}"` }] },
     });
     steps[2].latencyMs = performance.now() - start;
     if (error) throw error;
-    // Parse SSE response
     const text = typeof data === 'string' ? data : JSON.stringify(data);
-    reasoningAnswer = text.slice(0, 200);
     const { count: afterChains } = await supabase.from('aimos_reasoning_chains').select('*', { count: 'exact', head: true });
     steps[2].status = 'pass';
     steps[2].detail = `Response received (${text.length} chars)`;
@@ -568,10 +627,10 @@ async function runLiveCognitiveTest(onStep: (steps: LiveTestStep[]) => void): Pr
   }
   update();
 
-  // Step 4: Verify — Check reasoning chain created
+  // Step 4: Verify
   steps[3].status = 'running'; update();
   try {
-    await new Promise(r => setTimeout(r, 1500)); // Wait for async pipeline
+    await new Promise(r => setTimeout(r, 1500));
     const start = performance.now();
     const { data: chains } = await supabase.from('aimos_reasoning_chains')
       .select('id, confidence_kappa, quality_tier, depth')
@@ -580,16 +639,15 @@ async function runLiveCognitiveTest(onStep: (steps: LiveTestStep[]) => void): Pr
     if (chains?.length) {
       steps[3].status = 'pass';
       steps[3].detail = `Chain κ=${(chains[0].confidence_kappa || 0).toFixed(3)} tier=${chains[0].quality_tier} depth=${chains[0].depth}`;
-      steps[3].data = chains[0];
     } else {
-      steps[3].status = 'fail'; steps[3].detail = 'No chain created (pipeline may be async)';
+      steps[3].status = 'fail'; steps[3].detail = 'No chain created';
     }
   } catch (e: any) {
     steps[3].status = 'fail'; steps[3].detail = e.message;
   }
   update();
 
-  // Step 5: Extract — Check SEG
+  // Step 5: Extract
   steps[4].status = 'running'; update();
   try {
     const start = performance.now();
@@ -603,7 +661,7 @@ async function runLiveCognitiveTest(onStep: (steps: LiveTestStep[]) => void): Pr
   }
   update();
 
-  // Step 6: Log — Check Agent Discord
+  // Step 6: Log
   steps[5].status = 'running'; update();
   try {
     const start = performance.now();
@@ -613,22 +671,20 @@ async function runLiveCognitiveTest(onStep: (steps: LiveTestStep[]) => void): Pr
     steps[5].latencyMs = performance.now() - start;
     steps[5].status = msgs?.length ? 'pass' : 'fail';
     steps[5].detail = msgs?.length ? `Latest: ${msgs[0].agent_role}/${msgs[0].message_type}: ${msgs[0].content?.slice(0, 50)}` : 'No agent messages found';
-    steps[5].data = msgs?.[0];
   } catch (e: any) {
     steps[5].status = 'fail'; steps[5].detail = e.message;
   }
   update();
 
-  // Step 7: Reflect — Write self-assessment
+  // Step 7: Reflect
   steps[6].status = 'running'; update();
   try {
     const passCount = steps.filter(s => s.status === 'pass').length;
-    const totalSteps = steps.length - 1; // Exclude this step
+    const totalSteps = steps.length - 1;
     const start = performance.now();
     const { error } = await supabase.from('aimos_memory_atoms').insert({
       content: `SELF-REFLECTION [${testId}]: Cognitive loop test completed. ${passCount}/${totalSteps} steps passed. Pipeline integrity: ${((passCount / totalSteps) * 100).toFixed(0)}%. Timestamp: ${new Date().toISOString()}.`,
-      content_type: 'self_reflection',
-      memory_level: 'warm',
+      content_type: 'self_reflection', memory_level: 'warm',
       confidence_score: passCount / totalSteps,
       tags: ['self-reflection', 'system-proof', testId],
     });
@@ -645,7 +701,7 @@ async function runLiveCognitiveTest(onStep: (steps: LiveTestStep[]) => void): Pr
 }
 
 // ═══════════════════════════════════════════════════════════════
-// SELF-REFLECTION — AI analyzes its own state
+// SELF-REFLECTION
 // ═══════════════════════════════════════════════════════════════
 
 async function runSelfReflection(proof: FullSystemProof): Promise<{ analysis: string; proposals: string[] }> {
@@ -665,7 +721,6 @@ async function runSelfReflection(proof: FullSystemProof): Promise<{ analysis: st
 
   if (error) throw error;
 
-  // Parse the SSE response to extract text
   let fullText = '';
   if (typeof data === 'string') {
     const lines = data.split('\n');
@@ -680,16 +735,13 @@ async function runSelfReflection(proof: FullSystemProof): Promise<{ analysis: st
   }
   if (!fullText) fullText = typeof data === 'string' ? data : JSON.stringify(data);
 
-  // Persist reflection as memory atom
   await supabase.from('aimos_memory_atoms').insert({
     content: `SELF-REFLECTION: ${fullText.slice(0, 2000)}`,
-    content_type: 'self_reflection',
-    memory_level: 'warm',
+    content_type: 'self_reflection', memory_level: 'warm',
     confidence_score: proof.overallHealth,
     tags: ['self-reflection', 'system-audit', `health-${Math.round(proof.overallHealth * 100)}`],
   });
 
-  // Persist proof snapshot to self_audit_log
   await supabase.from('self_audit_log' as any).insert({
     audit_type: 'system_proof',
     system_health_score: proof.overallHealth,
@@ -700,6 +752,111 @@ async function runSelfReflection(proof: FullSystemProof): Promise<{ analysis: st
 
   return { analysis: fullText, proposals: [] };
 }
+
+// ═══════════════════════════════════════════════════════════════
+// INTEGRITY SCORE PANEL COMPONENT
+// ═══════════════════════════════════════════════════════════════
+
+const IntegrityPanel: React.FC<{ score: IntegrityScore | null; loading: boolean; onRefresh: () => void }> = ({ score, loading, onRefresh }) => {
+  if (!score) return null;
+  const color = score.overall > 0.7 ? 'text-emerald-400' : score.overall > 0.4 ? 'text-amber-400' : 'text-destructive';
+  const metrics = [
+    { label: 'Verified Atoms', value: score.verifiedAtoms, desc: '% atoms != pending' },
+    { label: 'Plans Advanced', value: score.advancedPlans, desc: '% plans step > 0' },
+    { label: 'Proposals Applied', value: score.appliedProposals, desc: '% proposals executed' },
+    { label: 'Avg κ Score', value: score.avgKappa, desc: 'Recent chain quality' },
+  ];
+
+  return (
+    <Card className="border-primary/30">
+      <CardHeader className="py-2 px-3">
+        <CardTitle className="text-xs font-mono flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <ShieldCheck className="w-3.5 h-3.5 text-primary" />
+            System Integrity Score
+          </div>
+          <div className="flex items-center gap-2">
+            <span className={`text-lg font-bold ${color}`}>{(score.overall * 100).toFixed(0)}%</span>
+            <Button size="sm" variant="ghost" className="h-5 w-5 p-0" onClick={onRefresh} disabled={loading}>
+              <RefreshCw className={`w-3 h-3 ${loading ? 'animate-spin' : ''}`} />
+            </Button>
+          </div>
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="py-2 px-3">
+        <div className="grid grid-cols-4 gap-2">
+          {metrics.map(m => {
+            const c = m.value > 0.6 ? 'text-emerald-400' : m.value > 0.3 ? 'text-amber-400' : 'text-destructive';
+            return (
+              <div key={m.label} className="text-center">
+                <div className={`text-sm font-mono font-bold ${c}`}>{(m.value * 100).toFixed(0)}%</div>
+                <div className="text-[8px] font-mono text-muted-foreground">{m.label}</div>
+              </div>
+            );
+          })}
+        </div>
+        <Progress value={score.overall * 100} className="h-1.5 mt-2" />
+      </CardContent>
+    </Card>
+  );
+};
+
+// ═══════════════════════════════════════════════════════════════
+// QUALITY TIMELINE COMPONENT
+// ═══════════════════════════════════════════════════════════════
+
+const QualityTimeline: React.FC<{ data: QualityDataPoint[]; regression: { detected: boolean; fromAvg: number; toAvg: number } | null }> = ({ data, regression }) => {
+  if (data.length === 0) return null;
+
+  return (
+    <Card className="border-border/50">
+      <CardHeader className="py-2 px-3">
+        <CardTitle className="text-xs font-mono flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <TrendingUp className="w-3.5 h-3.5" /> κ Quality Timeline
+          </div>
+          {regression && (
+            <Badge variant="destructive" className="text-[9px] font-mono animate-pulse">
+              <TrendingDown className="w-3 h-3 mr-1" />
+              Regression: {(regression.fromAvg * 100).toFixed(0)}%→{(regression.toAvg * 100).toFixed(0)}%
+            </Badge>
+          )}
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="py-2 px-3">
+        <ResponsiveContainer width="100%" height={140}>
+          <AreaChart data={data}>
+            <defs>
+              <linearGradient id="kappaGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3} />
+                <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0} />
+              </linearGradient>
+            </defs>
+            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+            <XAxis dataKey="time" tick={{ fontSize: 8 }} stroke="hsl(var(--muted-foreground))" />
+            <YAxis tick={{ fontSize: 9 }} domain={[0, 1]} stroke="hsl(var(--muted-foreground))" />
+            <Tooltip
+              contentStyle={{ backgroundColor: 'hsl(var(--background))', border: '1px solid hsl(var(--border))', fontSize: 10 }}
+              formatter={(value: any) => [(value as number).toFixed(3), 'κ']}
+            />
+            <ReferenceLine y={0.5} stroke="hsl(var(--destructive))" strokeDasharray="3 3" label={{ value: 'min', position: 'left', fill: 'hsl(var(--destructive))', fontSize: 8 }} />
+            <ReferenceLine y={0.8} stroke="hsl(var(--primary))" strokeDasharray="3 3" label={{ value: 'good', position: 'left', fill: 'hsl(var(--primary))', fontSize: 8 }} />
+            <Area type="monotone" dataKey="kappa" stroke="hsl(var(--primary))" fill="url(#kappaGrad)" strokeWidth={2} dot={(props: any) => {
+              const { cx, cy, payload } = props;
+              const fill = payload.tier === 'green' ? '#34d399' : payload.tier === 'yellow' ? '#fbbf24' : '#f87171';
+              return <circle cx={cx} cy={cy} r={3} fill={fill} stroke="none" />;
+            }} />
+          </AreaChart>
+        </ResponsiveContainer>
+        <div className="flex justify-center gap-4 mt-1">
+          <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-emerald-400" /><span className="text-[8px] font-mono text-muted-foreground">green (κ&gt;0.8)</span></div>
+          <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-amber-400" /><span className="text-[8px] font-mono text-muted-foreground">yellow (0.5-0.8)</span></div>
+          <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-red-400" /><span className="text-[8px] font-mono text-muted-foreground">red (κ&lt;0.5)</span></div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
 
 // ═══════════════════════════════════════════════════════════════
 // MAIN DASHBOARD
@@ -731,6 +888,12 @@ const SystemProofDashboard: React.FC = () => {
   const [auditHistory, setAuditHistory] = useState<any[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
 
+  // Phase 5: Quality Timeline & Integrity
+  const [qualityData, setQualityData] = useState<QualityDataPoint[]>([]);
+  const [integrityScore, setIntegrityScore] = useState<IntegrityScore | null>(null);
+  const [integrityLoading, setIntegrityLoading] = useState(false);
+  const [regression, setRegression] = useState<{ detected: boolean; fromAvg: number; toAvg: number } | null>(null);
+
   const runProof = useCallback(async () => {
     setLoading(true);
     try {
@@ -745,18 +908,33 @@ const SystemProofDashboard: React.FC = () => {
     } finally { setLoading(false); }
   }, [autoRefresh]);
 
+  const loadQuality = useCallback(async () => {
+    try {
+      const [timeline, integrity] = await Promise.all([
+        loadQualityTimeline(),
+        computeIntegrityScore(),
+      ]);
+      setQualityData(timeline);
+      setIntegrityScore(integrity);
+      setRegression(detectRegression(timeline));
+    } catch (e: any) {
+      console.error('Quality load error:', e);
+    }
+  }, []);
+
   useEffect(() => {
     if (autoRefresh) {
       runProof();
-      intervalRef.current = setInterval(runProof, 15000);
+      loadQuality();
+      intervalRef.current = setInterval(() => { runProof(); loadQuality(); }, 15000);
     } else if (intervalRef.current) {
       clearInterval(intervalRef.current);
       intervalRef.current = null;
     }
     return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
-  }, [autoRefresh, runProof]);
+  }, [autoRefresh, runProof, loadQuality]);
 
-  useEffect(() => { runProof(); }, []);
+  useEffect(() => { runProof(); loadQuality(); }, []);
 
   const toggleExpanded = (name: string) => {
     setExpandedSystems(prev => {
@@ -774,7 +952,6 @@ const SystemProofDashboard: React.FC = () => {
         case 'aimos_claim_verification': count = await seedClaimVerification(); break;
         case 'aimos_confidence_metrics': count = await seedConfidenceMetrics(); break;
         case 'aimos_evidence_graph': count = await seedEvidenceGraph(); break;
-        case 'agent_skill_log': count = await seedSkillLog(); break;
         default: toast.info('No seeder for this table'); return;
       }
       toast.success(`Seeded ${count} rows into ${table}`);
@@ -802,7 +979,7 @@ const SystemProofDashboard: React.FC = () => {
     try {
       await runLiveCognitiveTest(setLiveTestSteps);
       toast.success('Live cognitive test complete');
-      await runProof(); // Re-probe to show new data
+      await Promise.all([runProof(), loadQuality()]);
     } catch (e: any) {
       toast.error(`Live test error: ${e.message}`);
     } finally { setLiveTestRunning(false); }
@@ -841,11 +1018,18 @@ const SystemProofDashboard: React.FC = () => {
     setHistoryLoading(false);
   };
 
+  const refreshIntegrity = async () => {
+    setIntegrityLoading(true);
+    try {
+      const score = await computeIntegrityScore();
+      setIntegrityScore(score);
+    } catch {} finally { setIntegrityLoading(false); }
+  };
+
   const seedableTablesMap: Record<string, boolean> = {
     'aimos_claim_verification': true,
     'aimos_confidence_metrics': true,
     'aimos_evidence_graph': true,
-    'agent_skill_log': true,
   };
 
   const healthyCount = proof?.subsystems.filter(s => s.status === 'healthy').length || 0;
@@ -881,7 +1065,7 @@ const SystemProofDashboard: React.FC = () => {
             <Activity className={`w-3 h-3 mr-1 ${autoRefresh ? 'animate-pulse' : ''}`} />
             {autoRefresh ? 'Live' : 'Auto'}
           </Button>
-          <Button onClick={runProof} disabled={loading} size="sm" variant="default" className="text-xs">
+          <Button onClick={() => { runProof(); loadQuality(); }} disabled={loading} size="sm" variant="default" className="text-xs">
             <RefreshCw className={`w-3 h-3 mr-1 ${loading ? 'animate-spin' : ''}`} /> Probe
           </Button>
         </div>
@@ -889,6 +1073,27 @@ const SystemProofDashboard: React.FC = () => {
 
       <ScrollArea className="flex-1">
         <div className="p-4 space-y-4">
+          {/* ═══ SYSTEM INTEGRITY SCORE ═══ */}
+          <IntegrityPanel score={integrityScore} loading={integrityLoading} onRefresh={refreshIntegrity} />
+
+          {/* ═══ REGRESSION ALERT ═══ */}
+          {regression && (
+            <Card className="border-destructive/50 bg-destructive/5">
+              <CardContent className="py-3 px-4">
+                <div className="flex items-center gap-2">
+                  <AlertTriangle className="w-4 h-4 text-destructive animate-pulse" />
+                  <span className="text-xs font-mono font-bold text-destructive">Quality Regression Detected</span>
+                </div>
+                <p className="text-[10px] font-mono text-muted-foreground mt-1">
+                  Average κ dropped from {(regression.fromAvg * 100).toFixed(0)}% to {(regression.toAvg * 100).toFixed(0)}% (>{'>'}15% decline over last 10 chains)
+                </p>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* ═══ κ QUALITY TIMELINE ═══ */}
+          <QualityTimeline data={qualityData} regression={regression} />
+
           {/* Health Overview */}
           {proof && (
             <>
@@ -976,11 +1181,6 @@ const SystemProofDashboard: React.FC = () => {
                       </div>
                     </div>
                     {step.detail && <p className="text-muted-foreground ml-5">{step.detail}</p>}
-                    {step.data && (
-                      <pre className="text-[9px] text-foreground/60 ml-5 mt-1 overflow-hidden">
-                        {JSON.stringify(step.data, null, 0).slice(0, 120)}
-                      </pre>
-                    )}
                   </div>
                 ))}
                 <div className="text-center pt-1">
