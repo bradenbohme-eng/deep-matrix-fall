@@ -34,6 +34,19 @@ const MODE_TABS: { id: RightPanelMode; icon: React.ElementType; label: string }[
 ];
 
 const RightPanel: React.FC<RightPanelProps> = ({ mode, onModeChange, isOpen, width }) => {
+  const [swarmState, setSwarmState] = useState<SwarmState | null>(null);
+
+  // Expose swarm state setter for the chat panel to trigger
+  const triggerSwarm = useCallback((query: string) => {
+    const sim = createSwarmSimulation(query);
+    const interval = setInterval(() => {
+      const active = sim.tick();
+      setSwarmState(sim.getState());
+      if (!active) clearInterval(interval);
+    }, 180);
+    return () => clearInterval(interval);
+  }, []);
+
   if (!isOpen) return null;
 
   return (
@@ -41,7 +54,7 @@ const RightPanel: React.FC<RightPanelProps> = ({ mode, onModeChange, isOpen, wid
       {/* Content Panel */}
       <div className="h-full bg-surface-2 border-l border-border flex flex-col overflow-hidden" style={{ width: `${width}px` }}>
         {/* Mode Header */}
-        <div className="px-3 py-2 border-b border-border flex items-center gap-1">
+        <div className="px-3 py-2 border-b border-border flex items-center gap-1 flex-wrap">
           {MODE_TABS.map(({ id, icon: Icon }) => (
             <motion.button
               key={id}
@@ -67,7 +80,8 @@ const RightPanel: React.FC<RightPanelProps> = ({ mode, onModeChange, isOpen, wid
               transition={{ duration: 0.15 }}
               className="h-full"
             >
-              {mode === 'ai' && <AIChatPanel />}
+              {mode === 'ai' && <AIChatPanel onSwarmTrigger={triggerSwarm} />}
+              {mode === 'swarm' && <SwarmPanel state={swarmState} />}
               {mode === 'inspect' && <InspectPanel />}
               {mode === 'analyze' && <AnalyzePanel />}
               {mode === 'memory' && <MemoryPanel />}
