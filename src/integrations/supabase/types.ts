@@ -948,6 +948,104 @@ export type Database = {
           },
         ]
       }
+      aimos_test_runs: {
+        Row: {
+          completed_at: string | null
+          id: string
+          metrics: Json | null
+          scenario_id: string | null
+          started_at: string | null
+          status: string | null
+          steps: Json | null
+        }
+        Insert: {
+          completed_at?: string | null
+          id?: string
+          metrics?: Json | null
+          scenario_id?: string | null
+          started_at?: string | null
+          status?: string | null
+          steps?: Json | null
+        }
+        Update: {
+          completed_at?: string | null
+          id?: string
+          metrics?: Json | null
+          scenario_id?: string | null
+          started_at?: string | null
+          status?: string | null
+          steps?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "aimos_test_runs_scenario_id_fkey"
+            columns: ["scenario_id"]
+            isOneToOne: false
+            referencedRelation: "aimos_test_scenarios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      aimos_test_scenarios: {
+        Row: {
+          config: Json | null
+          created_at: string | null
+          description: string | null
+          id: string
+          name: string
+          scenario_type: string
+        }
+        Insert: {
+          config?: Json | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          name: string
+          scenario_type: string
+        }
+        Update: {
+          config?: Json | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          name?: string
+          scenario_type?: string
+        }
+        Relationships: []
+      }
+      aimos_vm_connections: {
+        Row: {
+          config: Json | null
+          connection_type: string
+          created_at: string | null
+          endpoint_url: string
+          id: string
+          last_tested_at: string | null
+          name: string
+          status: string | null
+        }
+        Insert: {
+          config?: Json | null
+          connection_type: string
+          created_at?: string | null
+          endpoint_url: string
+          id?: string
+          last_tested_at?: string | null
+          name: string
+          status?: string | null
+        }
+        Update: {
+          config?: Json | null
+          connection_type?: string
+          created_at?: string | null
+          endpoint_url?: string
+          id?: string
+          last_tested_at?: string | null
+          name?: string
+          status?: string | null
+        }
+        Relationships: []
+      }
       assets: {
         Row: {
           created_at: string | null

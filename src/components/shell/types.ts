@@ -8,7 +8,7 @@ export type OrchestrationSubPage = 'command' | 'pipeline' | 'events' | 'tests';
 export type CodeSubPage = 'editor' | 'preview' | 'diff';
 export type IntelSubPage = 'feeds' | 'network' | 'threats';
 export type DocsSubPage = 'edit' | 'outline' | 'versions';
-export type EvolveSubPage = 'audit' | 'engines' | 'sandbox' | 'proposals';
+export type EvolveSubPage = 'audit' | 'engines' | 'scenarios' | 'connections' | 'metrics' | 'sandbox' | 'proposals';
 
 export type SubPage = OrchestrationSubPage | CodeSubPage | IntelSubPage | DocsSubPage | EvolveSubPage;
 
@@ -17,7 +17,7 @@ export type OrchestrationLeftTab = 'tasks' | 'agents' | 'context' | 'budgets' | 
 export type CodeLeftTab = 'explorer' | 'search' | 'git' | 'extensions';
 export type IntelLeftTab = 'sources' | 'red-team' | 'blue-team' | 'network';
 export type DocsLeftTab = 'outline' | 'sources' | 'templates';
-export type EvolveLeftTab = 'status' | 'history' | 'config';
+export type EvolveLeftTab = 'status' | 'history' | 'config' | 'connections';
 
 export type LeftTab = OrchestrationLeftTab | CodeLeftTab | IntelLeftTab | DocsLeftTab | EvolveLeftTab;
 
@@ -76,6 +76,9 @@ export const WORLD_SUBPAGES: Record<WorldPage, { id: SubPage; label: string }[]>
   evolve: [
     { id: 'audit', label: 'Self-Audit' },
     { id: 'engines', label: 'Engine Tests' },
+    { id: 'scenarios', label: 'Scenarios' },
+    { id: 'connections', label: 'Connections' },
+    { id: 'metrics', label: 'Metrics' },
     { id: 'sandbox', label: 'Sandbox' },
     { id: 'proposals', label: 'Proposals' },
   ],
@@ -120,5 +123,6 @@ export const WORLD_LEFT_TABS: Record<WorldPage, { id: LeftTab; label: string; ic
     { id: 'status', label: 'Status', icon: 'activity' },
     { id: 'history', label: 'History', icon: 'history' },
     { id: 'config', label: 'Config', icon: 'settings' },
+    { id: 'connections', label: 'Connections', icon: 'plug' },
   ],
 };
