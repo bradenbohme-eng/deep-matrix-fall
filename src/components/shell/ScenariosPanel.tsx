@@ -42,6 +42,7 @@ interface AgentDiscordMessage {
   message_type: string;
   content: string;
   confidence: number | null;
+  plan_id: string | null;
   thread_id: string | null;
   created_at: string;
 }
