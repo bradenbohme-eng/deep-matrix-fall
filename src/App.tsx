@@ -8,6 +8,7 @@ import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import Architecture from "./pages/Architecture";
 import HQ from "./pages/HQ";
+import ContextLab from "./pages/ContextLab";
 import { ImageEditor } from "./components/ImageEditor";
 
 const queryClient = new QueryClient();
@@ -24,6 +25,7 @@ const App = () => (
             <Route path="/chat" element={<Index />} />
             <Route path="/architecture" element={<Architecture />} />
             <Route path="/editor" element={<ImageEditor />} />
+            <Route path="/context-lab" element={<ContextLab />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
