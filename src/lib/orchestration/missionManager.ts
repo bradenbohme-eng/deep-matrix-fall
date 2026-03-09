@@ -216,7 +216,7 @@ export class MissionManager {
       .map(r => r.toolClass);
 
     const workOrder: WorkOrder = {
-      id: makeId('wo'),
+      id: makeId('workorder'),
       missionId,
       stepId: currentStep.id,
       assignedAgent: agentRole,
