@@ -179,18 +179,7 @@ const SurveillancePanel = () => {
     };
   };
 
-  const generateSimulatedEvents = async () => {
-    try {
-      const response = await supabase.functions.invoke('surveillance-processor', {
-        body: { action: 'generate_events' },
-      });
-
-      if (response.error) throw response.error;
-      console.log('Generated events:', response.data);
-    } catch (error) {
-      console.error('Error generating events:', error);
-    }
-  };
+  // generateSimulatedEvents removed — production uses real Supabase data only
 
   const updateStats = (camerasData: SurveillanceCamera[], eventsData: SurveillanceEvent[]) => {
     setStats({
