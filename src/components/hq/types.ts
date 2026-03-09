@@ -16,6 +16,7 @@ export type RightDrawerTab =
   | 'docs'        // Documentation
   | 'surveillance' // Surveillance feeds
   | 'evolve'      // Self-evolution
+  | 'approvals'   // AI Action Approvals
   | 'settings';   // Matrix settings
 
 export type CentralPanelMode =

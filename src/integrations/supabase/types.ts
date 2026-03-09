@@ -460,6 +460,81 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_action_queue: {
+        Row: {
+          action_type: string
+          agent_role: string | null
+          auto_approve: boolean | null
+          created_at: string | null
+          description: string | null
+          execution_result: Json | null
+          expires_at: string | null
+          id: string
+          payload: Json
+          priority: number | null
+          resolved_at: string | null
+          resolved_by: string | null
+          source_chain_id: string | null
+          status: string
+          title: string
+        }
+        Insert: {
+          action_type: string
+          agent_role?: string | null
+          auto_approve?: boolean | null
+          created_at?: string | null
+          description?: string | null
+          execution_result?: Json | null
+          expires_at?: string | null
+          id?: string
+          payload?: Json
+          priority?: number | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          source_chain_id?: string | null
+          status?: string
+          title: string
+        }
+        Update: {
+          action_type?: string
+          agent_role?: string | null
+          auto_approve?: boolean | null
+          created_at?: string | null
+          description?: string | null
+          execution_result?: Json | null
+          expires_at?: string | null
+          id?: string
+          payload?: Json
+          priority?: number | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          source_chain_id?: string | null
+          status?: string
+          title?: string
+        }
+        Relationships: []
+      }
+      ai_autonomy_settings: {
+        Row: {
+          id: string
+          setting_key: string
+          setting_value: Json
+          updated_at: string | null
+        }
+        Insert: {
+          id?: string
+          setting_key: string
+          setting_value?: Json
+          updated_at?: string | null
+        }
+        Update: {
+          id?: string
+          setting_key?: string
+          setting_value?: Json
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       ai_issue_detection: {
         Row: {
           affected_services: Json | null

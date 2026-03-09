@@ -10,6 +10,7 @@ import {
   Eye, 
   Sparkles,
   Settings,
+  Shield,
   ChevronLeft,
   ChevronRight
 } from 'lucide-react';
@@ -25,6 +26,7 @@ interface RightActivityBarProps {
 const tabs: { id: RightDrawerTab; icon: React.ElementType; label: string }[] = [
   { id: 'chat', icon: MessageCircle, label: 'AI Chat' },
   { id: 'memory', icon: Brain, label: 'AIMOS Memory' },
+  { id: 'approvals', icon: Shield, label: 'Approvals' },
   { id: 'docs', icon: FileText, label: 'Documentation' },
   { id: 'surveillance', icon: Eye, label: 'Surveillance' },
   { id: 'evolve', icon: Sparkles, label: 'Self-Evolution' },
