@@ -60,12 +60,9 @@ const SurveillancePanel = () => {
     loadSurveillanceData();
     setupRealtimeSubscriptions();
     
-    // Simulate event generation every 10 seconds
-    const interval = setInterval(() => {
-      generateSimulatedEvents();
-    }, 10000);
-
-    return () => clearInterval(interval);
+    return () => {
+      // cleanup handled by setupRealtimeSubscriptions
+    };
   }, []);
 
   const loadSurveillanceData = async () => {
