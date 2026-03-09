@@ -11,6 +11,7 @@ import HQ from "./pages/HQ";
 import ContextLab from "./pages/ContextLab";
 import MemoryInspector from "./pages/MemoryInspector";
 import MissionControl from "./pages/MissionControl";
+import KnowledgeGraph from "./pages/KnowledgeGraph";
 import { ImageEditor } from "./components/ImageEditor";
 
 const queryClient = new QueryClient();
@@ -30,6 +31,7 @@ const App = () => (
             <Route path="/context-lab" element={<ContextLab />} />
             <Route path="/memory-inspector" element={<MemoryInspector />} />
             <Route path="/mission-control" element={<MissionControl />} />
+            <Route path="/knowledge-graph" element={<KnowledgeGraph />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
