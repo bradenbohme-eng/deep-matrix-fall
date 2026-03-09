@@ -1731,6 +1731,45 @@ export type Database = {
           },
         ]
       }
+      canon_entries: {
+        Row: {
+          canonical_domain: string
+          contradiction_count: number
+          created_at: string
+          demotion_reason: string | null
+          evidence_ids: string[] | null
+          id: string
+          memory_id: string
+          promotion_reason: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          canonical_domain: string
+          contradiction_count?: number
+          created_at?: string
+          demotion_reason?: string | null
+          evidence_ids?: string[] | null
+          id?: string
+          memory_id: string
+          promotion_reason?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          canonical_domain?: string
+          contradiction_count?: number
+          created_at?: string
+          demotion_reason?: string | null
+          evidence_ids?: string[] | null
+          id?: string
+          memory_id?: string
+          promotion_reason?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       challenges: {
         Row: {
           created_at: string | null
@@ -2306,6 +2345,48 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      contradiction_records: {
+        Row: {
+          contradiction_type: string
+          created_at: string
+          id: string
+          left_memory_id: string
+          recommended_resolution: string | null
+          resolution_status: string
+          resolved_at: string | null
+          resolved_by: string | null
+          right_memory_id: string
+          severity: string
+          updated_at: string
+        }
+        Insert: {
+          contradiction_type: string
+          created_at?: string
+          id?: string
+          left_memory_id: string
+          recommended_resolution?: string | null
+          resolution_status?: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          right_memory_id: string
+          severity?: string
+          updated_at?: string
+        }
+        Update: {
+          contradiction_type?: string
+          created_at?: string
+          id?: string
+          left_memory_id?: string
+          recommended_resolution?: string | null
+          resolution_status?: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          right_memory_id?: string
+          severity?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       deep_interconnects: {
         Row: {
@@ -3727,6 +3808,66 @@ export type Database = {
           },
         ]
       }
+      memory_write_proposals: {
+        Row: {
+          candidate_content: string
+          confidence: number
+          created_at: string
+          id: string
+          importance: number
+          metadata: Json | null
+          proposed_by: string
+          proposed_canonicality: string
+          rationale: string
+          resolution_status: string
+          resolved_at: string | null
+          resolved_by: string | null
+          session_id: string | null
+          tags: string[] | null
+          target_memory_id: string | null
+          target_memory_type: string
+          updated_at: string
+        }
+        Insert: {
+          candidate_content: string
+          confidence: number
+          created_at?: string
+          id?: string
+          importance?: number
+          metadata?: Json | null
+          proposed_by: string
+          proposed_canonicality?: string
+          rationale: string
+          resolution_status?: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          session_id?: string | null
+          tags?: string[] | null
+          target_memory_id?: string | null
+          target_memory_type: string
+          updated_at?: string
+        }
+        Update: {
+          candidate_content?: string
+          confidence?: number
+          created_at?: string
+          id?: string
+          importance?: number
+          metadata?: Json | null
+          proposed_by?: string
+          proposed_canonicality?: string
+          rationale?: string
+          resolution_status?: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          session_id?: string | null
+          tags?: string[] | null
+          target_memory_id?: string | null
+          target_memory_type?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       missions: {
         Row: {
           completed_at: string | null
@@ -4894,6 +5035,60 @@ export type Database = {
           retrieved_chunks?: Json | null
           section_id?: string | null
           text?: string | null
+        }
+        Relationships: []
+      }
+      runtime_journal: {
+        Row: {
+          actor: string
+          artifact_refs: Json
+          confidence_impact: number | null
+          created_at: string
+          duration_ms: number | null
+          id: string
+          mission_id: string | null
+          mode: string | null
+          regime: string | null
+          session_id: string | null
+          stages: Json | null
+          state_name: string
+          summary: string
+          task_id: string | null
+          trace_id: string | null
+        }
+        Insert: {
+          actor: string
+          artifact_refs?: Json
+          confidence_impact?: number | null
+          created_at?: string
+          duration_ms?: number | null
+          id?: string
+          mission_id?: string | null
+          mode?: string | null
+          regime?: string | null
+          session_id?: string | null
+          stages?: Json | null
+          state_name: string
+          summary: string
+          task_id?: string | null
+          trace_id?: string | null
+        }
+        Update: {
+          actor?: string
+          artifact_refs?: Json
+          confidence_impact?: number | null
+          created_at?: string
+          duration_ms?: number | null
+          id?: string
+          mission_id?: string | null
+          mode?: string | null
+          regime?: string | null
+          session_id?: string | null
+          stages?: Json | null
+          state_name?: string
+          summary?: string
+          task_id?: string | null
+          trace_id?: string | null
         }
         Relationships: []
       }
