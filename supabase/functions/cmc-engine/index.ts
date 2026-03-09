@@ -115,6 +115,19 @@ async function handleRetrieve(supabase: any, body: any) {
     }
   }
 
+  // Search by tags FIRST (more reliable than keyword ILIKE)
+  let tagResults: any[] = [];
+  if (expandedTags.length > 0) {
+    const { data } = await supabase
+      .from("aimos_memory_atoms")
+      .select("id, content, content_type, tags, source_refs, confidence_score, memory_level, access_count, metadata")
+      .in("memory_level", levels)
+      .overlaps("tags", expandedTags)
+      .order("confidence_score", { ascending: false })
+      .limit(maxResults);
+    tagResults = data || [];
+  }
+
   // Search by keywords across specified levels
   const keywordFilter = keywords.length > 0
     ? keywords.map((k: string) => `content.ilike.%${k}%`).join(",")
@@ -133,17 +146,17 @@ async function handleRetrieve(supabase: any, body: any) {
 
   const { data: keywordResults } = await queryBuilder;
 
-  // Also search by tags
-  let tagResults: any[] = [];
-  if (expandedTags.length > 0) {
+  // Fallback: if both tag and keyword search return empty, fetch recent high-confidence atoms
+  let fallbackResults: any[] = [];
+  if ((tagResults.length === 0) && (!keywordResults || keywordResults.length === 0)) {
     const { data } = await supabase
       .from("aimos_memory_atoms")
       .select("id, content, content_type, tags, source_refs, confidence_score, memory_level, access_count, metadata")
       .in("memory_level", levels)
-      .overlaps("tags", expandedTags)
       .order("confidence_score", { ascending: false })
-      .limit(maxResults);
-    tagResults = data || [];
+      .order("last_accessed_at", { ascending: false })
+      .limit(Math.min(maxResults, 5));
+    fallbackResults = data || [];
   }
 
   // Deduplicate and rank
