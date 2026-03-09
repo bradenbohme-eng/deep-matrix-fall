@@ -665,32 +665,41 @@ export type Database = {
       }
       aimos_claim_verification: {
         Row: {
+          blandness_score: number | null
           chain_id: string | null
           claim_text: string
           confidence: number | null
           contradicting_atom_ids: string[] | null
           created_at: string | null
+          crucible_iteration: number | null
           id: string
+          rhetorical_entropy: number | null
           status: string | null
           supporting_atom_ids: string[] | null
         }
         Insert: {
+          blandness_score?: number | null
           chain_id?: string | null
           claim_text: string
           confidence?: number | null
           contradicting_atom_ids?: string[] | null
           created_at?: string | null
+          crucible_iteration?: number | null
           id?: string
+          rhetorical_entropy?: number | null
           status?: string | null
           supporting_atom_ids?: string[] | null
         }
         Update: {
+          blandness_score?: number | null
           chain_id?: string | null
           claim_text?: string
           confidence?: number | null
           contradicting_atom_ids?: string[] | null
           created_at?: string | null
+          crucible_iteration?: number | null
           id?: string
+          rhetorical_entropy?: number | null
           status?: string | null
           supporting_atom_ids?: string[] | null
         }
@@ -990,6 +999,7 @@ export type Database = {
           created_at: string
           id: string
           last_accessed_at: string | null
+          memory_class: string | null
           memory_level: string | null
           metadata: Json | null
           parent_id: string | null
@@ -1015,6 +1025,7 @@ export type Database = {
           created_at?: string
           id?: string
           last_accessed_at?: string | null
+          memory_class?: string | null
           memory_level?: string | null
           metadata?: Json | null
           parent_id?: string | null
@@ -1040,6 +1051,7 @@ export type Database = {
           created_at?: string
           id?: string
           last_accessed_at?: string | null
+          memory_class?: string | null
           memory_level?: string | null
           metadata?: Json | null
           parent_id?: string | null
@@ -4120,6 +4132,42 @@ export type Database = {
           id?: string
           render_time?: number | null
           user_id?: string | null
+        }
+        Relationships: []
+      }
+      persona_state: {
+        Row: {
+          created_at: string | null
+          edge_friction: number | null
+          formality: number | null
+          id: string
+          pedagogy: number | null
+          session_id: string
+          updated_at: string | null
+          user_id: string | null
+          wit_irony: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          edge_friction?: number | null
+          formality?: number | null
+          id?: string
+          pedagogy?: number | null
+          session_id: string
+          updated_at?: string | null
+          user_id?: string | null
+          wit_irony?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          edge_friction?: number | null
+          formality?: number | null
+          id?: string
+          pedagogy?: number | null
+          session_id?: string
+          updated_at?: string | null
+          user_id?: string | null
+          wit_irony?: number | null
         }
         Relationships: []
       }
