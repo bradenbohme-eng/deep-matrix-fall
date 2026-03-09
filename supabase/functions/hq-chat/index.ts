@@ -517,15 +517,16 @@ async function collectAndPostProcess(
       console.warn(`[hq-chat] VIF LOW CONFIDENCE: κ=${vifScore.kappa.toFixed(3)} for query: "${query.slice(0, 60)}"`);
     }
 
-    // ── Store high-confidence response as memory atom ──
+    // ── Store high-confidence response as memory atom (boosted confidence for retrieval visibility) ──
     if (vifScore.kappa > (config.vif_kappa_threshold || 0.6) && fullResponse.length > 50) {
+      const boostedConfidence = Math.max(0.7, vifScore.kappa);
       await supabase.from("aimos_memory_atoms").insert({
         content: `AI Response (κ=${vifScore.kappa.toFixed(2)}): ${fullResponse.slice(0, 1000)}`,
         content_type: "ai_response",
         tags: extractTags(query),
         memory_level: "warm",
-        access_count: 0,
-        confidence_score: vifScore.kappa,
+        access_count: 1, // Start at 1 to prevent immediate decay
+        confidence_score: boostedConfidence,
         quality_score: vifScore.kappa,
         verification_status: vifScore.kappa > 0.7 ? "verified" : "pending",
         metadata: { chain_id: chainId, source: "hq_chat_response", entities_extracted: entities.length, vif_components: vifScore.components },

@@ -159,9 +159,9 @@ async function handleRetrieve(supabase: any, body: any) {
     fallbackResults = data || [];
   }
 
-  // Deduplicate and rank
+  // Deduplicate and rank (includes fallback results)
   const seen = new Map<string, any>();
-  for (const r of [...(keywordResults || []), ...tagResults]) {
+  for (const r of [...tagResults, ...(keywordResults || []), ...fallbackResults]) {
     if (!seen.has(r.id) || r.confidence_score > seen.get(r.id).confidence_score) {
       seen.set(r.id, r);
     }
