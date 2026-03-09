@@ -462,7 +462,7 @@ export class RuntimeSpine {
         urgency: hasUrgency ? 'high' : 'normal',
         requiresRetrieval: depth !== 'shallow' || mode === 'research',
         requiresTools: mode === 'coding' || mode === 'execution',
-        requiresAgents: depth === 'deep' || depth === 'exhaustive',
+        requiresAgents: depth === 'deep' || (depth as string) === 'exhaustive',
         topicTags: [],
         riskClass: 'minimal',
       };
