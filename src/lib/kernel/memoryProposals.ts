@@ -87,7 +87,7 @@ export async function listProposals(
     return [];
   }
 
-  return (data ?? []) as ProposalRecord[];
+  return (data ?? []) as unknown as ProposalRecord[];
 }
 
 // ─── Resolve Proposal ──────────────────────────────────────────────────────
