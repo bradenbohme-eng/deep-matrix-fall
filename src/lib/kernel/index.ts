@@ -18,3 +18,15 @@ export {
   type MemoryProposal,
   type JournalEntry,
 } from './runtimeSpine';
+
+export {
+  createMemoryProposal,
+  listProposals,
+  resolveProposal,
+  listCanonEntries,
+  demoteCanonEntry,
+  reportContradiction,
+  listContradictions,
+  type CreateProposalInput,
+  type ProposalRecord,
+} from './memoryProposals';
