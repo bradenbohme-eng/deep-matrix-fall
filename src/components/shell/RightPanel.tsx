@@ -178,6 +178,21 @@ const AIChatPanel: React.FC<{ onSwarmTrigger?: (query: string) => void }> = ({ o
       onDone: () => {
         setIsStreaming(false);
         abortRef.current = null;
+        // Fetch context attribution from latest reasoning chain
+        supabase
+          .from('aimos_reasoning_chains')
+          .select('source_refs')
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .then(({ data }) => {
+            if (data?.[0]?.source_refs) {
+              const refs = data[0].source_refs as string[];
+              const bci = parseInt(refs.find((r: string) => r.startsWith('bci:'))?.split(':')[1] || '0');
+              const cmc = parseInt(refs.find((r: string) => r.startsWith('cmc:'))?.split(':')[1] || '0');
+              if (bci > 0 || cmc > 0) setContextMeta({ bci, cmc });
+              else setContextMeta(null);
+            }
+          });
       },
       onError: (err) => {
         setIsStreaming(false);
