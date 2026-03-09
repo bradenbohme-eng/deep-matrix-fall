@@ -126,6 +126,7 @@ const AIChatPanel: React.FC<{ onSwarmTrigger?: (query: string) => void }> = ({ o
   const [isStreaming, setIsStreaming] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
+  const [contextMeta, setContextMeta] = useState<{ bci: number; cmc: number } | null>(null);
   const [messages, setMessages] = useState<{ id: string; role: 'user' | 'assistant'; content: string; timestamp: Date }[]>([
     { id: '1', role: 'assistant', content: 'HQ Intelligence online. Full orchestration context loaded — task queue, agent states, budget allocation, and reasoning chains are all available.\n\nHow can I assist?', timestamp: new Date() },
   ]);
