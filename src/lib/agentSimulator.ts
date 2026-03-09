@@ -63,6 +63,8 @@ const AGENT_DEFS: { role: AgentRole; name: string }[] = [
   { role: 'verifier', name: 'Verifier' },
   { role: 'auditor', name: 'Auditor' },
   { role: 'executor', name: 'Executor' },
+  { role: 'inquisitor', name: 'Inquisitor' },
+  { role: 'forecaster', name: 'Forecaster' },
 ];
 
 const REASONING_TEMPLATES: Record<ReasoningPhase, string[]> = {
