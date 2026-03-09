@@ -97,7 +97,7 @@ async function handleRetrieve(supabase: any, body: any) {
   const { query, tags = [], maxResults = 10, levels = ["hot", "warm"], expandTags = true } = body;
   if (!query) return json({ error: "query required" }, 400);
 
-  const keywords = query.toLowerCase().split(/\s+/).filter((w: string) => w.length > 2);
+  const keywords = query.toLowerCase().split(/\s+/).filter((w: string) => w.length > 1);
   let expandedTags = [...tags];
 
   // Expand tags via cooccurrence if enabled
