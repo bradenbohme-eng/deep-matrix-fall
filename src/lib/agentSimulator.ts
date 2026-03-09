@@ -103,6 +103,21 @@ const REASONING_TEMPLATES: Record<ReasoningPhase, string[]> = {
     'Archiving evidence graph connections used...',
     'Updating agent performance metrics...',
   ],
+  crucible: [
+    'Inquisitor attacking draft for logical fallacies...',
+    'Computing rhetorical entropy (blandness penalty)...',
+    'Detecting circular reasoning patterns...',
+    'Flagging sycophantic AI boilerplate phrases...',
+    'Recursive rewrite iteration in progress...',
+    'Evaluating if draft clears Brilliance threshold (κ≥0.75)...',
+  ],
+  forecast: [
+    'Modeling user cognitive trajectory (Theory of Mind)...',
+    'Anticipating potential counter-arguments...',
+    'Mapping emotional valence and friction tolerance...',
+    'Identifying logical blind spots in user reasoning...',
+    'Calculating optimal persona axis coordinates...',
+  ],
 };
 
 const MEMORY_TARGETS: Record<string, string[]> = {
