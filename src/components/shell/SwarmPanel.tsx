@@ -30,6 +30,8 @@ const ROLE_COLORS: Record<AgentRole, string> = {
   verifier: 'text-warning',
   auditor: 'text-destructive',
   executor: 'text-accent',
+  inquisitor: 'text-destructive',
+  forecaster: 'text-info',
 };
 
 const PHASE_ICONS: Record<ReasoningPhase, React.ElementType> = {
@@ -38,6 +40,8 @@ const PHASE_ICONS: Record<ReasoningPhase, React.ElementType> = {
   synthesis: Network,
   validation: CheckCircle2,
   audit: AlertTriangle,
+  crucible: Zap,
+  forecast: Brain,
 };
 
 const PHASE_COLORS: Record<ReasoningPhase, string> = {
@@ -46,6 +50,8 @@ const PHASE_COLORS: Record<ReasoningPhase, string> = {
   synthesis: 'text-accent border-accent/30',
   validation: 'text-warning border-warning/30',
   audit: 'text-destructive border-destructive/30',
+  crucible: 'text-destructive border-destructive/30',
+  forecast: 'text-info border-info/30',
 };
 
 const SYS_COLORS: Record<string, string> = {
