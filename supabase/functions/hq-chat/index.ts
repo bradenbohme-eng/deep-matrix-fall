@@ -88,6 +88,7 @@ serve(async (req) => {
         conversation_id: conversationId,
         user_query: lastUserMsg.slice(0, 500),
         reasoning_steps: [
+          { phase: "CONTEXT_SOURCES", detail: `BCI: ${contextSourceMeta.bciEntities} entities (${contextSourceMeta.bciOk ? 'OK' : 'FAIL'}), CMC: ${contextSourceMeta.cmcAtoms} atoms, Tags: ${contextSourceMeta.expandedTags}` },
           { phase: "CMC_RETRIEVE", detail: `${cmcContext.atoms.length} atoms retrieved`, tags: expandedTags },
           { phase: "VIF_PREGATE", detail: `Quality: ${pregate.quality}, Confidence: ${((pregate.avgConfidence || 0) * 100).toFixed(1)}%` },
           { phase: "AI_GENERATE", detail: "Streaming response" },
@@ -98,6 +99,7 @@ serve(async (req) => {
         coherence_score: pregate.avgConfidence,
         confidence_kappa: pregate.avgConfidence,
         quality_tier: pregate.quality === "sufficient" ? "green" : "yellow",
+        source_refs: [`bci:${contextSourceMeta.bciEntities}`, `cmc:${contextSourceMeta.cmcAtoms}`],
       });
     }
 
