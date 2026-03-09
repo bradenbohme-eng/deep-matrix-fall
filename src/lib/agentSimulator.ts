@@ -1,8 +1,8 @@
 // Agent Simulation Engine — Generates plausible agent activity traces
 // Runs alongside real AI chat to create cognitive transparency visualization
 
-export type AgentRole = 'planner' | 'researcher' | 'verifier' | 'auditor' | 'executor';
-export type ReasoningPhase = 'analysis' | 'research' | 'synthesis' | 'validation' | 'audit';
+export type AgentRole = 'planner' | 'researcher' | 'verifier' | 'auditor' | 'executor' | 'inquisitor' | 'forecaster';
+export type ReasoningPhase = 'analysis' | 'research' | 'synthesis' | 'validation' | 'audit' | 'crucible' | 'forecast';
 export type ThinkingDepth = 'shallow' | 'medium' | 'deep';
 
 export interface AgentState {
@@ -63,6 +63,8 @@ const AGENT_DEFS: { role: AgentRole; name: string }[] = [
   { role: 'verifier', name: 'Verifier' },
   { role: 'auditor', name: 'Auditor' },
   { role: 'executor', name: 'Executor' },
+  { role: 'inquisitor', name: 'Inquisitor' },
+  { role: 'forecaster', name: 'Forecaster' },
 ];
 
 const REASONING_TEMPLATES: Record<ReasoningPhase, string[]> = {
@@ -100,6 +102,21 @@ const REASONING_TEMPLATES: Record<ReasoningPhase, string[]> = {
     'Logging confidence metrics to consciousness tracker...',
     'Archiving evidence graph connections used...',
     'Updating agent performance metrics...',
+  ],
+  crucible: [
+    'Inquisitor attacking draft for logical fallacies...',
+    'Computing rhetorical entropy (blandness penalty)...',
+    'Detecting circular reasoning patterns...',
+    'Flagging sycophantic AI boilerplate phrases...',
+    'Recursive rewrite iteration in progress...',
+    'Evaluating if draft clears Brilliance threshold (κ≥0.75)...',
+  ],
+  forecast: [
+    'Modeling user cognitive trajectory (Theory of Mind)...',
+    'Anticipating potential counter-arguments...',
+    'Mapping emotional valence and friction tolerance...',
+    'Identifying logical blind spots in user reasoning...',
+    'Calculating optimal persona axis coordinates...',
   ],
 };
 
@@ -186,11 +203,13 @@ export function createSwarmSimulation(query: string): {
 
     // Update agent states based on phase
     const phaseAgentMap: Record<ReasoningPhase, AgentRole[]> = {
-      analysis: ['planner', 'researcher'],
+      analysis: ['planner', 'researcher', 'forecaster'],
       research: ['researcher', 'executor'],
       synthesis: ['planner', 'executor'],
       validation: ['verifier'],
       audit: ['auditor', 'verifier'],
+      crucible: ['inquisitor', 'verifier'],
+      forecast: ['forecaster', 'planner'],
     };
 
     const activeRoles = phaseAgentMap[phase] || ['planner'];
