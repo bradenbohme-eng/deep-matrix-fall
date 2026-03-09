@@ -69,7 +69,13 @@ serve(async (req) => {
     // ── STEP 5b: Load agent genomes for swarm context ──
     const agentGenomes = await loadAgentGenomes(supabase);
     
-    // ── STEP 6: Build enriched system prompt (now includes BCI context) ──
+    // ── STEP 6: Build enriched system prompt (now includes BCI context + source attribution) ──
+    const contextSourceMeta = {
+      bciEntities: Array.isArray(bciManifest?.manifest) ? bciManifest.manifest.length : (bciManifest ? 1 : 0),
+      cmcAtoms: cmcContext.atoms.length,
+      expandedTags: expandedTags.length,
+      bciOk: !!bciManifest,
+    };
     const systemPrompt = buildSystemPrompt(liveState, cmcContext, pregate, expandedTags, dynamicPrompts, agentGenomes, bciManifest);
 
     // ── STEP 7: Create reasoning chain record ──
