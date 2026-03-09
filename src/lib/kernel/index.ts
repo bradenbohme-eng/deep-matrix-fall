@@ -1,0 +1,20 @@
+// Kernel Package — Public API
+export {
+  RuntimeSpine,
+  getRuntimeSpine,
+  resetRuntimeSpine,
+  type SpineInput,
+  type SpineOutput,
+  type SpineStageResult,
+  type SpineStageName,
+  type SpineHooks,
+  type IntakeResult,
+  type InterpretationResult,
+  type DeliberationResult,
+  type ContextAssemblyResult,
+  type ExecutionRoutingResult,
+  type SynthesisResult,
+  type PersistenceResult,
+  type MemoryProposal,
+  type JournalEntry,
+} from './runtimeSpine';
