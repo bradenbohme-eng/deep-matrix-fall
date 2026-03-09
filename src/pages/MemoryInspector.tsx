@@ -201,7 +201,7 @@ const CanonTab: React.FC = () => {
   const refresh = useCallback(async () => {
     setLoading(true);
     const data = await listCanonEntries(domainFilter === 'all' ? undefined : domainFilter);
-    setEntries(data as CanonEntry[]);
+    setEntries(data as unknown as CanonEntry[]);
     setLoading(false);
   }, [domainFilter]);
 
