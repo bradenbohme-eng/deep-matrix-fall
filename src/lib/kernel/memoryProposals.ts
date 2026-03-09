@@ -61,7 +61,7 @@ export async function createMemoryProposal(input: CreateProposalInput): Promise<
     return null;
   }
 
-  return data as ProposalRecord;
+  return data as unknown as ProposalRecord;
 }
 
 // ─── List Proposals ────────────────────────────────────────────────────────
