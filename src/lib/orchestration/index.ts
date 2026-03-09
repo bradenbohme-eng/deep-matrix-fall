@@ -38,3 +38,12 @@ export {
   type CrossTestInsight,
   type AggregateStats,
 } from './testLogStore';
+
+// Mission Manager + Tool Router (Stage 3: Controlled Orchestration)
+export {
+  MissionManager,
+  ToolRouter,
+  getMissionManager,
+  type WorkOrder,
+  type ToolRoute,
+} from './missionManager';
