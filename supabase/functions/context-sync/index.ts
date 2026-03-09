@@ -46,6 +46,7 @@ serve(async (req) => {
         result = await recordWitness(supabase, body);
         break;
       case "health":
+      case "health_check":
         result = await healthCheck(supabase);
         break;
       default:
