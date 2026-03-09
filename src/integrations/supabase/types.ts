@@ -3870,45 +3870,84 @@ export type Database = {
       }
       missions: {
         Row: {
+          abort_reason: string | null
+          allowed_tools: string[]
+          approved_at: string | null
+          autonomy_tier: number
+          budget_limits: Json
           completed_at: string | null
           context_data: Json
           created_at: string
+          current_step_index: number | null
           deadline: string | null
           description: string
+          escalation_conditions: string[]
+          forbidden_actions: string[]
           id: string
           mission_type: string
           objectives: Json
           player_id: string | null
           rewards: Json
+          rollback_plan: string | null
+          started_at: string | null
           status: string
+          steps: Json
+          stop_conditions: string[]
+          success_metrics: string[]
           title: string
         }
         Insert: {
+          abort_reason?: string | null
+          allowed_tools?: string[]
+          approved_at?: string | null
+          autonomy_tier?: number
+          budget_limits?: Json
           completed_at?: string | null
           context_data?: Json
           created_at?: string
+          current_step_index?: number | null
           deadline?: string | null
           description: string
+          escalation_conditions?: string[]
+          forbidden_actions?: string[]
           id?: string
           mission_type: string
           objectives?: Json
           player_id?: string | null
           rewards?: Json
+          rollback_plan?: string | null
+          started_at?: string | null
           status?: string
+          steps?: Json
+          stop_conditions?: string[]
+          success_metrics?: string[]
           title: string
         }
         Update: {
+          abort_reason?: string | null
+          allowed_tools?: string[]
+          approved_at?: string | null
+          autonomy_tier?: number
+          budget_limits?: Json
           completed_at?: string | null
           context_data?: Json
           created_at?: string
+          current_step_index?: number | null
           deadline?: string | null
           description?: string
+          escalation_conditions?: string[]
+          forbidden_actions?: string[]
           id?: string
           mission_type?: string
           objectives?: Json
           player_id?: string | null
           rewards?: Json
+          rollback_plan?: string | null
+          started_at?: string | null
           status?: string
+          steps?: Json
+          stop_conditions?: string[]
+          success_metrics?: string[]
           title?: string
         }
         Relationships: [
@@ -6786,6 +6825,62 @@ export type Database = {
         }
         Relationships: []
       }
+      tool_action_log: {
+        Row: {
+          created_at: string
+          duration_ms: number | null
+          error_summary: string | null
+          id: string
+          input_summary: string | null
+          intent: string | null
+          mission_id: string | null
+          result_summary: string | null
+          risk_class: string
+          status: string
+          tool_class: string
+          tool_name: string
+          work_order_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          duration_ms?: number | null
+          error_summary?: string | null
+          id?: string
+          input_summary?: string | null
+          intent?: string | null
+          mission_id?: string | null
+          result_summary?: string | null
+          risk_class?: string
+          status?: string
+          tool_class: string
+          tool_name: string
+          work_order_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          duration_ms?: number | null
+          error_summary?: string | null
+          id?: string
+          input_summary?: string | null
+          intent?: string | null
+          mission_id?: string | null
+          result_summary?: string | null
+          risk_class?: string
+          status?: string
+          tool_class?: string
+          tool_name?: string
+          work_order_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tool_action_log_mission_id_fkey"
+            columns: ["mission_id"]
+            isOneToOne: false
+            referencedRelation: "missions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       traffic_monitoring: {
         Row: {
           congestion_level: string | null
@@ -7708,6 +7803,62 @@ export type Database = {
             columns: ["ghost_entity_id"]
             isOneToOne: false
             referencedRelation: "ghost_entities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      work_orders: {
+        Row: {
+          assigned_agent: string
+          completed_at: string | null
+          created_at: string
+          id: string
+          mission_id: string
+          objective: string
+          result: Json | null
+          risk_ceiling: string
+          status: string
+          step_id: string
+          timeout_ms: number
+          token_budget: number
+          tool_whitelist: string[]
+        }
+        Insert: {
+          assigned_agent: string
+          completed_at?: string | null
+          created_at?: string
+          id: string
+          mission_id: string
+          objective: string
+          result?: Json | null
+          risk_ceiling?: string
+          status?: string
+          step_id: string
+          timeout_ms?: number
+          token_budget?: number
+          tool_whitelist?: string[]
+        }
+        Update: {
+          assigned_agent?: string
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          mission_id?: string
+          objective?: string
+          result?: Json | null
+          risk_ceiling?: string
+          status?: string
+          step_id?: string
+          timeout_ms?: number
+          token_budget?: number
+          tool_whitelist?: string[]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "work_orders_mission_id_fkey"
+            columns: ["mission_id"]
+            isOneToOne: false
+            referencedRelation: "missions"
             referencedColumns: ["id"]
           },
         ]
