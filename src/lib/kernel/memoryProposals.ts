@@ -120,7 +120,7 @@ export async function resolveProposal(
       .single();
 
     if (proposal) {
-      const p = proposal as ProposalRecord;
+      const p = proposal as unknown as ProposalRecord;
       await supabase.from('aimos_memory_atoms').insert({
         content: p.candidate_content,
         content_type: p.target_memory_type,
