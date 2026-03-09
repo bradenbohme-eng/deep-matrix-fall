@@ -18,6 +18,8 @@ const PREFIXES = {
   agent: 'agt',
   action: 'act',
   spine: 'spn',
+  step: 'stp',
+  workorder: 'wo',
 } as const;
 
 export type IdPrefix = keyof typeof PREFIXES;
