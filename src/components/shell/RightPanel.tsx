@@ -126,6 +126,7 @@ const AIChatPanel: React.FC<{ onSwarmTrigger?: (query: string) => void }> = ({ o
   const [isStreaming, setIsStreaming] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
+  const [contextMeta, setContextMeta] = useState<{ bci: number; cmc: number } | null>(null);
   const [messages, setMessages] = useState<{ id: string; role: 'user' | 'assistant'; content: string; timestamp: Date }[]>([
     { id: '1', role: 'assistant', content: 'HQ Intelligence online. Full orchestration context loaded — task queue, agent states, budget allocation, and reasoning chains are all available.\n\nHow can I assist?', timestamp: new Date() },
   ]);
@@ -177,6 +178,21 @@ const AIChatPanel: React.FC<{ onSwarmTrigger?: (query: string) => void }> = ({ o
       onDone: () => {
         setIsStreaming(false);
         abortRef.current = null;
+        // Fetch context attribution from latest reasoning chain
+        supabase
+          .from('aimos_reasoning_chains')
+          .select('source_refs')
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .then(({ data }) => {
+            if (data?.[0]?.source_refs) {
+              const refs = data[0].source_refs as string[];
+              const bci = parseInt(refs.find((r: string) => r.startsWith('bci:'))?.split(':')[1] || '0');
+              const cmc = parseInt(refs.find((r: string) => r.startsWith('cmc:'))?.split(':')[1] || '0');
+              if (bci > 0 || cmc > 0) setContextMeta({ bci, cmc });
+              else setContextMeta(null);
+            }
+          });
       },
       onError: (err) => {
         setIsStreaming(false);
@@ -222,6 +238,15 @@ const AIChatPanel: React.FC<{ onSwarmTrigger?: (query: string) => void }> = ({ o
                 {msg.role === 'assistant' ? (
                   <div className="prose prose-xs prose-invert max-w-none text-xs leading-relaxed text-foreground/90 [&_p]:my-1 [&_ul]:my-1 [&_ol]:my-1 [&_li]:my-0.5 [&_code]:text-primary [&_code]:bg-surface-4 [&_code]:px-1 [&_code]:rounded [&_pre]:bg-surface-4 [&_pre]:p-2 [&_pre]:rounded-md [&_strong]:text-foreground [&_h1]:text-sm [&_h2]:text-xs [&_h3]:text-xs">
                     <ReactMarkdown>{msg.content}</ReactMarkdown>
+                    {/* Context attribution badge — shown on last assistant message */}
+                    {contextMeta && i === messages.length - 1 && msg.id !== '1' && (
+                      <div className="flex items-center gap-1.5 mt-2 pt-1.5 border-t border-border/30">
+                        <Database className="w-3 h-3 text-muted-foreground/60" />
+                        <span className="text-[9px] font-mono text-muted-foreground/60">
+                          Enriched: {contextMeta.bci} BCI entities · {contextMeta.cmc} memory atoms
+                        </span>
+                      </div>
+                    )}
                   </div>
                 ) : (
                   <p className="whitespace-pre-wrap text-xs leading-relaxed text-foreground/90">{msg.content}</p>

@@ -69,7 +69,13 @@ serve(async (req) => {
     // ── STEP 5b: Load agent genomes for swarm context ──
     const agentGenomes = await loadAgentGenomes(supabase);
     
-    // ── STEP 6: Build enriched system prompt (now includes BCI context) ──
+    // ── STEP 6: Build enriched system prompt (now includes BCI context + source attribution) ──
+    const contextSourceMeta = {
+      bciEntities: Array.isArray(bciManifest?.manifest) ? bciManifest.manifest.length : (bciManifest ? 1 : 0),
+      cmcAtoms: cmcContext.atoms.length,
+      expandedTags: expandedTags.length,
+      bciOk: !!bciManifest,
+    };
     const systemPrompt = buildSystemPrompt(liveState, cmcContext, pregate, expandedTags, dynamicPrompts, agentGenomes, bciManifest);
 
     // ── STEP 7: Create reasoning chain record ──
@@ -82,6 +88,7 @@ serve(async (req) => {
         conversation_id: conversationId,
         user_query: lastUserMsg.slice(0, 500),
         reasoning_steps: [
+          { phase: "CONTEXT_SOURCES", detail: `BCI: ${contextSourceMeta.bciEntities} entities (${contextSourceMeta.bciOk ? 'OK' : 'FAIL'}), CMC: ${contextSourceMeta.cmcAtoms} atoms, Tags: ${contextSourceMeta.expandedTags}` },
           { phase: "CMC_RETRIEVE", detail: `${cmcContext.atoms.length} atoms retrieved`, tags: expandedTags },
           { phase: "VIF_PREGATE", detail: `Quality: ${pregate.quality}, Confidence: ${((pregate.avgConfidence || 0) * 100).toFixed(1)}%` },
           { phase: "AI_GENERATE", detail: "Streaming response" },
@@ -92,6 +99,7 @@ serve(async (req) => {
         coherence_score: pregate.avgConfidence,
         confidence_kappa: pregate.avgConfidence,
         quality_tier: pregate.quality === "sufficient" ? "green" : "yellow",
+        source_refs: [`bci:${contextSourceMeta.bciEntities}`, `cmc:${contextSourceMeta.cmcAtoms}`],
       });
     }
 
@@ -509,15 +517,16 @@ async function collectAndPostProcess(
       console.warn(`[hq-chat] VIF LOW CONFIDENCE: κ=${vifScore.kappa.toFixed(3)} for query: "${query.slice(0, 60)}"`);
     }
 
-    // ── Store high-confidence response as memory atom ──
+    // ── Store high-confidence response as memory atom (boosted confidence for retrieval visibility) ──
     if (vifScore.kappa > (config.vif_kappa_threshold || 0.6) && fullResponse.length > 50) {
+      const boostedConfidence = Math.max(0.7, vifScore.kappa);
       await supabase.from("aimos_memory_atoms").insert({
         content: `AI Response (κ=${vifScore.kappa.toFixed(2)}): ${fullResponse.slice(0, 1000)}`,
         content_type: "ai_response",
         tags: extractTags(query),
         memory_level: "warm",
-        access_count: 0,
-        confidence_score: vifScore.kappa,
+        access_count: 1, // Start at 1 to prevent immediate decay
+        confidence_score: boostedConfidence,
         quality_score: vifScore.kappa,
         verification_status: vifScore.kappa > 0.7 ? "verified" : "pending",
         metadata: { chain_id: chainId, source: "hq_chat_response", entities_extracted: entities.length, vif_components: vifScore.components },

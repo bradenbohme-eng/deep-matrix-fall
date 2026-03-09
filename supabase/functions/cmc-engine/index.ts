@@ -97,7 +97,7 @@ async function handleRetrieve(supabase: any, body: any) {
   const { query, tags = [], maxResults = 10, levels = ["hot", "warm"], expandTags = true } = body;
   if (!query) return json({ error: "query required" }, 400);
 
-  const keywords = query.toLowerCase().split(/\s+/).filter((w: string) => w.length > 2);
+  const keywords = query.toLowerCase().split(/\s+/).filter((w: string) => w.length > 1);
   let expandedTags = [...tags];
 
   // Expand tags via cooccurrence if enabled
@@ -113,6 +113,19 @@ async function handleRetrieve(supabase: any, body: any) {
     if (cooc) {
       expandedTags = [...new Set([...tags, ...cooc.map((c: any) => c.tag_b)])];
     }
+  }
+
+  // Search by tags FIRST (more reliable than keyword ILIKE)
+  let tagResults: any[] = [];
+  if (expandedTags.length > 0) {
+    const { data } = await supabase
+      .from("aimos_memory_atoms")
+      .select("id, content, content_type, tags, source_refs, confidence_score, memory_level, access_count, metadata")
+      .in("memory_level", levels)
+      .overlaps("tags", expandedTags)
+      .order("confidence_score", { ascending: false })
+      .limit(maxResults);
+    tagResults = data || [];
   }
 
   // Search by keywords across specified levels
@@ -133,22 +146,22 @@ async function handleRetrieve(supabase: any, body: any) {
 
   const { data: keywordResults } = await queryBuilder;
 
-  // Also search by tags
-  let tagResults: any[] = [];
-  if (expandedTags.length > 0) {
+  // Fallback: if both tag and keyword search return empty, fetch recent high-confidence atoms
+  let fallbackResults: any[] = [];
+  if ((tagResults.length === 0) && (!keywordResults || keywordResults.length === 0)) {
     const { data } = await supabase
       .from("aimos_memory_atoms")
       .select("id, content, content_type, tags, source_refs, confidence_score, memory_level, access_count, metadata")
       .in("memory_level", levels)
-      .overlaps("tags", expandedTags)
       .order("confidence_score", { ascending: false })
-      .limit(maxResults);
-    tagResults = data || [];
+      .order("last_accessed_at", { ascending: false })
+      .limit(Math.min(maxResults, 5));
+    fallbackResults = data || [];
   }
 
-  // Deduplicate and rank
+  // Deduplicate and rank (includes fallback results)
   const seen = new Map<string, any>();
-  for (const r of [...(keywordResults || []), ...tagResults]) {
+  for (const r of [...tagResults, ...(keywordResults || []), ...fallbackResults]) {
     if (!seen.has(r.id) || r.confidence_score > seen.get(r.id).confidence_score) {
       seen.set(r.id, r);
     }

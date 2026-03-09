@@ -188,14 +188,47 @@ const PRESETS: PresetScenario[] = [
 ];
 
 const SEED_ENTITIES = [
+  // Shell / UI
   { entity_id: 'useShellStore', kind: 'function', path: 'src/components/shell/useShellStore.ts' },
   { entity_id: 'AppShell', kind: 'module', path: 'src/components/shell/AppShell.tsx' },
+  { entity_id: 'RightPanel', kind: 'module', path: 'src/components/shell/RightPanel.tsx' },
+  { entity_id: 'SwarmPanel', kind: 'module', path: 'src/components/shell/SwarmPanel.tsx' },
+  { entity_id: 'CenterWorkspace', kind: 'module', path: 'src/components/shell/CenterWorkspace.tsx' },
+  { entity_id: 'TopBar', kind: 'module', path: 'src/components/shell/TopBar.tsx' },
+  { entity_id: 'StatusBar', kind: 'module', path: 'src/components/shell/StatusBar.tsx' },
+  // IDE
   { entity_id: 'ProductionIDE', kind: 'module', path: 'src/components/ide/ProductionIDE.tsx' },
+  // Pages
   { entity_id: 'ContextLab', kind: 'module', path: 'src/pages/ContextLab.tsx' },
-  { entity_id: 'ragService', kind: 'module', path: 'src/lib/ragService.ts' },
+  { entity_id: 'HQ', kind: 'module', path: 'src/pages/HQ.tsx' },
+  // Orchestration core
   { entity_id: 'kernel', kind: 'module', path: 'src/lib/orchestration/kernel.ts' },
   { entity_id: 'taskQueue', kind: 'module', path: 'src/lib/orchestration/taskQueue.ts' },
+  { entity_id: 'contextManager', kind: 'module', path: 'src/lib/orchestration/contextManager.ts' },
+  { entity_id: 'verifier', kind: 'module', path: 'src/lib/orchestration/verifier.ts' },
   { entity_id: 'testHarness', kind: 'module', path: 'src/lib/orchestration/testHarness.ts' },
+  { entity_id: 'eventStore', kind: 'module', path: 'src/lib/orchestration/eventStore.ts' },
+  // Services
+  { entity_id: 'ragService', kind: 'module', path: 'src/lib/ragService.ts' },
+  { entity_id: 'hqChatService', kind: 'module', path: 'src/lib/hqChatService.ts' },
+  { entity_id: 'aimosClient', kind: 'module', path: 'src/lib/aimosClient.ts' },
+  { entity_id: 'aimosMemoryService', kind: 'module', path: 'src/lib/aimosMemoryService.ts' },
+  { entity_id: 'agentSimulator', kind: 'module', path: 'src/lib/agentSimulator.ts' },
+  // Hooks
+  { entity_id: 'useHQStore', kind: 'function', path: 'src/components/hq/useHQStore.ts' },
+  { entity_id: 'useIDEStore', kind: 'function', path: 'src/components/ide/useIDEStore.ts' },
+  // Edge functions
+  { entity_id: 'hq-chat', kind: 'function', path: 'supabase/functions/hq-chat/index.ts' },
+  { entity_id: 'cmc-engine', kind: 'function', path: 'supabase/functions/cmc-engine/index.ts' },
+  { entity_id: 'context-sync', kind: 'function', path: 'supabase/functions/context-sync/index.ts' },
+  { entity_id: 'vif-engine', kind: 'function', path: 'supabase/functions/vif-engine/index.ts' },
+  { entity_id: 'seg-engine', kind: 'function', path: 'supabase/functions/seg-engine/index.ts' },
+  { entity_id: 'apoe-engine', kind: 'function', path: 'supabase/functions/apoe-engine/index.ts' },
+  { entity_id: 'self-evolution', kind: 'function', path: 'supabase/functions/self-evolution/index.ts' },
+  // Matrix / HQ panels
+  { entity_id: 'AdvancedNeoChat', kind: 'module', path: 'src/components/matrix/AdvancedNeoChat.tsx' },
+  { entity_id: 'OrchestrationDashboard', kind: 'module', path: 'src/components/hq/OrchestrationDashboard.tsx' },
+  { entity_id: 'DAGVisualization', kind: 'module', path: 'src/components/hq/DAGVisualization.tsx' },
 ];
 
 // ─── Retrieval Implementations ───
