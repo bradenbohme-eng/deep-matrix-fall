@@ -27,6 +27,7 @@ const App = () => (
             <Route path="/architecture" element={<Architecture />} />
             <Route path="/editor" element={<ImageEditor />} />
             <Route path="/context-lab" element={<ContextLab />} />
+            <Route path="/memory-inspector" element={<MemoryInspector />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

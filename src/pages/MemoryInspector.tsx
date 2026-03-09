@@ -313,7 +313,7 @@ const ContradictionsTab: React.FC = () => {
   const refresh = useCallback(async () => {
     setLoading(true);
     const data = await listContradictions(statusFilter);
-    setContradictions(data as ContradictionRecord[]);
+    setContradictions(data as unknown as ContradictionRecord[]);
     setLoading(false);
   }, [statusFilter]);
 
