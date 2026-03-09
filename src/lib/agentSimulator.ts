@@ -1,8 +1,8 @@
 // Agent Simulation Engine — Generates plausible agent activity traces
 // Runs alongside real AI chat to create cognitive transparency visualization
 
-export type AgentRole = 'planner' | 'researcher' | 'verifier' | 'auditor' | 'executor';
-export type ReasoningPhase = 'analysis' | 'research' | 'synthesis' | 'validation' | 'audit';
+export type AgentRole = 'planner' | 'researcher' | 'verifier' | 'auditor' | 'executor' | 'inquisitor' | 'forecaster';
+export type ReasoningPhase = 'analysis' | 'research' | 'synthesis' | 'validation' | 'audit' | 'crucible' | 'forecast';
 export type ThinkingDepth = 'shallow' | 'medium' | 'deep';
 
 export interface AgentState {
