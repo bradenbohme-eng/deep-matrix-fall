@@ -247,6 +247,7 @@ const RightDrawerContent: React.FC<RightDrawerContentProps> = ({ activeTab, widt
           <div className="flex-1 overflow-hidden"><ProductionDocIDE /></div>
         </div>
       )}
+      {activeTab === 'approvals' && <div className="h-full overflow-hidden"><ApprovalPanel /></div>}
       {activeTab === 'surveillance' && <div className="h-full overflow-hidden"><SurveillancePanel /></div>}
       {activeTab === 'evolve' && <div className="h-full overflow-hidden"><SelfEvolutionPanel /></div>}
       {activeTab === 'settings' && (
