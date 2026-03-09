@@ -1,0 +1,4607 @@
+# Contextual Sync: Bitemporal Contract Indexing and Token-Weighted Retrieval for AI-Assisted Software Engineering
+
+## Subtitle
+
+A formal architecture for hierarchical code navigation, contract drift detection, synchronization gating, and self-remediating orchestration in large software systems
+
+---
+
+## Abstract
+
+Large language model assisted software engineering fails most often not because the model cannot generate syntax, but because it cannot reliably preserve *relationships* across large, evolving codebases. Modern coding agents frequently operate on local text windows while the actual software system is distributed across files, contracts, tests, traces, schemas, build rules, and historical constraints. The result is contextual blindness: edits that appear locally valid but globally desynchronize the system.
+
+This paper proposes **Contextual Sync**, a production-oriented architecture for AI-native software engineering. Contextual Sync treats a codebase not as an unordered pile of files but as a structured field of contracts, dependencies, evidence, and execution traces. At its core is the **Bitemporal Contract Index (BCI)**, an externalized index that records source artifacts, public contracts, hierarchical summaries, token-weighted spans, dependency hashes, blast radius estimates, and synchronization states. The BCI enables large language models to navigate software hierarchically rather than by brute-force text stuffing.
+
+The architecture integrates six major mechanisms. First, a watcher and analyzer pipeline converts code and related artifacts into durable indexed atoms. Second, a hierarchical navigation layer exposes these atoms across multiple levels of abstraction, from whole-system overview to exact spans of code. Third, a token-weighted retrieval solver constructs bounded execution contexts that include only the most relevant material and the minimum necessary dependencies. Fourth, a synchronization gate detects contract drift and blocks unsafe edits when code, documentation, tests, and traces fall out of parity. Fifth, an orchestration engine compiles intent into executable plans and routes blocked changes into constrained remediation loops. Sixth, an evidence graph stores success, contradiction, and correction traces so the system can learn from prior failure modes.
+
+The paper distinguishes sharply between operational mechanisms that can be implemented and benchmarked today, and speculative conceptual framings inspired by holography, category theory, and physics-guided retrieval. This distinction is essential. The core claim of the paper is not that metaphor alone improves software engineering, but that explicit contracts, hierarchical indexes, bitemporal provenance, and synchronization gates can dramatically reduce hallucination, drift, and wasted context in large-scale AI-assisted development.
+
+---
+
+## 1. Introduction
+
+### 1.1 The central failure mode of AI coding
+
+The present generation of coding agents is impressive at local transformation and unreliable at systemic coherence. They can rewrite a function, add a parameter, or generate a test file, yet still break the larger architecture because they lack persistent, structured visibility into:
+
+* which files participate in a contract,
+* which symbols are public versus internal,
+* which tests validate which behaviors,
+* which documentation describes which implementation,
+* which traces and witnesses prove that a change is safe,
+* and which dependent modules are now stale after a seemingly harmless edit.
+
+In short: the model sees *text*, while the software project is actually a *relational organism*.
+
+This mismatch becomes catastrophic in large repositories. The developer asks for a focused change. The model receives a narrow file slice. The change compiles in isolation. But elsewhere a test oracle, schema expectation, generated type, route handler, documentation claim, or orchestration chain is now invalid. The repository drifts. The AI did not “make a syntax error”; it violated *contextual sync*.
+
+### 1.2 Why brute-force context stuffing fails
+
+A common response is to provide the model with more files, more summaries, more tags, more pasted logs, and more documentation. This often worsens the problem. Context windows are finite, attention is lossy, and large flat contexts bury critical information in the middle. The system becomes slower, more expensive, and more brittle.
+
+Adding large volumes of inline metadata directly into code is particularly dangerous. It pollutes files, burdens human readers, increases token cost, and often forces the model to spend precious context budget reading scaffolding rather than reasoning about behavior. A software intelligence system must preserve structure *without* suffocating the source.
+
+### 1.3 The thesis
+
+This paper advances the following thesis:
+
+> AI-assisted software engineering becomes substantially more reliable when the codebase is augmented by an externalized, hierarchical, bitemporal contract index that supports token-weighted retrieval, synchronization gating, evidence-backed remediation, and durable memory of contradictions and fixes.
+
+The proposed system is called **Contextual Sync**.
+
+---
+
+## 2. Problem Statement
+
+### 2.1 Contextual blindness
+
+Contextual blindness is the condition in which an AI agent operates on a locally sufficient but globally incomplete view of a software system. It manifests in several familiar ways:
+
+1. **Contract drift**: an API, schema, or return shape changes, but dependent code is not updated.
+2. **Quartet drift**: code changes while documentation, tests, or traces remain stale.
+3. **Interface hallucination**: the model references a symbol that is semantically plausible but absent from the actual repository.
+4. **Dependency omission**: a required type, helper, config field, migration, or witness is not brought into context.
+5. **Context bloat**: too much surrounding text is injected, diluting the actual nucleus of the task.
+6. **Historical amnesia**: the model repeats past mistakes because prior contradictions and remediations are not surfaced.
+
+### 2.2 Flat retrieval as an anti-pattern
+
+Flat retrieval treats all potentially relevant artifacts as peers in a ranked list. This is insufficient for real software work because software is hierarchical. A request may begin at the system level, descend into a module, narrow to a contract, then require inspection of one exact procedure and two supporting tests. A ranked list does not model this traversal well. Navigation, not ranking alone, is the required primitive.
+
+### 2.3 Why synchronization matters more than generation
+
+The hard part of AI coding is not generating plausible code. The hard part is ensuring that every change remains synchronized with all relevant artifacts. A future-proof architecture must optimize for *synchronization fidelity* first and raw generation second.
+
+---
+
+## 3. Design Goals
+
+Contextual Sync is designed around the following goals:
+
+### 3.1 High coherence under bounded context
+
+The system must allow an agent to act with high structural awareness while reading only a bounded amount of material.
+
+### 3.2 Externalized structure, minimal source pollution
+
+The system must preserve structural metadata outside source files whenever possible, using sidecars, atoms, or indexes rather than filling code with verbose tags.
+
+### 3.3 Hierarchical navigation
+
+The system must support zoom-in and zoom-out traversal across multiple abstraction levels.
+
+### 3.4 Deterministic drift detection
+
+The system must detect when a change affects public behavior or dependent contracts, not merely when text changes.
+
+### 3.5 Safe refusal and remediation
+
+The system must block unsafe edits when evidence is insufficient and route failure into bounded correction loops.
+
+### 3.6 Durable learning
+
+The system must remember contradictions, remediations, and successful synchronization patterns across time.
+
+---
+
+## 4. Core Concepts
+
+### 4.1 Contextual Sync
+
+**Contextual Sync** is the state in which a proposed or executed change is consistent across all relevant artifacts needed to preserve the intended behavior of the system. These artifacts include but are not limited to code, public contracts, tests, documentation, traces, schemas, generated assets, and prior evidence.
+
+### 4.2 Bitemporal Contract Index (BCI)
+
+The **Bitemporal Contract Index** is the core substrate of Contextual Sync. It is an externalized representation of software artifacts and their relationships. “Bitemporal” means that every indexed claim may be tracked along at least two time axes:
+
+* **Transaction time**: when the system recorded the claim.
+* **Valid time**: the period during which the claim is considered semantically valid.
+
+This distinction matters because a source artifact may still exist in version control while its behavioral claim is no longer valid after a later change.
+
+### 4.3 Contract
+
+A **contract** is any explicit or implicit behavioral boundary that other artifacts rely upon. Contracts include:
+
+* function signatures,
+* return shapes,
+* type expectations,
+* schemas,
+* side effects,
+* configuration keys,
+* event semantics,
+* route payloads,
+* persistence layouts,
+* and orchestration assumptions.
+
+### 4.4 Quartet parity
+
+A high-integrity change is not just code. It includes at minimum four coupled dimensions:
+
+* **Code**
+* **Docs**
+* **Tests**
+* **Traces / witnesses**
+
+Quartet parity is the degree to which those four dimensions evolve together coherently.
+
+### 4.5 Blast radius
+
+The **blast radius** of a change is the estimated set of downstream artifacts likely to become stale or contradictory if the change proceeds. Blast radius is not merely the count of imports; it is a weighted impact estimation across contracts and evidence paths.
+
+---
+
+## 5. Architectural Overview
+
+Contextual Sync is composed of six major subsystems:
+
+1. **Analyzer / Watcher Pipeline**
+2. **Bitemporal Contract Index**
+3. **Hierarchical Navigation Layer**
+4. **Token-Weighted Context Solver**
+5. **Synchronization Gate and Remediation Loop**
+6. **Semantic Evidence Graph**
+
+Together these subsystems form a closed loop:
+
+1. Observe source changes.
+2. Extract contracts, spans, and relationships.
+3. Update indexed atoms and summaries.
+4. Resolve task context under a strict token budget.
+5. Execute or propose change plans.
+6. Validate quartet parity and contract integrity.
+7. Block or approve.
+8. Store witnesses, contradictions, and remediations.
+9. Surface lessons during future edits.
+
+---
+
+## 6. The Bitemporal Contract Index
+
+### 6.1 Why an external index is necessary
+
+The BCI exists because source files alone do not provide enough structure for reliable machine navigation. Source code contains syntax and some local semantics, but it does not naturally expose:
+
+* compressed multi-level summaries,
+* token costs per branch,
+* contract criticality,
+* confidence levels,
+* drift histories,
+* evidence links,
+* or validity windows.
+
+These are indexing concerns, not source concerns.
+
+### 6.2 Granularity of indexed units
+
+The BCI may index at several granularities:
+
+* repository,
+* package,
+* module,
+* file,
+* class,
+* function,
+* block,
+* test case,
+* schema,
+* route,
+* prompt chain,
+* build target,
+* deployment artifact,
+* witness trace,
+* and remediation record.
+
+### 6.3 Example indexed record
+
+A canonical BCI record for a source symbol may include:
+
+* canonical id
+* file path
+* line span and byte span
+* public/private visibility
+* owning module
+* export/import relationships
+* contract summary
+* side effects summary
+* token weight
+* compressed summaries at multiple levels
+* dependency hash
+* blast radius estimate
+* historical hotness
+* sync status
+* parity status
+* transaction time
+* valid time
+* evidence references
+* contradiction references
+* confidence score
+
+### 6.4 Bitemporal semantics
+
+Bitemporality prevents a common failure in AI memory systems: treating old truths as current truths. A record may still exist while no longer being valid. When a contract changes, the index does not merely overwrite the old claim. It closes the previous validity interval and opens a new one. This enables:
+
+* historical auditing,
+* causal debugging,
+* remediation provenance,
+* time-aware retrieval,
+* and trustworthy evidence chains.
+
+### 6.5 Dependency hash and contract drift
+
+Each artifact or symbol may carry a **dependency hash** derived from the subset of public dependencies required to preserve its contract. If the dependency hash changes upstream, dependents can be flagged as potentially stale even before they are re-executed. This is a practical bridge between symbolic structure and synchronization gating.
+
+---
+
+## 7. Hierarchical Navigation
+
+### 7.1 From retrieval to navigation
+
+Flat retrieval returns ranked candidates. Hierarchical navigation returns the *right abstraction level* first and permits deliberate descent. This is essential when token budgets are strict.
+
+### 7.2 Six abstraction levels
+
+A practical hierarchy for code intelligence can be expressed as follows:
+
+* **L0 — System Overview**: thesis, architecture, purpose, subsystem map
+* **L1 — Sections / Modules**: major components and boundaries
+* **L2 — Topics / Subsystems**: cohesive feature zones and thematic groups
+* **L3 — Concepts / Mechanics**: contracts, algorithms, design logic
+* **L4 — Procedures / Runbooks**: usage, operations, APIs, validation steps
+* **L5 — Artifacts / Spans**: concrete files, atoms, tests, exact code regions
+
+The model should not default to L5. It should begin at the highest level that can answer the task and descend only as needed.
+
+### 7.3 Boundary views
+
+Each artifact should expose compressed views corresponding to different levels. For example, a file may have:
+
+* an L0 purpose statement,
+* an L1 public API summary,
+* an L2 subsystem role summary,
+* an L3 branch map,
+* an L4 operational notes block,
+* and an L5 raw source span map.
+
+This allows “lazy loading” of detail. The model can inspect structure before paying for full logic.
+
+### 7.4 Navigation as a first-class operation
+
+Queries against Contextual Sync should be navigational by design:
+
+* “Show the big map for auth.”
+* “Expand only the contract-bearing branches.”
+* “Pull the smallest span that explains the failure.”
+* “Show all stale dependents whose dependency hash no longer matches.”
+
+This is qualitatively different from naive semantic search.
+
+---
+
+## 8. Token-Weighted Context Resolution
+
+### 8.1 Why token weights matter
+
+Every software artifact has a cognitive cost. A ten-line type definition and a 900-line rendering engine should not be treated as equal retrieval units. Context assembly must therefore be budget-aware.
+
+### 8.2 Token topography
+
+The BCI records token weights at multiple levels:
+
+* full file weight,
+* symbol weight,
+* block weight,
+* compressed boundary weight,
+* test weight,
+* witness weight,
+* doc weight.
+
+This creates a **token topography** of the repository. The solver can then choose whether to materialize a full artifact or only a compressed boundary.
+
+### 8.3 Retrieval objectives
+
+The context solver attempts to maximize several goals simultaneously:
+
+1. task relevance,
+2. contract completeness,
+3. structural coherence,
+4. contradiction visibility,
+5. token efficiency,
+6. diversity of evidence,
+7. and bounded latency.
+
+### 8.4 Physics-guided retrieval as an operational ranking strategy
+
+A useful retrieval model is to treat candidates as particles in a constrained field. This should be understood operationally, not mystically. The four main forces are:
+
+* **Gravity**: attract highly relevant artifacts toward the active context.
+* **Elasticity**: pull in dependencies required to preserve contracts.
+* **Repulsion**: separate contradictory or redundant candidates.
+* **Damping**: ensure convergence and avoid oscillatory context assembly.
+
+This framing is valuable because it naturally balances relevance, dependency preservation, and diversity under a budget.
+
+### 8.5 A pragmatic scoring formulation
+
+A practical context score for a candidate node may combine:
+
+* query relevance,
+* contract criticality,
+* historical hotness,
+* contradiction significance,
+* token weight penalty,
+* distance from target artifact,
+* and dependency tension.
+
+One possible form is:
+
+[
+score(n) = \alpha \cdot rel(n,q) + \beta \cdot crit(n) + \gamma \cdot hot(n) + \delta \cdot contra(n) - \lambda \cdot cost(n) + \epsilon \cdot dep(n)
+]
+
+where the coefficients are learned or policy-tuned.
+
+### 8.6 Compression policy
+
+If the token budget would be exceeded, the solver should compress before truncating. The policy order should be:
+
+1. preserve the primary target at highest fidelity,
+2. preserve contract-bearing dependencies,
+3. compress descriptive dependencies into boundary summaries,
+4. reject peripheral nodes that do not materially affect correctness.
+
+Blind truncation is forbidden because it destroys the very contracts the system is trying to preserve.
+
+---
+
+## 9. Synchronization Gate
+
+### 9.1 The role of the gate
+
+The synchronization gate is the architectural conscience of Contextual Sync. It answers a simple question:
+
+> Given the proposed change and the available evidence, is the system still synchronized enough to permit execution, merge, or release?
+
+### 9.2 Gate inputs
+
+The gate evaluates:
+
+* changed code spans,
+* affected contracts,
+* dependent artifacts,
+* quartet completeness,
+* parity score,
+* contradiction edges,
+* witness coverage,
+* dependency hash mismatches,
+* test coverage relevance,
+* and policy thresholds.
+
+### 9.3 Quartet parity
+
+Quartet parity is a composite measure of alignment across code, documentation, tests, and traces. It should incorporate both completeness and semantic agreement. A change with excellent code and zero updated tests is not high-integrity work; it is a future debugging bill wrapped in temporary confidence.
+
+### 9.4 Confidence gating
+
+The system should compute a confidence score for the proposed change. This score reflects whether the available evidence supports action. Below threshold, the system must abstain. An abstention is not failure; it is integrity.
+
+### 9.5 Failure states
+
+The gate may issue several failure categories:
+
+* **Contract drift detected**
+* **Quartet incomplete**
+* **Dependency hash mismatch**
+* **Witness deficit**
+* **Interface hallucination suspected**
+* **Contradiction unresolved**
+* **Blast radius too wide for current budget**
+
+Each failure state should emit a machine-readable remediation directive.
+
+---
+
+## 9A. Synchronization State Machine
+
+### 9A.1 Purpose
+
+The synchronization gate becomes substantially more useful when expressed not merely as a score but as an explicit state machine. A state machine makes the system legible to humans, auditable to tools, and executable by orchestration layers. It also prevents a common failure mode in AI-assisted engineering systems: vague warnings that do not produce a deterministic next action.
+
+### 9A.2 Core states
+
+A practical synchronization state machine should include at least the following states:
+
+* **UNINDEXED** — The artifact or proposal has not yet been analyzed into the BCI.
+* **INDEXED** — Structural extraction is complete and the artifact has a current BCI record.
+* **SYNCED** — The artifact and its coupled quartet dimensions are consistent under current evidence.
+* **STALE** — The artifact exists, but one or more upstream dependencies or witnesses have changed, making its prior validity uncertain.
+* **DRIFTED** — A contract-bearing dependency has changed in a way likely to invalidate the artifact semantically.
+* **PENDING_VALIDATION** — A proposed or recent change is awaiting validation, witness generation, or parity checks.
+* **PARTIALLY_SYNCED** — Some required dimensions are updated, but parity remains incomplete.
+* **BLOCKED** — The gate has determined the artifact cannot safely proceed under current evidence.
+* **REMEDIATING** — A bounded correction loop is actively attempting to resolve the block.
+* **ESCALATED** — The system has exhausted its automatic authority or retry budget and requires human or higher-tier intervention.
+* **SUPERSEDED** — The indexed claim remains historically present but is no longer the currently valid version.
+* **ARCHIVED** — The artifact or claim is no longer active for normal retrieval except under historical or audit queries.
+
+### 9A.3 State semantics
+
+These states are not interchangeable.
+
+**STALE** means uncertainty due to external change. The artifact may still be correct, but its previous witness set is no longer enough.
+
+**DRIFTED** means likely semantic breakage or mismatch. The system has concrete reason to believe a contract has been violated or a dependent no longer matches its assumptions.
+
+**BLOCKED** is a governance decision, not merely a description. It means the system refuses to continue automatically.
+
+**ESCALATED** means the system has deliberately handed authority upward rather than pretending confidence it does not possess.
+
+### 9A.4 Transition triggers
+
+Representative transitions include:
+
+* `UNINDEXED -> INDEXED` when parsing and BCI generation succeed.
+* `INDEXED -> SYNCED` when all required parity checks and witness conditions are satisfied.
+* `SYNCED -> STALE` when an upstream dependency hash changes or a witness validity window closes.
+* `STALE -> DRIFTED` when analysis confirms a contract, interface, schema, or semantic assumption no longer matches.
+* `STALE -> SYNCED` when refreshed validation shows that the artifact still satisfies current conditions.
+* `DRIFTED -> PENDING_VALIDATION` when a candidate repair or update has been proposed.
+* `PENDING_VALIDATION -> PARTIALLY_SYNCED` when some but not all quartet dimensions have been reconciled.
+* `PARTIALLY_SYNCED -> SYNCED` when parity and witness thresholds are fully restored.
+* `PENDING_VALIDATION -> BLOCKED` when confidence, parity, or contract thresholds fail.
+* `BLOCKED -> REMEDIATING` when the orchestration engine launches a bounded correction loop.
+* `REMEDIATING -> SYNCED` when remediation restores parity and clears contradictions.
+* `REMEDIATING -> BLOCKED` when a repair attempt fails but retry budget remains.
+* `REMEDIATING -> ESCALATED` when retry budgets, blast-radius limits, or authority policies are exceeded.
+* `SYNCED -> SUPERSEDED` when a newer valid record replaces the old claim.
+* `SUPERSEDED -> ARCHIVED` when retention policy moves the claim out of the active retrieval path.
+
+### 9A.5 Transition guards
+
+A transition must not occur solely because text changed. It should be guarded by structured evidence. Typical guards include:
+
+* dependency hash mismatch,
+* contract summary mismatch,
+* failed or missing tests,
+* stale or absent witness traces,
+* unresolved contradiction edges,
+* parity score below threshold,
+* confidence score below threshold,
+* or blast radius exceeding automatic authority.
+
+### 9A.6 Machine-readable state record
+
+Each synchronization evaluation should produce a state record containing at least:
+
+* target entity id,
+* prior state,
+* next state,
+* timestamp,
+* triggering event,
+* evidence pointers,
+* contradiction pointers,
+* parity score,
+* confidence score,
+* retry count,
+* policy threshold snapshot,
+* and recommended next action.
+
+### 9A.7 Example sync transition object
+
+```json
+{
+  "entity_id": "ent://repo/auth/login_handler#login",
+  "previous_state": "SYNCED",
+  "next_state": "STALE",
+  "trigger": "dependency_hash_changed",
+  "trigger_source": "ent://repo/auth/user_schema#UserRecord",
+  "parity_score": 0.92,
+  "confidence_score": 0.81,
+  "contradictions": [],
+  "recommended_action": "refresh_validation",
+  "tx_time": "2026-03-01T15:42:00Z",
+  "valid_time": ["2026-03-01T15:42:00Z", null]
+}
+```
+
+### 9A.8 Gate outcome classes
+
+A synchronization evaluation should resolve to one of a small set of actionable outcome classes:
+
+* **PROCEED** — safe to continue automatically.
+* **WARN** — low-severity mismatch; continue with notice.
+* **REFRESH** — revalidate stale assumptions before continuing.
+* **REMEDIATE** — automatic bounded repair required.
+* **ABSTAIN** — the system refuses automatic action.
+* **ESCALATE** — hand off to human or higher-tier planner.
+
+### 9A.9 Relationship to orchestration
+
+The state machine is not a passive diagnostic chart. It is the control surface through which orchestration operates. Every state transition should be legible to planning systems so that the next step—retrieve, test, repair, block, escalate, archive—can be chosen deterministically.
+
+## 10. Orchestration and Remediation
+
+### 10.1 Intent compilation
+
+A safe AI engineering system should not move directly from natural language request to code mutation. Instead, it should compile intent into a structured execution plan. Such a plan identifies:
+
+* target artifacts,
+* intended action,
+* required preconditions,
+* required evidence,
+* budget constraints,
+* and expected postconditions.
+
+### 10.2 Execution roles
+
+A robust orchestration chain may separate responsibilities into roles such as:
+
+* **Retriever**: materializes bounded context
+* **Planner**: compiles intent into a structured contract
+* **Builder**: proposes change
+* **Verifier**: checks parity and evidence
+* **Gatekeeper**: permits or blocks
+* **Remediator**: repairs failed proposals under stricter constraints
+
+### 10.3 The remediation loop
+
+When the gate blocks a proposal, the system should not merely report failure. It should generate a remediation atom describing:
+
+* what failed,
+* why it failed,
+* what evidence was missing,
+* what dependent artifacts are unsynchronized,
+* and what smaller bounded task can resolve the issue.
+
+The remediator then re-enters with narrower authority and stronger constraints. This loop must be bounded by retry budgets and escalation policies.
+
+### 10.4 Self-healing without infinite thrashing
+
+Autonomous correction is valuable only if bounded. Therefore the system must cap:
+
+* number of retries,
+* total tokens spent,
+* number of files touched,
+* and maximum allowed blast radius for automatic remediation.
+
+When bounds are exceeded, the system escalates to a human operator or a broader planning mode.
+
+---
+
+## 11. The Semantic Evidence Graph
+
+### 11.1 Why evidence must be explicit
+
+An AI coding system that cannot explain *why* it believes a change is safe is functionally blind. The Semantic Evidence Graph stores claims, supports, contradictions, derivations, witnesses, and resolutions as durable graph structure.
+
+### 11.2 Node types
+
+Useful node types include:
+
+* artifact,
+* contract,
+* claim,
+* witness,
+* test,
+* trace,
+* contradiction,
+* remediation,
+* plan,
+* agent,
+* policy,
+* and release event.
+
+### 11.3 Edge types
+
+Useful edge types include:
+
+* supports,
+* contradicts,
+* derives,
+* witnesses,
+* depends_on,
+* supersedes,
+* validates,
+* invalidates,
+* and references.
+
+### 11.4 Lessons learned as first-class evidence
+
+When a remediation succeeds, the system should store not just the final diff but the full failure-to-success transition. This matters because future tasks often resemble past failures more than past successes. The graph becomes a durable memory of what tends to go wrong and how it was corrected.
+
+### 11.5 Time-aware evidence retrieval
+
+Because evidence is bitemporal, the system can answer nuanced questions such as:
+
+* Which contracts were valid at the time of the last stable release?
+* Which contradiction remains unresolved now?
+* Which remediation pattern fixed similar drift in the past six weeks?
+
+This moves the system beyond stateless prompting into auditable engineering memory.
+
+---
+
+## 12. Epistemic Stratification: What is Operational vs. Speculative
+
+A recurring failure in ambitious systems work is mixing implementation-ready mechanisms with conceptual metaphors until the boundaries disappear. This paper explicitly rejects that muddling.
+
+### 12.1 Operational layer
+
+The following are operational and directly implementable:
+
+* AST and symbol extraction
+* sidecar or atomized indexing
+* hierarchical summaries
+* token weight accounting
+* dependency hashes
+* contract drift detection
+* quartet parity checks
+* confidence thresholds
+* bounded remediation loops
+* evidence graph storage
+* time-aware retrieval
+
+### 12.2 Near-term research layer
+
+The following are strong research directions but require careful evaluation:
+
+* learned weighting of relevance vs. contract criticality
+* multi-language contract canonicalization
+* retrieval simulation using explicit force models
+* automatic generation of boundary summaries from execution traces
+* contradiction-aware context assembly
+
+### 12.3 Speculative conceptual layer
+
+The following may inspire system design but should not be treated as empirically established within this paper unless separately validated:
+
+* holographic boundary encoding as a literal scalability law
+* universal logarithmic complexity claims
+* quantum cognition framings
+* consciousness analogies as engineering evidence
+* grand ontological interpretations of retrieval physics
+
+Concepts from these domains may still be useful as design metaphors or future theoretical extensions. They are simply not the primary proof of the architecture.
+
+---
+
+## 13. Data Model
+
+### 13.1 Canonical entity schema
+
+A minimal canonical entity should include:
+
+* `entity_id`
+* `kind`
+* `path`
+* `span`
+* `owner`
+* `visibility`
+* `contract_summary`
+* `effects_summary`
+* `token_weight`
+* `boundary_views`
+* `dependency_hash`
+* `blast_radius`
+* `parity_refs`
+* `evidence_refs`
+* `sync_status`
+* `confidence`
+* `tx_time`
+* `valid_time`
+
+### 13.2 Boundary view schema
+
+A boundary view should expose compact, machine-optimized summaries for different levels:
+
+* L0: purpose
+* L1: public API and exports
+* L2: subsystem role
+* L3: branch map
+* L4: operational rules and usage
+* L5: exact spans
+
+### 13.3 Remediation atom schema
+
+A remediation atom may contain:
+
+* failed target id
+* failure class
+* unresolved contradictions
+* missing quartet dimensions
+* absent witnesses
+* proposed narrowed task
+* retry count
+* escalation status
+* evidence pointers
+
+### 13.4 Witness schema
+
+A witness should bind claims to evidence such as:
+
+* tests passed,
+* traces observed,
+* static checks satisfied,
+* contract schemas matched,
+* docs updated,
+* dependency hashes reconciled.
+
+---
+
+## 13A. Formal BCI and Gate Schemas
+
+### 13A.1 Design principles
+
+The formal schema layer must satisfy five properties:
+
+1. **Compactness** — records must be lean enough for frequent regeneration and retrieval.
+2. **Determinism** — fields should be generated by explicit rules wherever possible.
+3. **Bitemporality** — historical truth and current truth must not be conflated.
+4. **Composability** — records should compose into higher-level entities and graphs.
+5. **Machine actionability** — every important field should be useful for retrieval, gating, remediation, or audit.
+
+### 13A.2 Canonical BCI entity schema
+
+A practical canonical BCI entity can be represented as follows:
+
+```json
+{
+  "entity_id": "ent://repo/module/file#symbol",
+  "kind": "function",
+  "path": "src/auth/login_handler.ts",
+  "language": "typescript",
+  "owner": "auth",
+  "visibility": "public",
+  "span": {
+    "line_start": 41,
+    "line_end": 88,
+    "byte_start": 913,
+    "byte_end": 2017
+  },
+  "contract": {
+    "summary": "Authenticates credentials and returns AuthResult",
+    "inputs": [
+      {"name": "request", "type": "LoginRequest", "required": true}
+    ],
+    "outputs": [
+      {"type": "AuthResult"}
+    ],
+    "side_effects": ["reads_user_store", "emits_audit_event"],
+    "failure_modes": ["INVALID_CREDENTIALS", "ACCOUNT_LOCKED"],
+    "stability": "medium"
+  },
+  "weights": {
+    "token_weight": 214,
+    "boundary_weights": {
+      "L0": 16,
+      "L1": 33,
+      "L2": 51,
+      "L3": 89,
+      "L4": 121,
+      "L5": 214
+    },
+    "hotness": 0.73,
+    "criticality": 0.88
+  },
+  "boundary_views": {
+    "L0": "Auth entry point for credential-based login.",
+    "L1": "login(request: LoginRequest) -> AuthResult",
+    "L2": "Bridges route payload validation, credential check, and audit emission.",
+    "L3": "Branches: validate_payload, lookup_user, verify_secret, issue_result.",
+    "L4": "Requires current user schema and audit sink. Covered by login success/failure tests.",
+    "L5_ref": "blob://repo/src/auth/login_handler.ts#L41-L88"
+  },
+  "dependencies": {
+    "imports": [
+      "ent://repo/auth/user_schema#LoginRequest",
+      "ent://repo/auth/results#AuthResult",
+      "ent://repo/audit/sink#emitAuditEvent"
+    ],
+    "depends_on": [
+      "ent://repo/auth/user_store#getUserByEmail",
+      "ent://repo/auth/secret#verifyPassword"
+    ],
+    "dependency_hash": "sha256:abc123..."
+  },
+  "quartet": {
+    "code_refs": ["ent://repo/module/file#symbol"],
+    "doc_refs": ["ent://repo/docs/auth_contracts#login"],
+    "test_refs": ["ent://repo/tests/auth/login_handler.spec#credential_login"],
+    "trace_refs": ["ent://repo/traces/auth/login_flow#2026-03-01"]
+  },
+  "sync": {
+    "status": "SYNCED",
+    "parity_score": 0.94,
+    "confidence_score": 0.91,
+    "blast_radius": 4,
+    "stale_reasons": [],
+    "contradiction_refs": []
+  },
+  "evidence": {
+    "witness_refs": [
+      "wit://repo/tests/run/8921",
+      "wit://repo/traces/auth/smoke/442"
+    ],
+    "verification_policy": "policy://sync/default",
+    "last_validated_by": "agent://verifier"
+  },
+  "bitemporal": {
+    "tx_time": "2026-03-01T16:00:00Z",
+    "valid_time": ["2026-03-01T16:00:00Z", null]
+  },
+  "supersession": {
+    "supersedes": null,
+    "superseded_by": null
+  }
+}
+```
+
+### 13A.3 Boundary view schema
+
+Boundary views deserve their own formal sub-schema because they are the main mechanism that keeps the system lightweight.
+
+```json
+{
+  "entity_id": "ent://repo/module/file#symbol",
+  "views": {
+    "L0": {"kind": "purpose", "token_weight": 16, "content": "..."},
+    "L1": {"kind": "signature", "token_weight": 33, "content": "..."},
+    "L2": {"kind": "role", "token_weight": 51, "content": "..."},
+    "L3": {"kind": "branch_map", "token_weight": 89, "content": "..."},
+    "L4": {"kind": "operational_notes", "token_weight": 121, "content": "..."},
+    "L5": {"kind": "artifact_ref", "token_weight": 214, "content_ref": "blob://..."}
+  },
+  "generated_from": "ast+contracts+tests+traces",
+  "generation_version": "bci-gen/0.1.0"
+}
+```
+
+### 13A.4 Sync evaluation schema
+
+Every gate pass should emit a normalized sync evaluation object.
+
+```json
+{
+  "evaluation_id": "sync_eval://repo/7f2a",
+  "target_entities": [
+    "ent://repo/auth/login_handler#login"
+  ],
+  "event": "proposed_edit",
+  "status_before": "PENDING_VALIDATION",
+  "status_after": "BLOCKED",
+  "scores": {
+    "parity": 0.61,
+    "confidence": 0.58,
+    "witness_coverage": 0.40,
+    "contract_alignment": 0.72
+  },
+  "policy": {
+    "min_parity": 0.90,
+    "min_confidence": 0.70,
+    "max_blast_radius_auto": 6
+  },
+  "detected_failures": [
+    "QUARTET_INCOMPLETE",
+    "MISSING_RELEVANT_TEST_UPDATE"
+  ],
+  "contradiction_refs": [
+    "seg://repo/contradiction/991"
+  ],
+  "recommended_action": "REMEDIATE",
+  "tx_time": "2026-03-01T16:03:00Z",
+  "valid_time": ["2026-03-01T16:03:00Z", null]
+}
+```
+
+### 13A.5 Remediation atom schema
+
+The remediation atom bridges a failed gate result to a bounded next task.
+
+```json
+{
+  "remediation_id": "rem://repo/1881",
+  "origin_evaluation": "sync_eval://repo/7f2a",
+  "target_entity": "ent://repo/auth/login_handler#login",
+  "failure_class": "QUARTET_INCOMPLETE",
+  "missing_dimensions": ["tests", "trace"],
+  "required_context": [
+    "ent://repo/tests/auth/login_handler.spec#credential_login",
+    "ent://repo/traces/auth/login_flow#latest"
+  ],
+  "narrowed_task": "Update the login success and failure tests to reflect AuthResult.biometricEligible and regenerate trace witness.",
+  "retry_budget_remaining": 2,
+  "authority_tier": "auto-repair",
+  "escalation_target": "human://repo/auth_owner",
+  "tx_time": "2026-03-01T16:04:00Z",
+  "valid_time": ["2026-03-01T16:04:00Z", null]
+}
+```
+
+### 13A.6 Witness schema
+
+Witnesses should be normalized instead of buried in raw logs.
+
+```json
+{
+  "witness_id": "wit://repo/tests/run/8921",
+  "kind": "test_run",
+  "subject_entities": [
+    "ent://repo/auth/login_handler#login",
+    "ent://repo/tests/auth/login_handler.spec#credential_login"
+  ],
+  "claims_supported": [
+    "claim://repo/auth/login_success_contract"
+  ],
+  "result": "PASS",
+  "environment": {
+    "branch": "feature/biometric-login",
+    "commit": "abc1234",
+    "runtime": "node20"
+  },
+  "artifacts": [
+    "blob://ci/logs/8921.txt"
+  ],
+  "tx_time": "2026-03-01T16:05:00Z",
+  "valid_time": ["2026-03-01T16:05:00Z", null]
+}
+```
+
+### 13A.7 Contradiction schema
+
+Contradictions are first-class and should not be reduced to plain warning strings.
+
+```json
+{
+  "contradiction_id": "seg://repo/contradiction/991",
+  "subject": "ent://repo/docs/auth_contracts#login",
+  "object": "ent://repo/auth/login_handler#login",
+  "relation": "contradicts",
+  "reason": "Documentation states AuthResult has fields {token, expiresAt}; implementation now returns {token, expiresAt, biometricEligible}.",
+  "severity": "medium",
+  "status": "open",
+  "tx_time": "2026-03-01T16:03:10Z",
+  "valid_time": ["2026-03-01T16:03:10Z", null]
+}
+```
+
+### 13A.8 Policy schema
+
+Policies control what counts as synchronized enough to act.
+
+```json
+{
+  "policy_id": "policy://sync/default",
+  "min_confidence": 0.70,
+  "min_parity": 0.90,
+  "min_witness_coverage": 0.75,
+  "max_blast_radius_auto": 6,
+  "max_auto_retries": 3,
+  "block_on": [
+    "INTERFACE_HALLUCINATION",
+    "DEPENDENCY_HASH_MISMATCH",
+    "UNRESOLVED_HIGH_SEVERITY_CONTRADICTION"
+  ],
+  "warn_on": [
+    "STALE_DOC_ONLY"
+  ]
+}
+```
+
+### 13A.9 Notes on schema evolution
+
+The schemas above should not be treated as fixed scripture. They are a disciplined starting point. Their purpose is to make the architecture executable and benchmarkable. Field additions are acceptable when they measurably improve retrieval, gating, or auditability; ornamental expansion is not.
+
+## 14. Algorithms
+
+### 14.1 Watcher / analyzer algorithm
+
+1. Observe file save, diff, or branch update.
+2. Parse language-specific syntax tree.
+3. Extract symbols, exports, imports, contracts, and side effects.
+4. Compute token weights and span maps.
+5. Generate or update boundary views.
+6. Recompute dependency hashes.
+7. Estimate blast radius.
+8. Update bitemporal records.
+9. Emit contradiction candidates if prior dependents are now stale.
+
+### 14.2 Context resolution algorithm
+
+1. Interpret task intent.
+2. Retrieve highest-level relevant boundaries first.
+3. Identify primary target artifacts.
+4. Expand contract-bearing dependencies.
+5. Add contradiction and witness nodes if relevant.
+6. Apply token-budget policy and compression.
+7. Produce execution manifest.
+
+### 14.3 Synchronization gate algorithm
+
+1. Collect changed artifacts and proposed diffs.
+2. Detect affected quartet elements.
+3. Re-evaluate dependency hashes.
+4. Measure parity and coverage.
+5. Search for contradictions and stale witnesses.
+6. Compute confidence.
+7. Approve, abstain, or escalate.
+
+### 14.4 Remediation loop algorithm
+
+1. Convert gate failure into remediation atom.
+2. Narrow the target and scope.
+3. Materialize stricter context.
+4. Attempt bounded repair.
+5. Re-run gate.
+6. Store outcome as evidence.
+7. Escalate if retry budget exhausted.
+
+---
+
+## 14A. Worked End-to-End Example
+
+### 14A.1 Scenario
+
+Consider a repository in which the authentication subsystem exposes a `login(request: LoginRequest) -> AuthResult` contract. The system currently supports standard credential-based login. A developer requests the following change:
+
+> Add biometric eligibility information to the login flow so the UI can determine whether to offer biometric sign-in after password authentication.
+
+At first glance this sounds local. In practice it touches multiple artifact classes:
+
+* route and handler code,
+* `AuthResult` contract definition,
+* UI assumptions,
+* tests for successful and failed login,
+* API or internal documentation,
+* and any trace or witness that verifies the login flow.
+
+This is precisely the kind of change that often appears trivial to a coding agent and then quietly desynchronizes the repository.
+
+### 14A.2 Initial indexed state
+
+Before the change, the BCI contains records such as:
+
+* `ent://repo/auth/login_handler#login`
+* `ent://repo/auth/results#AuthResult`
+* `ent://repo/tests/auth/login_handler.spec#credential_login`
+* `ent://repo/docs/auth_contracts#login`
+* `ent://repo/ui/login_page#submitLogin`
+* `ent://repo/traces/auth/login_flow#latest`
+
+All are currently in `SYNCED` state. The `AuthResult` contract summary indicates fields `{ token, expiresAt }`. The quartet parity for the login flow is above threshold, and no open contradictions exist.
+
+### 14A.3 Developer edit event
+
+The developer or coding agent edits `src/auth/results.ts` and `src/auth/login_handler.ts` so that `AuthResult` now includes a new field:
+
+```ts
+biometricEligible: boolean
+```
+
+The change is saved. This triggers the watcher and analyzer pipeline.
+
+### 14A.4 Watcher analysis pass
+
+The watcher performs the following steps:
+
+1. parses the changed files,
+2. extracts modified exported types and function contracts,
+3. recomputes token weights and boundary views,
+4. recomputes dependency hashes for changed entities,
+5. identifies downstream dependents of `AuthResult`,
+6. checks quartet-linked artifacts,
+7. emits updated BCI records and state transition candidates.
+
+At this stage, the system does **not** assume the repository is broken. It only knows that a contract-bearing export changed and that dependents may now be stale.
+
+### 14A.5 First state transitions
+
+The following transitions occur immediately:
+
+* `ent://repo/auth/results#AuthResult`: `SYNCED -> PENDING_VALIDATION`
+* `ent://repo/auth/login_handler#login`: `SYNCED -> PENDING_VALIDATION`
+* `ent://repo/ui/login_page#submitLogin`: `SYNCED -> STALE`
+* `ent://repo/docs/auth_contracts#login`: `SYNCED -> STALE`
+* `ent://repo/tests/auth/login_handler.spec#credential_login`: `SYNCED -> STALE`
+* `ent://repo/traces/auth/login_flow#latest`: `SYNCED -> STALE`
+
+The reason is simple: the upstream contract has changed, but the dependents have not yet been revalidated.
+
+### 14A.6 BCI update example
+
+The updated `AuthResult` entity receives a new bitemporal record:
+
+```json
+{
+  "entity_id": "ent://repo/auth/results#AuthResult",
+  "kind": "type",
+  "contract": {
+    "summary": "Authentication result including token, expiry, and biometric eligibility",
+    "outputs": [
+      {"type": "{ token: string, expiresAt: string, biometricEligible: boolean }"}
+    ]
+  },
+  "sync": {
+    "status": "PENDING_VALIDATION",
+    "parity_score": 0.78,
+    "confidence_score": 0.83,
+    "blast_radius": 5,
+    "stale_reasons": ["public_contract_changed"],
+    "contradiction_refs": []
+  },
+  "bitemporal": {
+    "tx_time": "2026-03-01T17:10:00Z",
+    "valid_time": ["2026-03-01T17:10:00Z", null]
+  },
+  "supersession": {
+    "supersedes": "ent://repo/auth/results#AuthResult@prev",
+    "superseded_by": null
+  }
+}
+```
+
+The earlier version of the contract is not deleted. Its `valid_time` is closed, preserving auditability.
+
+### 14A.7 Context resolution for a follow-up task
+
+Suppose the user now asks the coding agent:
+
+> Finish syncing the login system for biometric eligibility.
+
+The context solver does not dump the entire auth subsystem into the model. Instead it retrieves:
+
+* the L1 and L3 boundaries of `login_handler#login`,
+* the full contract view of `AuthResult`,
+* the stale test entity,
+* the stale documentation entity,
+* the stale UI consumer,
+* and the latest trace witness reference.
+
+If the token budget is tight, the UI file and documentation file may be included initially as L1 or L2 boundaries rather than full code. The primary handler logic and the `AuthResult` contract remain full-fidelity because they are contract-bearing nucleus artifacts.
+
+### 14A.8 Primary contradictions emerge
+
+During analysis, the system detects at least two contradictions:
+
+1. The documentation still claims `AuthResult` only contains `{ token, expiresAt }`.
+2. The UI consumer destructures only the old fields and contains no logic for `biometricEligible`.
+
+The system stores these as explicit contradiction objects rather than plain warning strings.
+
+```json
+{
+  "contradiction_id": "seg://repo/contradiction/1201",
+  "subject": "ent://repo/docs/auth_contracts#login",
+  "object": "ent://repo/auth/results#AuthResult",
+  "relation": "contradicts",
+  "reason": "Documentation omits biometricEligible from AuthResult.",
+  "severity": "medium",
+  "status": "open"
+}
+```
+
+```json
+{
+  "contradiction_id": "seg://repo/contradiction/1202",
+  "subject": "ent://repo/ui/login_page#submitLogin",
+  "object": "ent://repo/auth/results#AuthResult",
+  "relation": "depends_on_outdated_contract",
+  "reason": "UI consumer has not been reviewed against extended AuthResult shape.",
+  "severity": "medium",
+  "status": "open"
+}
+```
+
+### 14A.9 Proposed automated patch and gate evaluation
+
+Assume the Builder agent proposes a patch that updates only the handler and result type but does **not** update tests or docs. The synchronization gate evaluates the proposed state.
+
+The resulting evaluation might look like this:
+
+```json
+{
+  "evaluation_id": "sync_eval://repo/biometric_login_01",
+  "target_entities": [
+    "ent://repo/auth/login_handler#login",
+    "ent://repo/auth/results#AuthResult"
+  ],
+  "status_before": "PENDING_VALIDATION",
+  "status_after": "BLOCKED",
+  "scores": {
+    "parity": 0.62,
+    "confidence": 0.67,
+    "witness_coverage": 0.44,
+    "contract_alignment": 0.86
+  },
+  "detected_failures": [
+    "QUARTET_INCOMPLETE",
+    "STALE_DOC_CONTRACT",
+    "MISSING_RELEVANT_TEST_UPDATE"
+  ],
+  "recommended_action": "REMEDIATE"
+}
+```
+
+The proposal is **blocked**. This is a feature, not friction. The system is refusing to merge a locally correct but globally incomplete change.
+
+### 14A.10 Remediation atom emission
+
+The gate emits a remediation atom:
+
+```json
+{
+  "remediation_id": "rem://repo/biometric_login_01",
+  "origin_evaluation": "sync_eval://repo/biometric_login_01",
+  "target_entity": "ent://repo/auth/login_handler#login",
+  "failure_class": "QUARTET_INCOMPLETE",
+  "missing_dimensions": ["tests", "docs", "trace"],
+  "required_context": [
+    "ent://repo/tests/auth/login_handler.spec#credential_login",
+    "ent://repo/docs/auth_contracts#login",
+    "ent://repo/traces/auth/login_flow#latest"
+  ],
+  "narrowed_task": "Update tests, docs, and trace witness to include biometricEligible in AuthResult semantics.",
+  "retry_budget_remaining": 2,
+  "authority_tier": "auto-repair"
+}
+```
+
+### 14A.11 Bounded remediation pass
+
+The remediation loop now materializes a narrower context focused on the missing quartet dimensions rather than re-opening the whole feature area. The repair pass may do the following:
+
+* update the test assertions to include `biometricEligible`,
+* update the login contract docs,
+* regenerate or refresh the login trace witness,
+* optionally add a UI note or patch if policy deems the consumer contract-bearing.
+
+The retriever may still keep the UI file compressed if it does not need a full rewrite, but it must remain visible as a stale dependent until explicitly validated.
+
+### 14A.12 Second gate pass
+
+After remediation, the gate re-evaluates the system.
+
+```json
+{
+  "evaluation_id": "sync_eval://repo/biometric_login_02",
+  "target_entities": [
+    "ent://repo/auth/login_handler#login",
+    "ent://repo/auth/results#AuthResult",
+    "ent://repo/tests/auth/login_handler.spec#credential_login",
+    "ent://repo/docs/auth_contracts#login"
+  ],
+  "status_before": "REMEDIATING",
+  "status_after": "PARTIALLY_SYNCED",
+  "scores": {
+    "parity": 0.91,
+    "confidence": 0.87,
+    "witness_coverage": 0.82,
+    "contract_alignment": 0.95
+  },
+  "detected_failures": [
+    "STALE_UI_CONSUMER_PENDING_REVIEW"
+  ],
+  "recommended_action": "REFRESH"
+}
+```
+
+This is an important intermediate outcome. The system is now mostly synchronized, but one stale consumer remains.
+
+### 14A.13 Consumer validation
+
+The orchestration engine now runs a lightweight validation step for `ent://repo/ui/login_page#submitLogin`. It determines that the UI does not yet need a code change because it safely ignores extra fields, but it updates the consumer record and closes the stale interval with a witness that the contract extension is backward-compatible for that consumer.
+
+That transition is:
+
+* `ent://repo/ui/login_page#submitLogin`: `STALE -> SYNCED`
+
+### 14A.14 Final gate pass
+
+After consumer validation, the full set of relevant artifacts reaches synchronized status.
+
+```json
+{
+  "evaluation_id": "sync_eval://repo/biometric_login_03",
+  "target_entities": [
+    "ent://repo/auth/login_handler#login",
+    "ent://repo/auth/results#AuthResult",
+    "ent://repo/tests/auth/login_handler.spec#credential_login",
+    "ent://repo/docs/auth_contracts#login",
+    "ent://repo/ui/login_page#submitLogin"
+  ],
+  "status_before": "PARTIALLY_SYNCED",
+  "status_after": "SYNCED",
+  "scores": {
+    "parity": 0.96,
+    "confidence": 0.93,
+    "witness_coverage": 0.91,
+    "contract_alignment": 0.98
+  },
+  "detected_failures": [],
+  "recommended_action": "PROCEED"
+}
+```
+
+The change is now permitted for merge or downstream release flow.
+
+### 14A.15 Evidence graph persistence
+
+The system stores the entire sequence in the Semantic Evidence Graph:
+
+* the original intent claim,
+* the changed `AuthResult` contract,
+* the blocked first proposal,
+* the contradictions against docs and consumer assumptions,
+* the remediation atom,
+* the successful second and third evaluations,
+* and the witnesses proving parity restoration.
+
+This matters because a later request such as:
+
+> Extend signup response with deviceEnrollmentEligible
+
+may retrieve the prior biometric-login lesson and recognize a familiar pattern: contract extension, stale docs, stale tests, likely backward-compatible consumer review required.
+
+### 14A.16 Why this example matters
+
+This walkthrough illustrates the central promise of Contextual Sync:
+
+* the system does not blindly trust a local code patch,
+* it does not flood the model with the whole repository,
+* it does not reduce synchronization to vague warnings,
+* and it does not forget the structure of the failure once fixed.
+
+Instead, it translates a common software change into a disciplined cycle of indexing, navigation, gating, remediation, and memory.
+
+### 14A.17 Generalization of the pattern
+
+The same pattern applies beyond authentication examples. Similar sequences occur in:
+
+* schema evolution,
+* route payload changes,
+* event contract updates,
+* configuration key migration,
+* storage layout changes,
+* generated type updates,
+* and prompt-chain output shape evolution.
+
+The specifics change. The synchronization logic does not.
+
+## 14B. Mathematical Formalization
+
+### 14B.1 Purpose of the formal layer
+
+The architecture described in this paper is only scientifically useful if its key decisions can be expressed as measurable functions rather than intuition alone. The formal layer therefore serves four purposes:
+
+1. define what counts as a valuable context unit,
+2. define how bounded context is assembled,
+3. define how synchronization quality is scored,
+4. and define when the system proceeds, remediates, abstains, or escalates.
+
+The equations below are intended as operational formulations, not as metaphysical claims. They should be treated as tunable engineering models that can be benchmarked, stress-tested, and revised.
+
+### 14B.2 Notation
+
+Let the repository be represented as a directed graph `G = (V, E)` where each node `v in V` is an indexed entity in the BCI and each edge `e in E` is a typed relation such as `depends_on`, `supports`, `contradicts`, or `witnesses`.
+
+For each entity `v`, define:
+
+* `rel(v, q)` — relevance of entity `v` to task or query `q`, normalized to `[0, 1]`
+* `crit(v)` — contract criticality of `v`, normalized to `[0, 1]`
+* `hot(v)` — historical hotness or edit frequency of `v`, normalized to `[0, 1]`
+* `contra(v)` — contradiction salience of `v`, normalized to `[0, 1]`
+* `wit(v)` — witness need or witness value of `v`, normalized to `[0, 1]`
+* `risk(v)` — hallucination or uncertainty risk associated with acting on `v`, normalized to `[0, 1]`
+* `cost(v, l)` — token cost of materializing `v` at abstraction level `l`
+* `dep(v, u)` — dependency strength from `v` to `u`, normalized to `[0, 1]`
+
+Let `L = {0,1,2,3,4,5}` denote the available abstraction levels, where lower numbers are more compressed boundary views and `5` denotes the highest-fidelity artifact view.
+
+Let `x_(v,l)` be a binary decision variable indicating whether entity `v` is materialized at level `l` in the active context window.
+
+### 14B.3 Context utility function
+
+The goal of context resolution is to maximize the usefulness of the active context while respecting a hard token budget. A practical utility for choosing entity `v` at level `l` is:
+
+`U(v, l | q) = alpha*rel(v,q) + beta*crit(v) + gamma*hot(v) + delta*contra(v) + epsilon*wit(v) - lambda*norm_cost(v,l) - mu*risk(v)`
+
+where:
+
+* `norm_cost(v,l)` is a normalized cost term,
+* `alpha, beta, gamma, delta, epsilon, lambda, mu` are tunable nonnegative weights,
+* and all feature values are normalized into `[0, 1]`.
+
+This formulation captures the intuition that context should prefer entities that are relevant, contract-bearing, historically important, contradiction-rich when debugging, and evidence-bearing, while penalizing cost and uncertainty.
+
+### 14B.4 Budgeted context assembly
+
+The basic bounded retrieval problem can be stated as:
+
+maximize
+
+`sum over v,l of x_(v,l) * U(v, l | q)`
+
+subject to:
+
+1. `sum over v,l of x_(v,l) * cost(v,l) <= T_max`
+2. `sum over l of x_(v,l) <= 1` for every entity `v`
+3. all mandatory target entities must be included at or above a policy-required minimum fidelity
+4. all contract-critical dependencies required for soundness must be included at some admissible level
+
+This is a constrained optimization problem over entity-level choices. In general it resembles a structured knapsack problem with dependency constraints, so exact global optimization may be expensive. In practice, a two-stage heuristic is appropriate:
+
+* stage 1: select mandatory nucleus entities and critical dependencies,
+* stage 2: greedily fill remaining budget by descending marginal utility-per-token.
+
+The marginal utility ratio is:
+
+`R(v,l|q) = U(v,l|q) / cost(v,l)`
+
+Entities with the highest positive ratio are added first, subject to dependency and contradiction policies.
+
+### 14B.5 Compression policy as level selection
+
+Compression is not a generic summarization step. It is a controlled downgrade from full artifact fidelity to a lower-cost boundary view.
+
+For each entity `v`, the solver chooses a level `l*` such that:
+
+`l* = argmax over l in L of [ U(v,l|q) ]`
+
+subject to:
+
+* the global token budget,
+* minimum fidelity requirements for contract-bearing targets,
+* and safety policies for dependencies.
+
+A contract-defining entity may require `l >= 3`, while a peripheral consumer may be provisionally included at `l = 1` until deeper inspection is needed.
+
+### 14B.6 Dependency propagation and structural tension
+
+Pure relevance is not enough. If a target entity depends on another entity to preserve contract soundness, the retrieval process must account for that dependency.
+
+Define structural tension from target `v` to dependency `u` as:
+
+`T(v,u) = dep(v,u) * crit(u) * compat(v,u)`
+
+where `compat(v,u)` is a compatibility or necessity factor in `[0,1]` indicating how essential `u` is to interpreting `v` correctly under the current task.
+
+The dependency expansion rule can then require inclusion of `u` whenever:
+
+`T(v,u) >= tau_dep`
+
+for a policy threshold `tau_dep`.
+
+This prevents the system from pulling a function into context while omitting the type, schema, or contract that makes the function semantically intelligible.
+
+### 14B.7 Contradiction-aware expansion
+
+When the system is debugging or synchronizing an active change, contradictory artifacts often matter more than merely similar ones. Define contradiction pressure for entity `v` as:
+
+`C(v) = sum over c in Contradictions(v) of severity(c) * openness(c)`
+
+where:
+
+* `severity(c)` is mapped to `[0,1]`,
+* `openness(c)` is `1` for open contradictions and decays toward `0` as they are resolved or superseded.
+
+This term can be injected into the utility score through `contra(v)`. In effect, contradictory artifacts gain retrieval priority because they explain why the system is not synchronized.
+
+### 14B.8 Blast radius estimation
+
+Blast radius is the weighted downstream impact of a change. Let `src` be a changed entity. The blast radius can be approximated as:
+
+`B(src) = sum over u reachable from src of decay(dist(src,u)) * dep(src,u) * public(u) * fragility(u)`
+
+where:
+
+* `dist(src,u)` is graph distance,
+* `decay(d)` is a monotone decreasing function such as `1 / (1 + d)`,
+* `public(u)` is the degree to which `u` exposes behavior to other subsystems or users,
+* `fragility(u)` estimates sensitivity to upstream contract changes.
+
+This yields a scalar blast radius that is more informative than raw fan-out count. Two modules may each have five dependents, but if one set is internal and tolerant while the other exposes public API boundaries, the second should score much higher.
+
+### 14B.9 Quartet parity
+
+Quartet parity should punish missing dimensions strongly. A weighted arithmetic mean is often too forgiving, so a weighted harmonic mean is preferable.
+
+Let:
+
+* `a_code` = code alignment score in `[0,1]`
+* `a_docs` = documentation alignment score in `[0,1]`
+* `a_tests` = test alignment score in `[0,1]`
+* `a_traces` = trace/witness alignment score in `[0,1]`
+
+with weights `w_code + w_docs + w_tests + w_traces = 1`.
+
+Define parity `P` as:
+
+`P = 1 / ( w_code/(a_code + eps) + w_docs/(a_docs + eps) + w_tests/(a_tests + eps) + w_traces/(a_traces + eps) )`
+
+where `eps` is a very small constant for numerical stability.
+
+The harmonic form is useful because it sharply penalizes a single missing or near-zero dimension. If code is updated but tests are absent, parity collapses rather than remaining deceptively average.
+
+### 14B.10 Contract alignment score
+
+Contract alignment measures whether an entity and its dependents agree on the same externally relevant semantics.
+
+A simple operational form is:
+
+`A_contract(v) = 1 - mismatch(v) / max(1, obligations(v))`
+
+where:
+
+* `mismatch(v)` is the count or weighted count of unresolved contract mismatches,
+* `obligations(v)` is the total number of contract obligations being checked.
+
+A richer version can weight mismatch types differently, assigning larger penalties to return-shape mismatches or deleted required fields than to additive optional fields.
+
+### 14B.11 Witness coverage
+
+Witness coverage measures how much of the current claim surface is actually supported by tests, traces, static checks, or other accepted evidence.
+
+Define:
+
+`W(v) = supported_claim_weight(v) / total_claim_weight(v)`
+
+where claim weights allow some obligations to matter more than others. For example, a failing integration test or a missing migration witness should count more heavily than the absence of a low-value doc trace.
+
+### 14B.12 Confidence score
+
+The final confidence score `kappa` should aggregate the major validation factors while explicitly subtracting risk.
+
+One practical form is:
+
+`kappa = sigma( theta0 + theta1*P + theta2*A_contract + theta3*W - theta4*R_hall - theta5*R_contra - theta6*R_scope )`
+
+where:
+
+* `sigma` is a logistic squashing function mapping the score into `[0,1]`,
+* `P` is quartet parity,
+* `A_contract` is contract alignment,
+* `W` is witness coverage,
+* `R_hall` is hallucination risk,
+* `R_contra` is unresolved contradiction risk,
+* `R_scope` is scope or blast-radius risk.
+
+The logistic form is useful because it yields a bounded confidence value while allowing policy calibration by changing the `theta` coefficients.
+
+### 14B.13 Gate decision function
+
+Given parity `P`, confidence `kappa`, blast radius `B`, contradiction set `C`, retry count `r`, and policy thresholds, the decision function `D` can be defined as:
+
+* `PROCEED` if `P >= tau_P`, `kappa >= tau_kappa`, no blocking contradiction is open, and `B <= tau_B` or the current authority tier permits the scope.
+* `WARN` if the change is safe to continue but some non-blocking discrepancy remains.
+* `REFRESH` if stale assumptions or outdated witnesses must be revalidated before proceeding.
+* `REMEDIATE` if the failure is localized and the automatic repair budget permits another attempt.
+* `ABSTAIN` if confidence is below threshold, hallucination risk is high, or a required contract dependency is unresolved.
+* `ESCALATE` if `r >= tau_retry` or the blast radius exceeds automatic authority.
+
+More compactly, one can express the blocking condition as:
+
+`block = (P < tau_P) or (kappa < tau_kappa) or exists c in C such that severity(c) >= tau_c and status(c) = open`
+
+Then:
+
+* if `block = false`, proceed or warn,
+* if `block = true` and `r < tau_retry` and `B <= tau_B_auto`, remediate,
+* otherwise escalate.
+
+### 14B.14 Remediation priority
+
+When multiple missing dimensions or contradictions exist, remediation should target the highest expected synchronization gain per unit cost.
+
+For a candidate remediation action `m`, define:
+
+`G(m) = expected_delta_P(m) + expected_delta_kappa(m)`
+
+and prioritize by:
+
+`Priority(m) = G(m) / remediation_cost(m)`
+
+This tends to prefer inexpensive actions with large synchronization payoff, such as updating a stale test or regenerating a witness, before expensive broad refactors.
+
+### 14B.15 Time-aware validity decay
+
+Not all evidence ages equally well. A static witness from months ago should not count as strongly as a fresh integration run after a major contract change. Let the freshness factor for witness `w` be:
+
+`fresh(w, t) = exp( -lambda_time * age(w, t) )`
+
+where `age(w, t)` is the elapsed time since the witness was produced relative to the current evaluation time `t`.
+
+Freshness can then scale witness contribution inside `W(v)` so that recent evidence counts more heavily than stale evidence.
+
+### 14B.16 Notes on learnability and calibration
+
+The coefficients in these formulations may be hand-tuned initially and later learned from repository history. That is a practical path:
+
+1. begin with transparent rule-based weights,
+2. log decisions and outcomes,
+3. fit better coefficients from observed synchronization success and failure,
+4. preserve explainability by keeping the final model interpretable.
+
+A completely opaque scorer would defeat one of the central purposes of this architecture, namely legible and auditable decision-making.
+
+### 14B.17 Why formalization matters
+
+These equations do not claim to solve software engineering. They do something more modest and more useful: they turn previously vague intuitions—relevance, risk, drift, parity, evidence, scope—into measurable variables that can be improved by experiment rather than rhetoric.
+
+## 15. Benchmark Harness Design
+
+### 15.1 Purpose of the benchmark harness
+
+A system like Contextual Sync cannot be evaluated adequately with generic code-generation benchmarks. Standard benchmarks overemphasize local completion quality and under-measure the actual target of this architecture: preservation of coherence across contracts, tests, docs, traces, and downstream dependents under bounded context.
+
+The benchmark harness must therefore test not merely whether an agent can generate plausible code, but whether it can:
+
+* detect contract-bearing changes,
+* retrieve the right supporting context without flooding the model,
+* distinguish stale artifacts from synchronized ones,
+* block unsafe partial fixes,
+* repair localized drift,
+* and preserve evidence-backed coherence over time.
+
+In other words, the benchmark must measure **synchronization intelligence**, not just code emission.
+
+### 15.2 Evaluation unit
+
+The primary evaluation unit should be a **synchronization episode**.
+
+A synchronization episode consists of:
+
+1. an initial repository state,
+2. a triggering change or requested mutation,
+3. a bounded task prompt,
+4. a set of relevant hidden dependents and witnesses,
+5. an execution trace of retrieval, planning, gating, and repair,
+6. and a final labeled outcome indicating whether the repository is synchronized.
+
+This is a better unit than a single file edit because the architecture is expressly designed to handle cross-artifact coherence rather than isolated text patches.
+
+### 15.3 Benchmark corpus composition
+
+The corpus should contain repositories or subsystems spanning multiple languages and artifact types where possible. At minimum, each benchmark sample should include:
+
+* source code,
+* tests,
+* documentation or contract notes,
+* traces, logs, or witness artifacts,
+* and an explicit dependency graph or derivable dependency structure.
+
+To avoid overfitting to one ecosystem, the harness should contain at least three strata:
+
+1. **single-language application repositories**
+2. **polyglot service boundaries**
+3. **AI-native or orchestration-heavy systems with prompt chains, config, or trace artifacts**
+
+The benchmark should include both small and medium-sized repositories, and later scale to larger repositories once instrumentation is stable.
+
+### 15.4 Task family taxonomy
+
+The benchmark suite should be divided into task families that stress different synchronization failure modes.
+
+#### 15.4.1 Contract extension tasks
+
+A return type, schema, or event payload gains a new field. Hidden dependents may need updates, validation, or compatibility review.
+
+Examples:
+
+* add `biometricEligible` to `AuthResult`
+* extend route response with `pagination.cursor`
+* add optional config field with downstream defaults
+
+#### 15.4.2 Contract narrowing or breaking tasks
+
+A field becomes required, renamed, deleted, or semantically changed.
+
+Examples:
+
+* rename `expiresAt` to `expiryTimestamp`
+* remove deprecated enum member
+* change event contract from string to structured payload
+
+These are valuable because they create high-stakes downstream drift.
+
+#### 15.4.3 Side-effect and behavior change tasks
+
+The public type signature may remain constant while operational behavior changes.
+
+Examples:
+
+* login now emits an audit event
+* cache layer becomes write-through instead of write-back
+* retry policy now includes exponential backoff
+
+These tasks test whether docs, traces, and witnesses are updated even when signatures alone are insufficient.
+
+#### 15.4.4 Test and witness regeneration tasks
+
+The code is already updated, but tests or traces are stale.
+
+Examples:
+
+* refresh integration test after schema evolution
+* regenerate trace witness after route flow update
+* update examples and assertions after migration
+
+These tasks isolate the remediation and parity-restoration machinery.
+
+#### 15.4.5 Hidden dependent discovery tasks
+
+The prompt mentions only the primary file or feature, while the true task requires finding hidden dependents.
+
+Examples:
+
+* update password reset response format
+* migrate storage layout without directly naming downstream consumers
+
+These tasks directly test whether the index and blast-radius model outperform naive local editing.
+
+#### 15.4.6 Hallucination trap tasks
+
+The benchmark intentionally includes plausible but nonexistent symbols, routes, or contracts.
+
+Examples:
+
+* similar function names with one decoy
+* deprecated docs that mention old helper names
+* stale tests referencing removed APIs
+
+These tasks test abstention and contradiction handling.
+
+#### 15.4.7 Long-horizon refactor tasks
+
+A change spans multiple files and possibly multiple sequential synchronization episodes.
+
+Examples:
+
+* rename a public contract across service, docs, tests, and UI consumer
+* split one monolithic module into two while preserving interfaces
+
+These tasks test whether the architecture still holds under more ambitious changes rather than only micro-edits.
+
+### 15.5 Difficulty tiers
+
+Each episode should be labeled by difficulty tier. A practical tiering scheme is:
+
+* **Tier 1** — one primary file, one hidden dependent, clear witness path
+* **Tier 2** — one contract change, two to four dependents, mixed artifact types
+* **Tier 3** — multiple dependents, contradictory docs/tests, bounded remediation required
+* **Tier 4** — polyglot or orchestration-heavy drift with several evidence paths
+* **Tier 5** — multi-step refactor with sequential sync-gate transitions
+
+Difficulty labeling is essential because systems may appear strong when benchmarked only on trivial contract extension tasks.
+
+### 15.6 Ground-truth labeling
+
+The benchmark must provide reliable ground truth for what counts as synchronized. Ground truth should not be reduced to “the tests passed.” A proper label set includes:
+
+* correct target artifacts,
+* necessary dependent artifacts,
+* acceptable compatible no-change cases,
+* required witness types,
+* expected contradiction detections,
+* expected gate outcome for incomplete proposals,
+* and the final synchronized artifact set.
+
+Each episode should therefore include a machine-readable answer key specifying:
+
+* minimal sufficient context set,
+* minimal sufficient patch set,
+* blocking conditions,
+* acceptable alternative synchronized outcomes,
+* and whether backward compatibility is allowed to satisfy some stale consumers without code changes.
+
+### 15.7 Dataset splits
+
+The harness should be split along repository and pattern axes to avoid leakage.
+
+Recommended splits:
+
+* **train/calibration split** for coefficient tuning and policy selection
+* **development split** for iterative system refinement
+* **held-out evaluation split** with repositories or subsystems unseen during tuning
+* **challenge split** containing adversarial and high-ambiguity episodes
+
+Crucially, pattern leakage must be controlled. If the train set contains twenty near-identical contract extension tasks in the same auth subsystem, the evaluation will flatter the system artificially.
+
+### 15.8 Baselines
+
+The benchmark should compare Contextual Sync against multiple baselines, not merely one weak strawman.
+
+#### 15.8.1 Local-edit baseline
+
+The agent receives only the directly mentioned file or span and no structured sync substrate.
+
+This baseline measures the cost of purely local reasoning.
+
+#### 15.8.2 Full-context stuffing baseline
+
+The agent receives the task plus a large set of surrounding files or summaries without bounded optimization.
+
+This baseline measures whether the proposed architecture beats brute-force context expansion.
+
+#### 15.8.3 Flat semantic retrieval baseline
+
+The system retrieves top-k artifacts by embedding similarity without hierarchical navigation, dependency constraints, or contradiction handling.
+
+This is likely the most relevant baseline in modern RAG-based tooling.
+
+#### 15.8.4 Hierarchical retrieval without sync gate
+
+This baseline includes structured retrieval but no explicit synchronization gate or remediation loop.
+
+It isolates the value of gating and parity enforcement.
+
+#### 15.8.5 Sync gate without evidence graph memory
+
+This baseline includes indexing and gating but lacks durable contradiction and remediation memory.
+
+It tests whether long-term memory improves repeated synchronization patterns.
+
+### 15.9 Ablation studies
+
+Ablation is essential. Otherwise, one never knows which subsystem is pulling its weight.
+
+The benchmark should include at least the following ablations:
+
+* remove boundary views and use only full artifacts
+* remove token weighting and use uniform retrieval cost
+* remove dependency-hash propagation
+* remove contradiction-aware retrieval
+* remove quartet parity from the gate
+* remove witness freshness decay
+* remove remediation loop
+* remove evidence graph lessons from future episodes
+
+Each ablation should be measured on success rate, false block rate, false approval rate, token cost, and latency.
+
+### 15.10 Core outcome metrics
+
+The benchmark should measure at least four classes of outcomes.
+
+#### 15.10.1 Synchronization correctness
+
+* final synchronization success rate
+* contract drift detection precision
+* contract drift detection recall
+* contradiction detection precision
+* contradiction detection recall
+* quartet parity restoration rate
+
+#### 15.10.2 Decision quality
+
+* false approval rate (unsafe change allowed)
+* false block rate (safe change blocked)
+* abstention precision
+* remediation success rate
+* escalation appropriateness rate
+
+#### 15.10.3 Efficiency
+
+* average total tokens consumed per episode
+* average retrieval tokens consumed per successful edit
+* latency to first decision
+* latency to final synchronized outcome
+* average number of remediation loops
+
+#### 15.10.4 Stability over time
+
+* regression recurrence rate on similar future episodes
+* lesson reuse rate from the evidence graph
+* witness staleness sensitivity
+* drift reintroduction rate after successful merge
+
+### 15.11 False approval vs false block analysis
+
+This architecture must make a hard trade-off: if the gate is too lenient, unsafe changes slip through; if it is too strict, productivity collapses under needless blocking.
+
+Therefore the benchmark should report the following separately rather than hiding them inside one composite score:
+
+* unsafe acceptance rate,
+* safe rejection rate,
+* safe acceptance rate,
+* unsafe rejection rate,
+* and abstention distribution by failure class.
+
+A receiver-operating style analysis across policy thresholds is useful here. One can vary `tau_P`, `tau_kappa`, and `tau_B` to generate operating curves showing how policy choices shift the balance between safety and throughput.
+
+### 15.12 Retrieval quality instrumentation
+
+Because Contextual Sync claims to improve *what* the model sees, the harness must inspect retrieval quality directly.
+
+Useful retrieval metrics include:
+
+* nucleus recall: fraction of mandatory target entities retrieved
+* dependency recall: fraction of mandatory contract-critical dependencies retrieved
+* contradiction recall: fraction of relevant contradictory artifacts surfaced
+* compression quality: ratio of retrieved utility to retrieved token cost
+* context pollution rate: fraction of retrieved tokens not materially contributing to the successful outcome
+
+This is important because a system can sometimes succeed despite mediocre retrieval due to model luck. The benchmark should reward structural retrieval quality directly.
+
+### 15.13 Human review protocol
+
+Some episodes will admit multiple valid synchronized outcomes. Therefore a human review protocol is required for adjudication.
+
+A robust review protocol should include:
+
+* blinded assessment of outputs against the answer key,
+* a rubric for acceptable alternative synchronized solutions,
+* explicit scoring of whether the system found all required artifact classes,
+* and a separate safety review for false approvals.
+
+Reviewers should not merely judge code elegance. They should judge synchronization integrity.
+
+### 15.14 Adversarial and robustness testing
+
+The benchmark harness should include adversarial variants to test system brittleness.
+
+Examples:
+
+* stale but plausible docs that conflict with current code,
+* misleading near-duplicate symbol names,
+* partially regenerated tests that pass but miss the changed contract,
+* traces with valid syntax but obsolete semantics,
+* and intentionally noisy repos where naive retrieval tends to over-pull irrelevant artifacts.
+
+Robustness should also be measured under budget stress. The same episode should be run at multiple token ceilings to determine how gracefully the system degrades.
+
+### 15.15 Budget-sweep experiments
+
+A particularly important experiment is the token-budget sweep.
+
+For a fixed episode, run the system at several budgets:
+
+* very low budget,
+* low budget,
+* medium budget,
+* generous budget.
+
+Then observe:
+
+* success rate,
+* contradiction recall,
+* false approvals,
+* parity restoration,
+* latency,
+* and compression behavior.
+
+This directly tests the paper’s claim that hierarchical compression and token-weighted retrieval maintain coherence better than flat or brute-force approaches under tight budgets.
+
+### 15.16 Longitudinal memory experiments
+
+Because the architecture includes an evidence graph and lesson reuse, the benchmark should contain repeated pattern families over time.
+
+The experiment should compare:
+
+* first occurrence of a drift pattern,
+* later occurrence without memory injection,
+* later occurrence with memory injection.
+
+This measures whether the system actually learns useful reusable synchronization patterns or merely stores decorative provenance.
+
+### 15.17 Statistical reporting
+
+Results should be reported with uncertainty estimates rather than single triumphant numbers. Recommended reporting includes:
+
+* mean and standard deviation across episodes,
+* bootstrap confidence intervals for key metrics,
+* per-task-family breakdowns,
+* per-difficulty-tier breakdowns,
+* and significance testing for major baseline comparisons where appropriate.
+
+The system should also publish failure case summaries rather than only aggregate metrics. Averages can hide ugly behavior.
+
+### 15.18 Release criteria for a production candidate
+
+A production-ready Contextual Sync implementation should meet threshold criteria on a held-out split before broad rollout. Example release criteria might include:
+
+* final synchronization success rate above a chosen threshold,
+* false approval rate below a strict safety threshold,
+* false block rate below a usability threshold,
+* bounded median latency,
+* and positive ablation evidence that the gate and retrieval substrate materially improve outcomes over flat baselines.
+
+Release criteria force the architecture to earn trust empirically rather than by rhetorical flourish.
+
+### 15.19 Why this harness matters
+
+A benchmark harness of this kind does more than evaluate the architecture. It disciplines the architecture. It prevents the paper from confusing conceptual elegance with actual performance. The system must prove, episode by episode, that it can protect coherence under pressure.
+
+## 16. Evaluation Framework
+
+### 15.1 Core metrics
+
+The architecture should be evaluated using metrics that reflect coherence, not just generation speed:
+
+* synchronization success rate
+* contract drift detection precision and recall
+* false block rate
+* false approval rate
+* quartet parity compliance rate
+* witness coverage rate
+* average token cost per successful edit
+* average blast radius per automatic edit
+* time to remediation
+* regression recurrence rate
+
+### 15.2 Benchmark tasks
+
+A proper benchmark suite should include:
+
+1. signature changes with hidden dependents
+2. schema evolution across code and tests
+3. route payload changes with stale docs
+4. generated type updates across language boundaries
+5. configuration key renames with deployment implications
+6. prompt chain changes requiring witness regeneration
+7. deliberate hallucination traps using plausible but nonexistent APIs
+
+### 15.3 Baselines
+
+Compare against:
+
+* flat semantic retrieval
+* full-file stuffing
+* naive summarization-only retrieval
+* no-sync-gate agent pipelines
+* conventional pre-commit checks without bitemporal memory
+
+### 15.4 Human factors
+
+The system should also be evaluated on developer usability:
+
+* clarity of block reasons
+* usefulness of remediation suggestions
+* perceived noise level
+* perceived trustworthiness
+* time saved in debugging drift
+
+---
+
+## 16. Evaluation Framework
+
+### 16.1 Evaluation strategy
+
+The benchmark harness defines *what* to test. The evaluation framework defines *how* results are interpreted.
+
+A complete evaluation should answer four questions:
+
+1. Does the system keep repositories more synchronized than strong baselines?
+2. Does it do so with acceptable token cost and latency?
+3. Does it avoid unsafe approvals while not overblocking developers?
+4. Do its individual subsystems each contribute measurable value?
+
+### 16.2 Primary evaluation axes
+
+The system should be judged along four primary axes:
+
+* **Coherence** — whether final outcomes are actually synchronized
+* **Safety** — whether unsafe changes are correctly blocked or escalated
+* **Efficiency** — whether coherence is achieved with bounded token and time cost
+* **Adaptivity** — whether memory, remediation, and hierarchy improve future episodes
+
+### 16.3 Comparative reporting template
+
+For every major experimental condition, the paper should report:
+
+* baseline or variant name,
+* synchronization success rate,
+* false approval rate,
+* false block rate,
+* mean parity at final accepted state,
+* mean confidence at decision time,
+* mean total tokens used,
+* mean latency to final outcome,
+* and mean number of remediation iterations.
+
+This makes cross-method comparison straightforward.
+
+### 16.4 Episode-level analysis
+
+Aggregate numbers are not enough. Each experiment batch should include episode-level tracing for a subset of representative cases:
+
+* one clean success,
+* one correct abstention,
+* one false approval,
+* one false block,
+* one successful remediation,
+* and one escalation.
+
+This grounds the paper in real failure anatomy.
+
+### 16.5 Task-family breakdown
+
+Results should be stratified by task family. A system may be excellent at contract extension but fragile on behavior-only changes or witness regeneration. Therefore each major metric should be broken down for:
+
+* contract extension,
+* contract breaking changes,
+* side-effect changes,
+* witness regeneration,
+* hidden dependent discovery,
+* hallucination traps,
+* and long-horizon refactors.
+
+### 16.6 Difficulty-tier breakdown
+
+Metrics should also be broken down by difficulty tier. It is not enough to report one average if the system performs well only on Tier 1 and Tier 2 episodes while collapsing on Tier 4 and Tier 5.
+
+### 16.7 Cost-quality frontier
+
+Because Contextual Sync explicitly optimizes bounded context, the evaluation should include a cost-quality frontier analysis. This plots synchronization quality against token usage and latency.
+
+A strong system should dominate weaker baselines by achieving equal or better synchronization with lower or comparable cost. If the system only wins by spending dramatically more tokens, it has not really solved the stated problem.
+
+### 16.8 Threshold sweep analysis
+
+The evaluation should sweep important policy thresholds such as:
+
+* minimum parity threshold,
+* minimum confidence threshold,
+* maximum automatic blast radius,
+* and maximum remediation retries.
+
+For each threshold configuration, report how the operating point changes. This is necessary because some environments prefer aggressive productivity while others prefer conservative safety.
+
+### 16.9 Error taxonomy
+
+Every failure should be assigned a primary failure class. Suggested classes include:
+
+* missed dependent,
+* missed contradiction,
+* wrong compatibility judgment,
+* insufficient witness retrieval,
+* overcompression of critical context,
+* excessive context pollution,
+* overblocking due to stale low-value artifact,
+* underblocking due to weak parity enforcement,
+* failed remediation planning,
+* and memory misuse or stale lesson injection.
+
+A serious paper should not merely show that errors occurred; it should classify them.
+
+### 16.10 Evaluation of memory benefits
+
+To test whether the evidence graph genuinely helps, the evaluation must separate:
+
+* no-memory condition,
+* passive-memory condition where provenance is stored but not retrieved,
+* and active-memory condition where relevant lessons are injected into future episodes.
+
+Improvement should be measured both in success rate and in reduction of repeat failure classes.
+
+### 16.11 Human acceptability metrics
+
+If the system is intended for real development workflows, human-facing metrics matter as well. These can include:
+
+* usefulness of block messages,
+* clarity of remediation instructions,
+* trust in escalations,
+* annoyance caused by false blocks,
+* and perceived debugging time saved.
+
+These should be treated as secondary but still important metrics.
+
+### 16.12 Minimal publishable result standard
+
+A minimal publishable result should demonstrate at least the following on a held-out split:
+
+1. materially better synchronization success than local-edit and flat semantic retrieval baselines,
+2. materially lower false approval rate than ungated hierarchical retrieval,
+3. acceptable latency and token overhead relative to gains in coherence,
+4. and at least one clear benefit from either evidence-memory reuse or bounded remediation.
+
+Without these results, the architecture remains an interesting proposal rather than a demonstrated advance.
+
+## 17. Implementation Blueprint
+
+### 17.1 Purpose of the blueprint
+
+The preceding sections define the architecture conceptually, formally, and evaluatively. This section answers a harsher question: how should one actually build the system in a way that is modular, observable, incrementally deployable, and resistant to turning into a magnificent maintenance swamp.
+
+The implementation blueprint is intentionally conservative. It favors explicit boundaries, narrow responsibilities, append-only evidence where possible, and replaceable subsystems. The goal is not to build a monolith that does everything at once, but a layered substrate that can begin small and grow without structural collapse.
+
+### 17.2 High-level service topology
+
+A practical Contextual Sync implementation can be decomposed into the following runtime components:
+
+1. **Workspace Watcher**
+2. **Language Analysis Workers**
+3. **BCI Store**
+4. **Boundary View Generator**
+5. **Dependency and Drift Engine**
+6. **Context Resolver Service**
+7. **Synchronization Gate Service**
+8. **Remediation Orchestrator**
+9. **Semantic Evidence Graph Store**
+10. **IDE / Agent Integration Layer**
+11. **Observability and Diagnostics Layer**
+
+These may initially run inside one process for simplicity, but the architectural boundaries should be preserved so they can later be split into services if scale demands it.
+
+### 17.3 Component responsibilities
+
+#### 17.3.1 Workspace Watcher
+
+The watcher monitors file saves, git diffs, branch changes, generated artifact updates, and optionally CI events. Its job is not to understand the code deeply; its job is to produce a clean stream of change events.
+
+Inputs:
+
+* local file system changes
+* git status or diff events
+* branch switch events
+* CI completion events
+* manual reindex requests
+
+Outputs:
+
+* normalized `ChangeEvent` objects
+* debounced file groups
+* reindex job requests
+* invalidation messages for stale boundary views
+
+The watcher should aggressively debounce noisy save storms and collapse repeated edits into a single analysis job where possible.
+
+#### 17.3.2 Language Analysis Workers
+
+These workers parse specific languages and artifact types. Each worker is responsible for extracting:
+
+* symbols,
+* imports and exports,
+* type or schema information,
+* public contract candidates,
+* side effects where inferable,
+* span maps,
+* and syntax or semantic errors.
+
+Language workers should be pluggable. A TypeScript worker, Python worker, Markdown contract worker, JSON schema worker, and test-file worker may each expose the same normalized output schema even if their extraction logic differs.
+
+This separation matters because multi-language repositories are inevitable, and forcing one giant universal parser to pretend all artifacts are alike is how software becomes haunted.
+
+#### 17.3.3 BCI Store
+
+The BCI Store is the operational memory substrate for indexed entities and their current and historical validity intervals. It should support:
+
+* keyed lookup by entity id,
+* lookup by file path and span,
+* retrieval by dependency relation,
+* retrieval by sync status,
+* bitemporal queries,
+* and efficient updates of supersession chains.
+
+A practical implementation can begin with a relational store plus JSON fields for flexible payloads. The important property is not a fashionable database choice; it is transactional clarity.
+
+The BCI Store should separate at least three tables or collections logically:
+
+* `entities`
+* `entity_versions`
+* `sync_evaluations`
+
+This makes supersession and validity windows explicit instead of hiding everything inside mutable blobs.
+
+#### 17.3.4 Boundary View Generator
+
+The Boundary View Generator builds L0–L5 views from analyzed entities and linked evidence. It should not generate florid prose. It should generate compact machine-first summaries that support navigation and retrieval.
+
+Inputs:
+
+* analyzed entities
+* contract metadata
+* tests and witness references
+* prior stable boundary views for diff-aware regeneration
+
+Outputs:
+
+* boundary view records
+* boundary weight estimates
+* invalidation notices when views become stale
+
+This service should support partial regeneration so that small local changes do not force full repository re-summarization.
+
+#### 17.3.5 Dependency and Drift Engine
+
+This engine maintains dependency hashes, detects upstream/downstream staleness, estimates blast radius, and emits contradiction candidates.
+
+Responsibilities:
+
+* recompute dependency hashes for changed entities
+* propagate stale status to dependents
+* identify likely drift versus mere staleness
+* estimate blast radius
+* generate contradiction seeds when doc/test/consumer artifacts appear inconsistent
+
+This engine is where many of the paper’s core ideas become operational. It turns a syntactic change into a semantic suspicion graph.
+
+#### 17.3.6 Context Resolver Service
+
+Given a task prompt and optionally a target artifact, the resolver chooses what context to materialize under budget. It queries the BCI Store and the evidence graph, computes utility, selects abstraction levels, and returns an execution manifest.
+
+Inputs:
+
+* task prompt
+* target entity hints
+* budget constraints
+* policy thresholds
+* active sync state information
+
+Outputs:
+
+* execution manifest
+* selected entities and levels
+* dropped entities with reasons
+* projected cost and risk summary
+
+The resolver should expose both a machine API and a human-readable explanation mode so debugging its choices is possible.
+
+#### 17.3.7 Synchronization Gate Service
+
+The gate is the policy enforcement nucleus. It accepts proposed diffs or completed edits, retrieves relevant quartet and evidence artifacts, computes parity and confidence, and returns a decision.
+
+Inputs:
+
+* proposed change set
+* affected entity set
+* current sync states
+* relevant witnesses and contradictions
+* applicable policy profile
+
+Outputs:
+
+* sync evaluation record
+* gate outcome class
+* failure classes
+* remediation directives when blocked
+
+This service should be deterministic for a fixed snapshot and policy profile. If it behaves like a moody oracle, developers will rightly stop trusting it.
+
+#### 17.3.8 Remediation Orchestrator
+
+The remediation orchestrator translates gate failures into bounded follow-up tasks. It should:
+
+* rank repair opportunities,
+* create remediation atoms,
+* request narrowed context,
+* dispatch constrained repair attempts,
+* track retry budgets,
+* and escalate when bounds are exceeded.
+
+This component is a planner, not merely a loop. It must choose the smallest next action likely to restore synchronization.
+
+#### 17.3.9 Semantic Evidence Graph Store
+
+The evidence graph stores:
+
+* claims,
+* contradictions,
+* witnesses,
+* remediations,
+* plans,
+* and outcome traces.
+
+This may live in a graph database, a relational graph layer, or an indexed document store with edge tables. The critical feature is typed, queryable relations over time—not database fashion theater.
+
+#### 17.3.10 IDE / Agent Integration Layer
+
+This layer integrates the substrate into real workflows. It should provide:
+
+* inline sync status indicators,
+* blast radius previews,
+* stale dependent notifications,
+* gated save or commit flows,
+* “why blocked?” explanations,
+* remediation task launchers,
+* and context manifest inspection for AI-driven edits.
+
+This is where the system becomes usable rather than merely correct in a backend vacuum.
+
+#### 17.3.11 Observability and Diagnostics Layer
+
+A system that blocks edits and proposes repairs must be inspectable. The diagnostics layer should expose:
+
+* event timelines,
+* retrieval manifests,
+* gate score breakdowns,
+* contradiction lists,
+* retry histories,
+* token-cost reports,
+* and stale-entity heatmaps.
+
+Without this layer, the architecture becomes impossible to debug once it scales beyond toy repos.
+
+### 17.4 Core data flow
+
+A standard end-to-end flow should look like this:
+
+1. A file save or git diff produces a `ChangeEvent`.
+2. The watcher debounces and groups related changes.
+3. Language workers parse changed artifacts.
+4. The BCI Store receives new entity versions and closes old validity intervals where required.
+5. Boundary views are regenerated selectively.
+6. Dependency hashes are recomputed.
+7. Downstream entities are marked `STALE` or `DRIFTED` as appropriate.
+8. If an AI task is requested, the Context Resolver materializes a bounded execution manifest.
+9. The Builder or developer applies a change.
+10. The Synchronization Gate evaluates the proposal.
+11. If approved, witnesses are attached and relevant entities become `SYNCED`.
+12. If blocked, a remediation atom is created and the Remediation Orchestrator decides the next bounded action.
+13. The Evidence Graph persists the episode.
+
+This flow should be recorded in structured traces so each decision can be replayed and analyzed later.
+
+### 17.5 Suggested storage layout
+
+A practical initial storage layout may include the following logical collections or tables:
+
+* `change_events`
+* `entities`
+* `entity_versions`
+* `boundary_views`
+* `dependency_edges`
+* `sync_states`
+* `sync_evaluations`
+* `witnesses`
+* `contradictions`
+* `remediation_atoms`
+* `plans`
+* `evidence_edges`
+* `policy_profiles`
+
+Blob-like payloads such as raw trace outputs, diffs, or large logs should be stored separately with stable references rather than embedded directly in every structured record.
+
+### 17.6 Caching strategy
+
+Caching matters because the system performs repeated retrieval and evaluation work around a repository that often changes incrementally rather than wholesale.
+
+Recommended caches include:
+
+* parsed AST cache keyed by content hash
+* boundary view cache keyed by entity version id
+* dependency expansion cache keyed by target entity and policy profile
+* context manifest cache keyed by task + repo snapshot + budget
+* witness freshness cache for repeated evaluations in the same snapshot window
+
+Caches must be invalidated conservatively. Stale cache hits in a sync system are comedy of the worst kind.
+
+### 17.7 Update and invalidation rules
+
+The blueprint should define explicit invalidation rules. At minimum:
+
+* a content hash change invalidates the AST and derived boundary views for that entity,
+* a public contract change invalidates dependency hashes for direct dependents,
+* a witness refresh invalidates prior witness freshness scores,
+* a contradiction resolution closes the contradiction validity interval,
+* and a policy profile update invalidates cached gate outcomes computed under the prior policy.
+
+This is tedious, yes. Tedious clarity is cheaper than mystical bugs.
+
+### 17.8 API surface
+
+The implementation should expose a narrow, stable API surface. Representative endpoints or service calls may include:
+
+* `index_changes(change_set)`
+* `get_entity(entity_id, at_time?)`
+* `get_boundary(entity_id, level)`
+* `resolve_context(task, hints, budget, policy)`
+* `evaluate_sync(change_set, policy)`
+* `create_remediation(evaluation_id)`
+* `get_contradictions(entity_id)`
+* `record_witness(witness_payload)`
+* `query_lessons(pattern, scope)`
+* `explain_decision(evaluation_id)`
+
+The API should separate read paths from mutation paths clearly.
+
+### 17.9 Policy profiles
+
+Different teams will want different risk tolerances. The implementation should therefore support named policy profiles such as:
+
+* `strict_release`
+* `default_dev`
+* `rapid_prototype`
+* `docs_light`
+* `high_risk_migration`
+
+Each profile can set thresholds for parity, confidence, blast radius, retry count, and blocking contradiction severity. Policies should be versioned so decisions remain interpretable historically.
+
+### 17.10 IDE integration patterns
+
+A strong IDE integration should avoid both silence and spam. Useful interaction patterns include:
+
+* subtle sync badges per file or symbol,
+* on-demand stale dependent panel,
+* pre-commit gate summary,
+* diff overlay showing which quartet dimensions remain unsynchronized,
+* explanation drawer for blocked actions,
+* and a one-click launch of bounded remediation tasks.
+
+The IDE should also expose the current context manifest for AI actions so the developer can inspect what the model actually saw. This is a major trust feature.
+
+### 17.11 Agent integration patterns
+
+For AI agents, the integration layer should provide structured tools rather than giant text dumps. The agent should be able to request:
+
+* target entity summaries,
+* boundary views by level,
+* contradiction sets,
+* relevant witnesses,
+* stale dependents,
+* and policy-aware remediation directives.
+
+This helps the agent act like a constrained operator over structured state instead of a tourist wandering a maze with a flashlight and excessive confidence.
+
+### 17.12 CI and branch workflow integration
+
+Contextual Sync should integrate with existing workflows rather than demanding a revolution on day one. Natural integration points include:
+
+* pre-commit warnings or hard blocks,
+* pre-push gate summaries,
+* pull request sync reports,
+* CI-generated witnesses,
+* and release-branch stricter policy enforcement.
+
+A sensible rollout pattern is lenient warnings locally, stronger gating in pull requests, and strict gating on protected branches.
+
+### 17.13 Performance envelope targets
+
+The blueprint should define early operational targets so the system remains practical. Example goals might include:
+
+* sub-second incremental reindex for small local edits,
+* low-single-digit-second gate evaluation for typical change sets,
+* bounded retrieval manifest generation within interactive editing latency,
+* and graceful degradation under larger episodes via asynchronous deep validation.
+
+Precise numbers will vary by repository scale, but targets force discipline.
+
+### 17.14 Observability dashboards
+
+A mature implementation should expose dashboards for:
+
+* sync state distribution across the repo,
+* open contradictions by subsystem,
+* stale entity accumulation over time,
+* most common gate failure classes,
+* false block and false approval audits,
+* and top recurring remediation patterns.
+
+This makes the substrate useful not only for immediate coding tasks but for engineering governance and repo health analysis.
+
+### 17.15 Rollout strategy
+
+The system should be introduced in phases:
+
+1. **Shadow mode** — index and evaluate without blocking anything.
+2. **Advisory mode** — surface warnings and explanations in IDE or PR views.
+3. **Selective gate mode** — enforce on high-risk task families only.
+4. **Default gate mode** — enforce on most changes with escape hatches.
+5. **Strict mode** — enforce according to release-grade policy profiles.
+
+This sequence reduces organizational shock and generates calibration data before hard enforcement.
+
+### 17.16 Failure containment
+
+The implementation must assume some subsystem will occasionally fail. Therefore it should define containment behavior:
+
+* if the watcher fails, queue events and resume safely,
+* if a language worker fails, mark analysis incomplete rather than inventing structure,
+* if the evidence graph is unavailable, continue minimal gating but degrade memory features explicitly,
+* if the gate service is unavailable, revert to advisory mode rather than pretending safety,
+* and if policy lookup fails, use a known safe fallback profile.
+
+Graceful degradation is mandatory. A sync system that collapses completely under minor service failure will not survive real development environments.
+
+### 17.17 Security and trust boundaries
+
+Even before a dedicated security section, the implementation must define trust boundaries. At minimum:
+
+* raw source artifacts are not automatically trusted as true descriptions of current contracts,
+* generated summaries are versioned and attributable,
+* witnesses are tied to environment and commit metadata,
+* policies require controlled modification,
+* and gate explanations must cite actual evidence sources, not invented rationales.
+
+These constraints protect the system from becoming manipulable or opaque.
+
+### 17.18 Minimal viable build sequence
+
+If the system were to be built from scratch, the most practical sequence would be:
+
+1. workspace watcher and change-event normalization,
+2. one or two language analysis workers,
+3. BCI entity/version store,
+4. L0–L3 boundary view generation,
+5. dependency hash propagation and stale marking,
+6. basic context resolver,
+7. advisory synchronization gate,
+8. witness ingestion from tests/CI,
+9. remediation atom emission,
+10. evidence graph persistence,
+11. IDE integration and dashboards.
+
+This sequence delivers value early while preserving the deeper architecture.
+
+### 17.19 Why the blueprint matters
+
+Without an implementation blueprint, even a strong paper risks becoming ceremonial. This blueprint turns the architecture into a build program: what runs where, what talks to what, what gets stored, what gets invalidated, what gets shown to the user, and what happens when the machine itself stumbles.
+
+## 18. Implementation Roadmap
+
+### 16.1 Phase I — Minimum viable substrate
+
+* File watcher
+* AST extraction for primary languages
+* sidecar index generation
+* symbol and contract summaries
+* token weights and span maps
+* simple dependency graph
+* basic sync warnings
+
+### 16.2 Phase II — Hierarchical navigation and bounded retrieval
+
+* multi-level summaries L0–L5
+* task-to-target resolution
+* token-budgeted context manifests
+* compressed boundary views
+* minimal blast radius estimation
+
+### 16.3 Phase III — Synchronization gate
+
+* quartet detector
+* parity calculator
+* dependency hash propagation
+* abstention thresholds
+* remediation atom generation
+
+### 16.4 Phase IV — Orchestration and evidence
+
+* structured execution plans
+* verifier chains
+* semantic evidence graph integration
+* witness generation and persistence
+* historical lesson retrieval
+
+### 16.5 Phase V — Research extensions
+
+* force-based retrieval simulation
+* learned scoring policies
+* cross-repository memory
+* multi-agent coordination
+* graph-native visual diagnostics
+
+---
+
+## 17. Failure Modes and Defensive Design
+
+### 17.1 Metadata bloat
+
+If the index becomes too verbose, it recreates the original problem. The defense is compression discipline, strict schemas, and boundary views that optimize for machine navigation rather than prose ornament.
+
+### 17.2 Overblocking
+
+A synchronization gate that blocks too aggressively becomes an anti-tool. The defense is explicit confidence modeling, tunable thresholds, override policies, and careful measurement of false block rate.
+
+### 17.3 Underblocking
+
+A weak gate creates false confidence. The defense is broad witness coverage, contract-level drift detection, and contradiction retrieval.
+
+### 17.4 Stale summaries
+
+Boundary views can go stale if not regenerated. The defense is transactionally coupling summary updates with source changes and marking stale validity windows clearly.
+
+### 17.5 Infinite remediation loops
+
+Autonomous repair can spiral. The defense is bounded retries, bounded token budgets, scoped remediation, and escalation rules.
+
+### 17.6 Graph pollution
+
+Evidence graphs can degrade into junkyards of weak claims. The defense is typed edges, evidence quality thresholds, bitemporal pruning strategies, and explicit contradiction resolution workflows.
+
+---
+
+## 18. Implementation Roadmap
+
+### 18.1 Roadmap philosophy
+
+The roadmap should minimize three risks:
+
+* building too much before measuring anything,
+* enforcing too early before the false-block profile is understood,
+* and overcoupling retrieval, gating, and memory into a monolith that becomes impossible to evolve.
+
+Therefore each phase should end with a measurable capability and a clear calibration loop.
+
+### 18.2 Phase I — Event and indexing substrate
+
+Goals:
+
+* normalize change events,
+* parse primary languages,
+* create BCI records,
+* produce boundary views,
+* and support manual inspection of entity versions.
+
+Deliverables:
+
+* watcher daemon,
+* AST cache,
+* entity/version store,
+* boundary view generator,
+* first diagnostics panel.
+
+Success criteria:
+
+* incremental indexing works reliably,
+* entity supersession and validity windows are correct,
+* and developers can inspect what the system believes exists.
+
+### 18.3 Phase II — Dependency propagation and stale detection
+
+Goals:
+
+* compute dependency hashes,
+* propagate stale status,
+* estimate blast radius,
+* and surface contradiction candidates.
+
+Deliverables:
+
+* dependency graph tables,
+* stale-marking engine,
+* blast radius estimator,
+* contradiction seed generator.
+
+Success criteria:
+
+* hidden dependents are surfaced with useful precision,
+* and stale marking is informative without overwhelming noise.
+
+### 18.4 Phase III — Context resolution
+
+Goals:
+
+* resolve bounded context manifests,
+* support multi-level retrieval,
+* and expose explainable retrieval choices.
+
+Deliverables:
+
+* context resolver service,
+* utility scoring implementation,
+* level-selection policy,
+* dropped-context explanation support.
+
+Success criteria:
+
+* nucleus recall is high,
+* context pollution stays low,
+* and token budgets are respected consistently.
+
+### 18.5 Phase IV — Advisory synchronization gate
+
+Goals:
+
+* compute parity, contract alignment, witness coverage, and confidence,
+* emit sync evaluations,
+* but do not yet hard-block normal workflows.
+
+Deliverables:
+
+* gate service,
+* sync evaluation records,
+* advisory IDE and PR surfaces,
+* policy profile support.
+
+Success criteria:
+
+* false approval and false block patterns become measurable,
+* and human reviewers find the explanations legible.
+
+### 18.6 Phase V — Witness ingestion and evidence graph
+
+Goals:
+
+* ingest tests, traces, and CI outputs as witnesses,
+* persist contradictions and lessons,
+* and support time-aware evidence retrieval.
+
+Deliverables:
+
+* witness ingester,
+* contradiction store,
+* evidence graph store,
+* lesson query interface.
+
+Success criteria:
+
+* repeated drift patterns become easier to detect,
+* and witness-aware decisions outperform witness-blind baselines.
+
+### 18.7 Phase VI — Remediation loop
+
+Goals:
+
+* generate remediation atoms,
+* run bounded repair plans,
+* and escalate safely when automatic repair exceeds policy.
+
+Deliverables:
+
+* remediation planner,
+* retry budgets,
+* escalation routing,
+* remediation analytics.
+
+Success criteria:
+
+* localized sync failures are repaired automatically at meaningful rates,
+* without infinite thrashing or hidden unsafe approvals.
+
+### 18.8 Phase VII — Selective enforcement
+
+Goals:
+
+* move from advisory mode to selective hard blocking for high-risk task families.
+
+Deliverables:
+
+* per-policy enforcement controls,
+* pre-commit / PR blocking integration,
+* override and audit workflows.
+
+Success criteria:
+
+* safety improves materially with tolerable friction,
+* and override usage remains interpretable rather than constant.
+
+### 18.9 Phase VIII — Full repository health and governance layer
+
+Goals:
+
+* turn synchronization intelligence into a repo-wide health and governance substrate.
+
+Deliverables:
+
+* dashboards,
+* longitudinal drift reports,
+* recurring remediation heatmaps,
+* release-readiness sync summaries.
+
+Success criteria:
+
+* the system provides value beyond single edits,
+* and engineering teams use it for planning, release confidence, and architectural maintenance.
+
+### 18.10 Ongoing calibration loops
+
+Every phase should feed calibration loops for:
+
+* policy thresholds,
+* scoring weights,
+* boundary generation quality,
+* retrieval utility,
+* and human trust.
+
+These loops should be continuous rather than postponed until some mythical “later optimization” phase.
+
+## 19. Broader Implications
+
+Contextual Sync suggests a larger shift in how software engineering systems should be designed for AI participation. Instead of treating models as magical code oracles, we should treat them as agents operating inside a structured knowledge-and-evidence substrate. The more the system externalizes contracts, histories, and validation boundaries, the less it depends on fragile prompt luck.
+
+This has consequences beyond coding assistants:
+
+* AI-native IDEs
+* autonomous migration tools
+* test synthesis systems
+* documentation maintenance systems
+* deployment governance
+* incident remediation
+* long-horizon refactoring agents
+* and persistent engineering memory systems
+
+The architecture is especially relevant in environments where multiple AI agents collaborate or where context continuity spans days, branches, and releases.
+
+---
+
+## 19. Conclusion
+
+The central problem of AI software engineering is not code generation but systemic coherence under bounded context. Large models fail because they are asked to operate inside repositories whose structure, contracts, evidence, and historical corrections remain mostly implicit. Contextual Sync makes these relationships explicit without drowning the source in inline metadata.
+
+The proposed Bitemporal Contract Index provides the memory substrate. Hierarchical navigation provides the map. Token-weighted retrieval provides bounded cognition. The synchronization gate provides integrity. The remediation loop provides bounded self-healing. The semantic evidence graph provides durable learning.
+
+Together these mechanisms form a disciplined alternative to brute-force context stuffing and naive agent autonomy. They point toward a class of software environments in which AI can act with deeper structural awareness, safer refusal behavior, and stronger continuity across time.
+
+The path forward is clear: build the substrate, benchmark the gates, measure the drift, and let evidence—not mere rhetoric—decide how far the system can evolve.
+
+---
+
+## 20. Appendix A — Working Terminology
+
+### Contextual Sync
+
+The synchronized state across code, docs, tests, traces, contracts, and evidence required for a safe change.
+
+### Bitemporal Contract Index (BCI)
+
+The externalized, time-aware index of software artifacts, contracts, weights, dependencies, and sync states.
+
+### Boundary View
+
+A compressed representation of an artifact at a chosen abstraction level.
+
+### Contract Drift
+
+A change in behavior or expectation that leaves dependents stale or contradictory.
+
+### Quartet Parity
+
+Alignment across code, docs, tests, and traces.
+
+### Blast Radius
+
+Estimated downstream impact of a proposed change.
+
+### Witness
+
+An evidence artifact supporting the claim that a change is correct and synchronized.
+
+### Remediation Atom
+
+A structured failure-and-repair record emitted by the synchronization gate.
+
+---
+
+## 21. Appendix B — Immediate Next Expansion Targets
+
+The following sections should be deepened next in subsequent passes:
+
+1. Formal BCI JSON schema
+2. Exact sync-state machine
+3. Mathematical derivation of context scoring and budget policy
+4. Contract taxonomy by artifact type
+5. Multi-language extraction strategy
+6. Concrete benchmark harness design
+7. Human-in-the-loop override protocol
+8. Visualization system for blast radius and contradiction paths
+9. Security and adversarial considerations
+10. Full worked example across a real repository change
+
+---
+
+## Authoring Note
+
+This document intentionally separates operational machinery from speculative conceptual framing. The purpose is to produce a paper that can guide implementation, testing, and refinement rather than collapse into vague futurism. Where theory extends beyond current evidence, it should be labeled as theory. Where a mechanism can be built, measured, and falsified, it should be specified precisely.
+
+
+
+# Contextual Sync — Security, Adversarial, and Trust Considerations
+
+## Subtitle
+
+A companion section for the Contextual Sync paper covering attack surfaces, integrity risks, trust boundaries, abuse modes, and defensive architecture
+
+---
+
+## Abstract
+
+Any system that indexes repositories, influences AI context, blocks changes, emits remediation plans, and stores evidence over time ceases to be a passive developer convenience. It becomes part of the control surface of software engineering itself. Once this happens, the system inherits a new class of responsibilities: it must resist stale truth, forged evidence, manipulated summaries, poisoned retrieval, unsafe overrides, and policy abuse.
+
+This document analyzes the security and trust implications of Contextual Sync. It identifies the main attack surfaces created by bitemporal indexing, hierarchical boundary views, witness-backed gating, contradiction storage, and remediation orchestration. It then proposes a defensive architecture grounded in attribution, provenance, freshness, least authority, transparent explanations, and safe degradation. The goal is not to pretend that perfect trust can be automated. The goal is to ensure the substrate fails honestly, resists manipulation, and never grants itself confidence it did not earn.
+
+---
+
+## 1. Why Security Matters Here
+
+Contextual Sync is not merely a retrieval system. It affects what an AI sees, what it ignores, what it believes is current, what it thinks is contradicted, and whether a proposed change may proceed. That makes it a target.
+
+A malicious or merely sloppy actor does not need to compromise the entire repository to distort behavior. They may instead attack the indexing substrate, the witness layer, the policy configuration, the override workflow, the contradiction graph, or the compressed boundary views. Any of these can bias the system toward unsafe approval, needless blockage, or systematic confusion.
+
+In plain terms: once the machine starts deciding what counts as “in sync,” the machine’s own truth machinery becomes part of the threat model.
+
+---
+
+## 2. Threat Model
+
+### 2.1 Protected assets
+
+The system should explicitly protect the following assets:
+
+* integrity of BCI records
+* correctness of boundary views
+* authenticity and freshness of witnesses
+* correctness of contradiction edges
+* stability of policy profiles
+* reliability of gate outcomes
+* trustworthiness of remediation directives
+* integrity of supersession and validity intervals
+* explainability of decisions
+* and developer trust in the system’s abstentions and approvals
+
+### 2.2 Adversary classes
+
+The threat model should include multiple adversary classes rather than imagining only a single villain archetype.
+
+#### 2.2.1 Accidental adversary
+
+The most common adversary is ordinary developer entropy: stale docs, regenerated files on the wrong branch, copied tests with misleading names, old traces mistaken for current evidence, or local tools that partially update artifacts.
+
+This adversary is not malicious, but it causes real synchronization damage.
+
+#### 2.2.2 Curious but careless AI agent
+
+An AI agent may overstate confidence, consume stale summaries, apply the wrong remediation pattern, or treat a plausible artifact as authoritative without validating it.
+
+This is not malice either. It is automation with too much optimism and too little epistemic shame.
+
+#### 2.2.3 Malicious repository contributor
+
+A contributor may intentionally poison documentation, boundary views, or test fixtures to bias the system toward an unsafe change or toward obstructing a competing line of work.
+
+#### 2.2.4 Malicious automation or compromised integration
+
+A CI worker, plugin, or connected service may emit forged witnesses, spoof branch state, or inject invalid traces.
+
+#### 2.2.5 Governance adversary
+
+A user with access to policy settings or override pathways may deliberately weaken thresholds or normalize bypasses until the gate becomes ceremonial.
+
+### 2.3 Security objectives
+
+The system should be evaluated against the following objectives:
+
+* **Integrity** — indexed truth should not be silently altered.
+* **Freshness** — stale evidence should decay in authority.
+* **Attribution** — every important artifact should have a source and actor.
+* **Least authority** — no component should be able to certify more than it actually knows.
+* **Explainability** — approvals and blocks must cite actual evidence.
+* **Graceful degradation** — failures should reduce capability safely, not invent confidence.
+* **Auditability** — major decisions should be reconstructible after the fact.
+
+---
+
+## 3. Primary Attack Surfaces
+
+### 3.1 Source artifact poisoning
+
+The repository itself may contain poisoned or misleading artifacts such as:
+
+* outdated docs that look authoritative,
+* test names that imply broader coverage than the tests actually provide,
+* comments claiming contracts that code no longer satisfies,
+* generated files checked in from older schemas,
+* or examples that silently encode obsolete semantics.
+
+Because Contextual Sync reads across artifact classes, it can inherit these distortions unless provenance and freshness are tracked carefully.
+
+### 3.2 Boundary view poisoning
+
+Boundary views are compressed summaries and therefore disproportionately influential. If they are wrong, stale, or maliciously altered, they can misdirect both retrieval and downstream agent behavior.
+
+Boundary poisoning can take several forms:
+
+* stale boundary views surviving after contract change,
+* generated summaries that omit critical side effects,
+* hostile summaries crafted to make one path look canonical,
+* or model-generated summaries that quietly hallucinate contract details.
+
+This is especially dangerous because boundary views are cheap to retrieve and therefore likely to be read more often than raw code.
+
+### 3.3 Witness forgery or replay
+
+A witness may be forged, replayed from another branch, produced against a different commit, or attached to the wrong validity window.
+
+Examples:
+
+* a passing test witness from an earlier commit reused after a breaking contract change,
+* a trace generated in a staging-like environment but recorded as release-grade evidence,
+* or a synthetic witness artifact inserted to satisfy the gate without actually validating the claim.
+
+### 3.4 Contradiction manipulation
+
+Because contradictions can influence retrieval priority and blocking decisions, an attacker may try to:
+
+* suppress legitimate contradictions,
+* flood the graph with low-value contradictions to raise noise,
+* create strategically misleading contradiction edges,
+* or keep resolved contradictions open to stall progress.
+
+### 3.5 Dependency graph distortion
+
+If dependencies are extracted incorrectly or manipulated, blast radius and stale propagation will be wrong. This may cause:
+
+* dangerous underestimation of downstream impact,
+* false claims of backward compatibility,
+* or persistent false blocks from phantom dependencies.
+
+### 3.6 Policy tampering
+
+If thresholds, block conditions, or override rules are altered without disciplined governance, the gate can be softened into irrelevance or hardened into sabotage.
+
+Policy tampering is particularly subtle because it may appear as a legitimate configuration change rather than an obvious compromise.
+
+### 3.7 Override abuse
+
+Every practical system needs escape hatches. Unfortunately, escape hatches are where integrity often goes to die.
+
+Unsafe override patterns include:
+
+* routine bypass of sync failures without review,
+* blanket suppression of contradiction classes,
+* emergency-only overrides used as normal workflow,
+* and overrides that leave no durable audit trail.
+
+### 3.8 Cross-branch truth confusion
+
+A witness, summary, or sync evaluation valid on one branch may be invalid on another. If the substrate fails to bind evidence tightly to branch, commit, and snapshot identity, it may combine truths that were never simultaneously true.
+
+This is a classic failure mode in systems that reason about mutable repositories as though they were stable worlds.
+
+### 3.9 Prompt-chain and orchestration poisoning
+
+If prompt templates, remediation instructions, or orchestration policies are themselves stored as editable artifacts, they become attack surfaces. A malicious change could instruct the system to ignore witness deficits, soften blocking logic, or reinterpret contradictions as optional.
+
+### 3.10 Confidence gaming
+
+If confidence is computed from measurable fields, actors may try to game those fields rather than genuinely improve synchronization. Examples include:
+
+* adding shallow tests to inflate witness coverage,
+* producing verbose docs that mimic alignment without semantic value,
+* splitting risky changes across multiple small episodes to stay below blast-radius thresholds,
+* or manufacturing stale but plentiful evidence to bury real contradictions.
+
+---
+
+## 4. Trust Boundaries
+
+### 4.1 Never trust a single layer absolutely
+
+The architecture should assume that any one layer may be stale, biased, or incomplete. Therefore:
+
+* code alone is not the whole truth,
+* docs alone are not the whole truth,
+* tests alone are not the whole truth,
+* traces alone are not the whole truth,
+* generated summaries alone are not the whole truth,
+* and the gate itself is not the whole truth.
+
+Trust must emerge from cross-checking, freshness, provenance, and bounded confidence.
+
+### 4.2 Trust zones
+
+A practical implementation should distinguish at least the following trust zones:
+
+* **Raw artifact zone** — source code, docs, tests, traces, configs
+* **Derived index zone** — BCI records, boundary views, dependency hashes
+* **Validation zone** — witnesses, evaluations, parity metrics, contradiction records
+* **Governance zone** — policies, overrides, authority tiers, escalation rules
+* **Execution zone** — agent plans, remediation tasks, applied diffs
+
+Artifacts crossing between zones should carry explicit attribution and timestamps.
+
+### 4.3 Minimal trust principle
+
+A useful design rule is:
+
+> No artifact should be allowed to certify its own correctness without an external witness or policy-accepted corroboration.
+
+For example:
+
+* a generated boundary view cannot by itself prove a contract;
+* a code diff cannot by itself prove that the docs remain accurate;
+* a passing test cannot by itself prove that no dependent contract drift exists.
+
+### 4.4 Human trust boundary
+
+The human developer or reviewer remains the ultimate trust anchor in high-stakes cases. This does not mean humans must manually inspect everything. It means the system must know when it has reached the edge of justified autonomy and stop pretending otherwise.
+
+---
+
+## 5. Defensive Design Principles
+
+### 5.1 Provenance everywhere
+
+Every meaningful derived artifact should be attributable. This includes:
+
+* who generated it,
+* from which inputs,
+* under which policy,
+* at which commit or snapshot,
+* and at what time.
+
+The system should never emit an unsigned, unattributed “truth object” and then expect future components to treat it as gospel.
+
+### 5.2 Freshness-aware authority
+
+Authority should decay with age unless renewed. A fresh integration witness against the current commit should count more than a month-old local run. A fresh boundary view regenerated after a contract change should supersede a previously cached summary.
+
+Freshness should not be cosmetic metadata. It should directly influence gating and retrieval.
+
+### 5.3 Least authority for automation
+
+Each automated component should be constrained to the smallest set of powers it actually needs. For example:
+
+* the watcher may emit change events but not alter policies,
+* the boundary generator may create summaries but not approve synchronization,
+* the gate may block but not silently mutate source,
+* the remediator may propose bounded repairs but not rewrite arbitrary subsystems without escalation.
+
+### 5.4 Explainable blocking and approval
+
+A blocked action must cite specific evidence, thresholds, and unresolved contradictions. An approval must also cite the basis for confidence. Silent confidence is not trust; it is roulette wearing a tie.
+
+### 5.5 Safe degradation
+
+When a subsystem fails, the architecture should degrade toward advisory or abstaining behavior, not toward unjustified permission.
+
+### 5.6 Bitemporal integrity
+
+Supersession chains and validity windows are security features, not merely historical niceties. They prevent the system from conflating “once true” with “currently true.”
+
+### 5.7 Override with friction and memory
+
+Overrides should be possible but costly in the right way:
+
+* require reason codes,
+* require actor attribution,
+* require scope and duration,
+* and create durable audit artifacts.
+
+The system should remember override patterns. Frequent overrides around one failure class may indicate overblocking or workflow abuse.
+
+---
+
+## 6. Defensive Mechanisms by Subsystem
+
+### 6.1 Workspace watcher defenses
+
+The watcher should:
+
+* bind events to workspace snapshot identity,
+* debounce but never silently discard causally important change events,
+* distinguish local unsaved buffers from committed states where relevant,
+* and log event collapse behavior for later audit.
+
+### 6.2 Language worker defenses
+
+Language workers should:
+
+* fail closed on parse ambiguity rather than invent symbols,
+* mark partial extraction explicitly,
+* version their extraction logic,
+* and allow multiple extraction passes to be compared when confidence is low.
+
+### 6.3 BCI store defenses
+
+The BCI store should:
+
+* preserve append-only version history for critical records,
+* enforce immutability on finalized historical records,
+* maintain explicit supersession references,
+* and reject updates that would create impossible bitemporal states.
+
+### 6.4 Boundary view defenses
+
+Boundary views should:
+
+* always reference the exact entity version they summarize,
+* include generator version and source inputs,
+* be invalidated automatically on public-contract change,
+* and support spot-check regeneration against raw artifacts.
+
+High-risk boundary views should be regenerable deterministically from raw inputs whenever possible.
+
+### 6.5 Witness defenses
+
+Witnesses should be bound to:
+
+* commit or snapshot id,
+* branch,
+* environment,
+* toolchain version,
+* policy profile,
+* and subject entities.
+
+Witness reuse across incompatible snapshots should be prohibited or explicitly marked as degraded evidence.
+
+### 6.6 Contradiction store defenses
+
+Contradictions should:
+
+* carry severity and provenance,
+* support resolution with explicit justification,
+* decay or archive when obsolete,
+* and prevent duplicate flooding from dominating retrieval unfairly.
+
+The system should distinguish high-confidence contradictions from weak suspicion edges.
+
+### 6.7 Policy store defenses
+
+Policy changes should:
+
+* be versioned,
+* require privileged authority,
+* be attributable,
+* and create audit records explaining what changed and why.
+
+Critical policy changes may also require dual authorization or delayed activation in stricter environments.
+
+### 6.8 Gate service defenses
+
+The gate should:
+
+* expose score breakdowns,
+* pin evaluations to exact policy versions,
+* refuse evaluation when required evidence is unavailable,
+* and avoid using opaque hidden heuristics that cannot be inspected later.
+
+### 6.9 Remediation orchestrator defenses
+
+The remediator should:
+
+* operate under bounded authority,
+* avoid widening scope without explicit escalation,
+* record retry histories,
+* and never erase the trail of failed attempts.
+
+### 6.10 IDE and UI defenses
+
+The UI should:
+
+* clearly distinguish current truth from historical truth,
+* show when evidence is stale,
+* make overrides visible and attributable,
+* and avoid presenting low-confidence suggestions as settled facts.
+
+Good interface honesty is a security feature.
+
+---
+
+## 7. Adversarial Scenarios
+
+### 7.1 Stale document masquerading as current contract
+
+An outdated contract doc claims a route returns two fields, while code now returns three. The boundary generator accidentally privileges the doc because it is concise and highly retrievable.
+
+Defense:
+
+* freshness-weighted retrieval,
+* contradiction edge between doc and implementation,
+* mandatory code-linked contract corroboration for public API claims,
+* and blocking of doc-derived certainty without implementation support.
+
+### 7.2 Replay of an old test witness
+
+A passing CI witness from commit A is attached to commit B after a public contract change.
+
+Defense:
+
+* commit-bound witness identity,
+* freshness decay,
+* dependency-hash mismatch invalidation,
+* and gate refusal to count stale witnesses as full support.
+
+### 7.3 Poisoned boundary view
+
+A malicious contributor alters a generated boundary summary file or tampers with its storage so that it omits a critical side effect.
+
+Defense:
+
+* boundary views tied to content hash and generator version,
+* regeneration spot checks,
+* append-only audit trail,
+* and fall back to raw artifact retrieval if summary integrity is uncertain.
+
+### 7.4 Contradiction flooding
+
+An attacker introduces many low-value contradiction objects to distract the resolver and create noise.
+
+Defense:
+
+* contradiction deduplication,
+* severity weighting,
+* provenance scoring,
+* and cap-based retrieval policies so low-quality contradictions cannot crowd out contract-critical entities.
+
+### 7.5 Override normalization
+
+A team begins bypassing sync failures habitually because the gate is annoying in a certain workflow.
+
+Defense:
+
+* override analytics,
+* managerial or policy review for repeated patterns,
+* friction for repeated overrides in one subsystem,
+* and threshold recalibration driven by measured false-block evidence rather than quiet surrender.
+
+### 7.6 Cross-branch evidence confusion
+
+A developer checks out a release branch while local witnesses from a feature branch remain cached.
+
+Defense:
+
+* branch and commit binding on all cache keys,
+* branch switch invalidation,
+* and visible stale-evidence banners in the IDE.
+
+### 7.7 Prompt policy drift
+
+A prompt template for remediation is modified so the AI is encouraged to ignore stale docs as “non-essential.”
+
+Defense:
+
+* treat prompt-chain assets as governed artifacts,
+* version and review them like policies,
+* and track their effect on false approval and false block metrics.
+
+---
+
+## 8. Override Governance
+
+### 8.1 Why overrides are necessary
+
+No serious system can ban overrides entirely. Repositories are messy, emergencies happen, and the substrate itself will sometimes be wrong. The real question is not whether overrides exist, but whether they are disciplined.
+
+### 8.2 Required properties of an override
+
+A valid override should include:
+
+* actor identity,
+* scope,
+* duration,
+* reason code,
+* affected entities,
+* policy exception invoked,
+* and optional reviewer identity for high-risk cases.
+
+### 8.3 Override classes
+
+Useful override classes include:
+
+* **advisory bypass** — continue despite warning-level discrepancy
+* **temporary evidence deficit bypass** — proceed while a non-critical witness is unavailable
+* **emergency operational bypass** — time-sensitive action under heightened audit
+* **review-backed release bypass** — human-approved exception for protected branch or release flow
+
+These classes should not all carry the same authority or retention policy.
+
+### 8.4 Post-override obligations
+
+Some overrides should create automatic follow-up obligations:
+
+* regenerate missing witness,
+* update stale docs,
+* resolve open contradiction,
+* or review the affected policy threshold.
+
+Otherwise overrides become one-way leaks in the integrity hull.
+
+---
+
+## 9. Auditability and Forensics
+
+### 9.1 Decision replay
+
+A mature system should allow replay of a gate decision from historical records. Given an evaluation id, one should be able to reconstruct:
+
+* the policy profile,
+* the retrieved entities and levels,
+* the witness set,
+* the contradiction set,
+* the parity and confidence inputs,
+* and the final decision path.
+
+### 9.2 Forensic questions the system should answer
+
+Examples:
+
+* Why was this unsafe change allowed?
+* Why was this safe change blocked?
+* Which stale witness influenced the decision?
+* Which override suppressed the block?
+* Which policy version was active at the time?
+* Which lesson was injected from memory, and did it help or harm?
+
+If the substrate cannot answer these questions, it should not be trusted with high-impact decisions.
+
+### 9.3 Audit retention
+
+The system should define retention classes so that:
+
+* critical gate evaluations and overrides are retained longer,
+* low-value transient diagnostics may expire earlier,
+* and historical truth can still be reconstructed without storing infinite junk forever.
+
+---
+
+## 10. Metrics for Security and Trustworthiness
+
+The benchmark harness should include trust-specific metrics such as:
+
+* forged witness detection rate,
+* stale evidence misuse rate,
+* poisoned boundary detection rate,
+* contradiction flooding resilience,
+* unsafe override rate,
+* override recurrence by subsystem,
+* policy tamper detection latency,
+* and branch confusion error rate.
+
+These metrics should be reported alongside standard synchronization metrics. A system that is highly coherent under friendly conditions but gullible under adversarial conditions is not mature.
+
+---
+
+## 11. Human Factors and Trust Calibration
+
+### 11.1 The system must earn trust gradually
+
+Trust should emerge from repeated accurate behavior, transparent explanations, and honest abstention—not from authoritative UI styling or grand claims.
+
+### 11.2 Good abstention is a trust builder
+
+When the system says:
+
+> I cannot safely approve this because the witness is stale and the dependency hash changed upstream.
+
+and it can show the evidence, that is competence. Developers can work with that. The opposite—smug certainty based on rotten evidence—is how trust dies.
+
+### 11.3 Avoiding learned helplessness
+
+If the system blocks too often or explains poorly, developers will either ignore it or ritualistically override it. Therefore trust calibration must be an ongoing design concern, not an afterthought.
+
+---
+
+## 12. Minimal Security Requirements for a First Production Version
+
+A first production-worthy release should satisfy at least the following:
+
+1. all critical derived artifacts are attributable and versioned,
+2. witnesses are snapshot-bound and freshness-aware,
+3. policies and overrides are versioned and audited,
+4. boundary views are invalidated on relevant contract changes,
+5. gate decisions are replayable,
+6. safe degradation paths are implemented,
+7. contradiction records support provenance and resolution,
+8. and branch confusion protections exist at cache and witness boundaries.
+
+Without these, the system may still be useful as advisory tooling, but it should not be trusted as a strong gatekeeper.
+
+---
+
+## 13. Conclusion
+
+Security in Contextual Sync is not a side topic. It is central to whether the architecture remains a disciplined synchronization substrate or degenerates into a confidence amplifier for stale, forged, or manipulated truth.
+
+The central principle is simple: no layer should be trusted beyond the evidence it can actually justify. Boundary views must be attributable. Witnesses must be fresh and bound to the right snapshot. Contradictions must be explicit and auditable. Policies must be governed. Overrides must leave scars in history. And when the machine does not know enough, it must abstain plainly instead of improvising certainty.
+
+A sync system that cannot defend its own truth machinery is just another source of drift with better branding.
+
+---
+
+## 14. Immediate Next Expansion Targets
+
+This companion section can be deepened next in several directions:
+
+1. formal adversarial benchmark suite for Contextual Sync
+2. cryptographic or signature-backed witness integrity models
+3. policy governance and multi-actor approval design
+4. privacy considerations for traces and evidence retention
+5. secure multi-agent coordination and authority partitioning
+6. incident response playbooks when the sync substrate itself is wrong
+
+---
+
+# Contextual Sync — Security, Adversarial, and Trust Considerations
+
+## Subtitle
+
+A companion section for the Contextual Sync paper covering attack surfaces, integrity risks, trust boundaries, abuse modes, and defensive architecture
+
+---
+
+## Abstract
+
+Any system that indexes repositories, influences AI context, blocks changes, emits remediation plans, and stores evidence over time ceases to be a passive developer convenience. It becomes part of the control surface of software engineering itself. Once this happens, the system inherits a new class of responsibilities: it must resist stale truth, forged evidence, manipulated summaries, poisoned retrieval, unsafe overrides, and policy abuse.
+
+This document analyzes the security and trust implications of Contextual Sync. It identifies the main attack surfaces created by bitemporal indexing, hierarchical boundary views, witness-backed gating, contradiction storage, and remediation orchestration. It then proposes a defensive architecture grounded in attribution, provenance, freshness, least authority, transparent explanations, and safe degradation. The goal is not to pretend that perfect trust can be automated. The goal is to ensure the substrate fails honestly, resists manipulation, and never grants itself confidence it did not earn.
+
+---
+
+## 1. Why Security Matters Here
+
+Contextual Sync is not merely a retrieval system. It affects what an AI sees, what it ignores, what it believes is current, what it thinks is contradicted, and whether a proposed change may proceed. That makes it a target.
+
+A malicious or merely sloppy actor does not need to compromise the entire repository to distort behavior. They may instead attack the indexing substrate, the witness layer, the policy configuration, the override workflow, the contradiction graph, or the compressed boundary views. Any of these can bias the system toward unsafe approval, needless blockage, or systematic confusion.
+
+In plain terms: once the machine starts deciding what counts as “in sync,” the machine’s own truth machinery becomes part of the threat model.
+
+---
+
+## 2. Threat Model
+
+### 2.1 Protected assets
+
+The system should explicitly protect the following assets:
+
+* integrity of BCI records
+* correctness of boundary views
+* authenticity and freshness of witnesses
+* correctness of contradiction edges
+* stability of policy profiles
+* reliability of gate outcomes
+* trustworthiness of remediation directives
+* integrity of supersession and validity intervals
+* explainability of decisions
+* and developer trust in the system’s abstentions and approvals
+
+### 2.2 Adversary classes
+
+The threat model should include multiple adversary classes rather than imagining only a single villain archetype.
+
+#### 2.2.1 Accidental adversary
+
+The most common adversary is ordinary developer entropy: stale docs, regenerated files on the wrong branch, copied tests with misleading names, old traces mistaken for current evidence, or local tools that partially update artifacts.
+
+This adversary is not malicious, but it causes real synchronization damage.
+
+#### 2.2.2 Curious but careless AI agent
+
+An AI agent may overstate confidence, consume stale summaries, apply the wrong remediation pattern, or treat a plausible artifact as authoritative without validating it.
+
+This is not malice either. It is automation with too much optimism and too little epistemic shame.
+
+#### 2.2.3 Malicious repository contributor
+
+A contributor may intentionally poison documentation, boundary views, or test fixtures to bias the system toward an unsafe change or toward obstructing a competing line of work.
+
+#### 2.2.4 Malicious automation or compromised integration
+
+A CI worker, plugin, or connected service may emit forged witnesses, spoof branch state, or inject invalid traces.
+
+#### 2.2.5 Governance adversary
+
+A user with access to policy settings or override pathways may deliberately weaken thresholds or normalize bypasses until the gate becomes ceremonial.
+
+### 2.3 Security objectives
+
+The system should be evaluated against the following objectives:
+
+* **Integrity** — indexed truth should not be silently altered.
+* **Freshness** — stale evidence should decay in authority.
+* **Attribution** — every important artifact should have a source and actor.
+* **Least authority** — no component should be able to certify more than it actually knows.
+* **Explainability** — approvals and blocks must cite actual evidence.
+* **Graceful degradation** — failures should reduce capability safely, not invent confidence.
+* **Auditability** — major decisions should be reconstructible after the fact.
+
+---
+
+## 3. Primary Attack Surfaces
+
+### 3.1 Source artifact poisoning
+
+The repository itself may contain poisoned or misleading artifacts such as:
+
+* outdated docs that look authoritative,
+* test names that imply broader coverage than the tests actually provide,
+* comments claiming contracts that code no longer satisfies,
+* generated files checked in from older schemas,
+* or examples that silently encode obsolete semantics.
+
+Because Contextual Sync reads across artifact classes, it can inherit these distortions unless provenance and freshness are tracked carefully.
+
+### 3.2 Boundary view poisoning
+
+Boundary views are compressed summaries and therefore disproportionately influential. If they are wrong, stale, or maliciously altered, they can misdirect both retrieval and downstream agent behavior.
+
+Boundary poisoning can take several forms:
+
+* stale boundary views surviving after contract change,
+* generated summaries that omit critical side effects,
+* hostile summaries crafted to make one path look canonical,
+* or model-generated summaries that quietly hallucinate contract details.
+
+This is especially dangerous because boundary views are cheap to retrieve and therefore likely to be read more often than raw code.
+
+### 3.3 Witness forgery or replay
+
+A witness may be forged, replayed from another branch, produced against a different commit, or attached to the wrong validity window.
+
+Examples:
+
+* a passing test witness from an earlier commit reused after a breaking contract change,
+* a trace generated in a staging-like environment but recorded as release-grade evidence,
+* or a synthetic witness artifact inserted to satisfy the gate without actually validating the claim.
+
+### 3.4 Contradiction manipulation
+
+Because contradictions can influence retrieval priority and blocking decisions, an attacker may try to:
+
+* suppress legitimate contradictions,
+* flood the graph with low-value contradictions to raise noise,
+* create strategically misleading contradiction edges,
+* or keep resolved contradictions open to stall progress.
+
+### 3.5 Dependency graph distortion
+
+If dependencies are extracted incorrectly or manipulated, blast radius and stale propagation will be wrong. This may cause:
+
+* dangerous underestimation of downstream impact,
+* false claims of backward compatibility,
+* or persistent false blocks from phantom dependencies.
+
+### 3.6 Policy tampering
+
+If thresholds, block conditions, or override rules are altered without disciplined governance, the gate can be softened into irrelevance or hardened into sabotage.
+
+Policy tampering is particularly subtle because it may appear as a legitimate configuration change rather than an obvious compromise.
+
+### 3.7 Override abuse
+
+Every practical system needs escape hatches. Unfortunately, escape hatches are where integrity often goes to die.
+
+Unsafe override patterns include:
+
+* routine bypass of sync failures without review,
+* blanket suppression of contradiction classes,
+* emergency-only overrides used as normal workflow,
+* and overrides that leave no durable audit trail.
+
+### 3.8 Cross-branch truth confusion
+
+A witness, summary, or sync evaluation valid on one branch may be invalid on another. If the substrate fails to bind evidence tightly to branch, commit, and snapshot identity, it may combine truths that were never simultaneously true.
+
+This is a classic failure mode in systems that reason about mutable repositories as though they were stable worlds.
+
+### 3.9 Prompt-chain and orchestration poisoning
+
+If prompt templates, remediation instructions, or orchestration policies are themselves stored as editable artifacts, they become attack surfaces. A malicious change could instruct the system to ignore witness deficits, soften blocking logic, or reinterpret contradictions as optional.
+
+### 3.10 Confidence gaming
+
+If confidence is computed from measurable fields, actors may try to game those fields rather than genuinely improve synchronization. Examples include:
+
+* adding shallow tests to inflate witness coverage,
+* producing verbose docs that mimic alignment without semantic value,
+* splitting risky changes across multiple small episodes to stay below blast-radius thresholds,
+* or manufacturing stale but plentiful evidence to bury real contradictions.
+
+---
+
+## 4. Trust Boundaries
+
+### 4.1 Never trust a single layer absolutely
+
+The architecture should assume that any one layer may be stale, biased, or incomplete. Therefore:
+
+* code alone is not the whole truth,
+* docs alone are not the whole truth,
+* tests alone are not the whole truth,
+* traces alone are not the whole truth,
+* generated summaries alone are not the whole truth,
+* and the gate itself is not the whole truth.
+
+Trust must emerge from cross-checking, freshness, provenance, and bounded confidence.
+
+### 4.2 Trust zones
+
+A practical implementation should distinguish at least the following trust zones:
+
+* **Raw artifact zone** — source code, docs, tests, traces, configs
+* **Derived index zone** — BCI records, boundary views, dependency hashes
+* **Validation zone** — witnesses, evaluations, parity metrics, contradiction records
+* **Governance zone** — policies, overrides, authority tiers, escalation rules
+* **Execution zone** — agent plans, remediation tasks, applied diffs
+
+Artifacts crossing between zones should carry explicit attribution and timestamps.
+
+### 4.3 Minimal trust principle
+
+A useful design rule is:
+
+> No artifact should be allowed to certify its own correctness without an external witness or policy-accepted corroboration.
+
+For example:
+
+* a generated boundary view cannot by itself prove a contract;
+* a code diff cannot by itself prove that the docs remain accurate;
+* a passing test cannot by itself prove that no dependent contract drift exists.
+
+### 4.4 Human trust boundary
+
+The human developer or reviewer remains the ultimate trust anchor in high-stakes cases. This does not mean humans must manually inspect everything. It means the system must know when it has reached the edge of justified autonomy and stop pretending otherwise.
+
+---
+
+## 5. Defensive Design Principles
+
+### 5.1 Provenance everywhere
+
+Every meaningful derived artifact should be attributable. This includes:
+
+* who generated it,
+* from which inputs,
+* under which policy,
+* at which commit or snapshot,
+* and at what time.
+
+The system should never emit an unsigned, unattributed “truth object” and then expect future components to treat it as gospel.
+
+### 5.2 Freshness-aware authority
+
+Authority should decay with age unless renewed. A fresh integration witness against the current commit should count more than a month-old local run. A fresh boundary view regenerated after a contract change should supersede a previously cached summary.
+
+Freshness should not be cosmetic metadata. It should directly influence gating and retrieval.
+
+### 5.3 Least authority for automation
+
+Each automated component should be constrained to the smallest set of powers it actually needs. For example:
+
+* the watcher may emit change events but not alter policies,
+* the boundary generator may create summaries but not approve synchronization,
+* the gate may block but not silently mutate source,
+* the remediator may propose bounded repairs but not rewrite arbitrary subsystems without escalation.
+
+### 5.4 Explainable blocking and approval
+
+A blocked action must cite specific evidence, thresholds, and unresolved contradictions. An approval must also cite the basis for confidence. Silent confidence is not trust; it is roulette wearing a tie.
+
+### 5.5 Safe degradation
+
+When a subsystem fails, the architecture should degrade toward advisory or abstaining behavior, not toward unjustified permission.
+
+### 5.6 Bitemporal integrity
+
+Supersession chains and validity windows are security features, not merely historical niceties. They prevent the system from conflating “once true” with “currently true.”
+
+### 5.7 Override with friction and memory
+
+Overrides should be possible but costly in the right way:
+
+* require reason codes,
+* require actor attribution,
+* require scope and duration,
+* and create durable audit artifacts.
+
+The system should remember override patterns. Frequent overrides around one failure class may indicate overblocking or workflow abuse.
+
+---
+
+## 6. Defensive Mechanisms by Subsystem
+
+### 6.1 Workspace watcher defenses
+
+The watcher should:
+
+* bind events to workspace snapshot identity,
+* debounce but never silently discard causally important change events,
+* distinguish local unsaved buffers from committed states where relevant,
+* and log event collapse behavior for later audit.
+
+### 6.2 Language worker defenses
+
+Language workers should:
+
+* fail closed on parse ambiguity rather than invent symbols,
+* mark partial extraction explicitly,
+* version their extraction logic,
+* and allow multiple extraction passes to be compared when confidence is low.
+
+### 6.3 BCI store defenses
+
+The BCI store should:
+
+* preserve append-only version history for critical records,
+* enforce immutability on finalized historical records,
+* maintain explicit supersession references,
+* and reject updates that would create impossible bitemporal states.
+
+### 6.4 Boundary view defenses
+
+Boundary views should:
+
+* always reference the exact entity version they summarize,
+* include generator version and source inputs,
+* be invalidated automatically on public-contract change,
+* and support spot-check regeneration against raw artifacts.
+
+High-risk boundary views should be regenerable deterministically from raw inputs whenever possible.
+
+### 6.5 Witness defenses
+
+Witnesses should be bound to:
+
+* commit or snapshot id,
+* branch,
+* environment,
+* toolchain version,
+* policy profile,
+* and subject entities.
+
+Witness reuse across incompatible snapshots should be prohibited or explicitly marked as degraded evidence.
+
+### 6.6 Contradiction store defenses
+
+Contradictions should:
+
+* carry severity and provenance,
+* support resolution with explicit justification,
+* decay or archive when obsolete,
+* and prevent duplicate flooding from dominating retrieval unfairly.
+
+The system should distinguish high-confidence contradictions from weak suspicion edges.
+
+### 6.7 Policy store defenses
+
+Policy changes should:
+
+* be versioned,
+* require privileged authority,
+* be attributable,
+* and create audit records explaining what changed and why.
+
+Critical policy changes may also require dual authorization or delayed activation in stricter environments.
+
+### 6.8 Gate service defenses
+
+The gate should:
+
+* expose score breakdowns,
+* pin evaluations to exact policy versions,
+* refuse evaluation when required evidence is unavailable,
+* and avoid using opaque hidden heuristics that cannot be inspected later.
+
+### 6.9 Remediation orchestrator defenses
+
+The remediator should:
+
+* operate under bounded authority,
+* avoid widening scope without explicit escalation,
+* record retry histories,
+* and never erase the trail of failed attempts.
+
+### 6.10 IDE and UI defenses
+
+The UI should:
+
+* clearly distinguish current truth from historical truth,
+* show when evidence is stale,
+* make overrides visible and attributable,
+* and avoid presenting low-confidence suggestions as settled facts.
+
+Good interface honesty is a security feature.
+
+---
+
+## 7. Adversarial Scenarios
+
+### 7.1 Stale document masquerading as current contract
+
+An outdated contract doc claims a route returns two fields, while code now returns three. The boundary generator accidentally privileges the doc because it is concise and highly retrievable.
+
+Defense:
+
+* freshness-weighted retrieval,
+* contradiction edge between doc and implementation,
+* mandatory code-linked contract corroboration for public API claims,
+* and blocking of doc-derived certainty without implementation support.
+
+### 7.2 Replay of an old test witness
+
+A passing CI witness from commit A is attached to commit B after a public contract change.
+
+Defense:
+
+* commit-bound witness identity,
+* freshness decay,
+* dependency-hash mismatch invalidation,
+* and gate refusal to count stale witnesses as full support.
+
+### 7.3 Poisoned boundary view
+
+A malicious contributor alters a generated boundary summary file or tampers with its storage so that it omits a critical side effect.
+
+Defense:
+
+* boundary views tied to content hash and generator version,
+* regeneration spot checks,
+* append-only audit trail,
+* and fall back to raw artifact retrieval if summary integrity is uncertain.
+
+### 7.4 Contradiction flooding
+
+An attacker introduces many low-value contradiction objects to distract the resolver and create noise.
+
+Defense:
+
+* contradiction deduplication,
+* severity weighting,
+* provenance scoring,
+* and cap-based retrieval policies so low-quality contradictions cannot crowd out contract-critical entities.
+
+### 7.5 Override normalization
+
+A team begins bypassing sync failures habitually because the gate is annoying in a certain workflow.
+
+Defense:
+
+* override analytics,
+* managerial or policy review for repeated patterns,
+* friction for repeated overrides in one subsystem,
+* and threshold recalibration driven by measured false-block evidence rather than quiet surrender.
+
+### 7.6 Cross-branch evidence confusion
+
+A developer checks out a release branch while local witnesses from a feature branch remain cached.
+
+Defense:
+
+* branch and commit binding on all cache keys,
+* branch switch invalidation,
+* and visible stale-evidence banners in the IDE.
+
+### 7.7 Prompt policy drift
+
+A prompt template for remediation is modified so the AI is encouraged to ignore stale docs as “non-essential.”
+
+Defense:
+
+* treat prompt-chain assets as governed artifacts,
+* version and review them like policies,
+* and track their effect on false approval and false block metrics.
+
+---
+
+## 8. Override Governance
+
+### 8.1 Why overrides are necessary
+
+No serious system can ban overrides entirely. Repositories are messy, emergencies happen, and the substrate itself will sometimes be wrong. The real question is not whether overrides exist, but whether they are disciplined.
+
+### 8.2 Required properties of an override
+
+A valid override should include:
+
+* actor identity,
+* scope,
+* duration,
+* reason code,
+* affected entities,
+* policy exception invoked,
+* and optional reviewer identity for high-risk cases.
+
+### 8.3 Override classes
+
+Useful override classes include:
+
+* **advisory bypass** — continue despite warning-level discrepancy
+* **temporary evidence deficit bypass** — proceed while a non-critical witness is unavailable
+* **emergency operational bypass** — time-sensitive action under heightened audit
+* **review-backed release bypass** — human-approved exception for protected branch or release flow
+
+These classes should not all carry the same authority or retention policy.
+
+### 8.4 Post-override obligations
+
+Some overrides should create automatic follow-up obligations:
+
+* regenerate missing witness,
+* update stale docs,
+* resolve open contradiction,
+* or review the affected policy threshold.
+
+Otherwise overrides become one-way leaks in the integrity hull.
+
+---
+
+## 9. Auditability and Forensics
+
+### 9.1 Decision replay
+
+A mature system should allow replay of a gate decision from historical records. Given an evaluation id, one should be able to reconstruct:
+
+* the policy profile,
+* the retrieved entities and levels,
+* the witness set,
+* the contradiction set,
+* the parity and confidence inputs,
+* and the final decision path.
+
+### 9.2 Forensic questions the system should answer
+
+Examples:
+
+* Why was this unsafe change allowed?
+* Why was this safe change blocked?
+* Which stale witness influenced the decision?
+* Which override suppressed the block?
+* Which policy version was active at the time?
+* Which lesson was injected from memory, and did it help or harm?
+
+If the substrate cannot answer these questions, it should not be trusted with high-impact decisions.
+
+### 9.3 Audit retention
+
+The system should define retention classes so that:
+
+* critical gate evaluations and overrides are retained longer,
+* low-value transient diagnostics may expire earlier,
+* and historical truth can still be reconstructed without storing infinite junk forever.
+
+---
+
+## 10. Metrics for Security and Trustworthiness
+
+The benchmark harness should include trust-specific metrics such as:
+
+* forged witness detection rate,
+* stale evidence misuse rate,
+* poisoned boundary detection rate,
+* contradiction flooding resilience,
+* unsafe override rate,
+* override recurrence by subsystem,
+* policy tamper detection latency,
+* and branch confusion error rate.
+
+These metrics should be reported alongside standard synchronization metrics. A system that is highly coherent under friendly conditions but gullible under adversarial conditions is not mature.
+
+---
+
+## 10A. Formal Adversarial Benchmark Suite
+
+### 10A.1 Purpose
+
+A security section without adversarial evaluation is just polite paranoia. If Contextual Sync is to influence gating, retrieval, remediation, and long-term engineering memory, then its trust machinery must be tested under deliberate pressure.
+
+The formal adversarial benchmark suite exists to answer five questions:
+
+1. Can the system detect stale, forged, or poisoned evidence?
+2. Can it resist retrieval distortion caused by malicious or misleading summaries?
+3. Can it keep policy and override abuse from silently hollowing out the gate?
+4. Can it avoid unsafe approvals under adversarial conditions?
+5. Can it fail safely and explainably when certainty collapses?
+
+### 10A.2 Security episode definition
+
+The core unit of evaluation should be an **adversarial synchronization episode**. Each episode contains:
+
+* a repository snapshot,
+* one or more poisoned, stale, forged, or manipulated artifacts,
+* a triggering task or change request,
+* a target synchronization objective,
+* hidden ground truth about which artifacts are malicious, stale, or trustworthy,
+* and expected acceptable system behaviors.
+
+The episode outcome is not merely whether the model wrote code. It is whether the full substrate behaved safely, correctly, and transparently.
+
+### 10A.3 Adversarial task families
+
+The benchmark should include at least the following attack families.
+
+#### 10A.3.1 Stale truth attacks
+
+A stale artifact looks authoritative and semantically plausible but no longer reflects current repository truth.
+
+Examples:
+
+* stale contract docs with unchanged filenames,
+* old trace witnesses attached to new code,
+* generated summaries left unrefreshed after contract change,
+* branch-local caches surviving checkout to a different truth state.
+
+Target behavior:
+
+* freshness-aware downgrading of authority,
+* contradiction surfacing,
+* refusal to treat stale artifacts as decisive support.
+
+#### 10A.3.2 Forged witness attacks
+
+A witness is syntactically well-formed but not authentically tied to the subject entity, commit, branch, or environment it claims to validate.
+
+Examples:
+
+* replayed CI pass from another commit,
+* copied trace artifact with altered metadata,
+* low-integrity test run masquerading as release-grade validation.
+
+Target behavior:
+
+* witness rejection or authority downgrade,
+* explicit explanation of binding mismatch,
+* no unsafe approval based on forged support.
+
+#### 10A.3.3 Boundary poisoning attacks
+
+Compressed boundary views are modified, stale, or generated misleadingly to bias retrieval or approval.
+
+Examples:
+
+* summary omits a critical side effect,
+* summary overstates backward compatibility,
+* summary claims nonexistent consumer safety,
+* summary subtly routes the agent away from the true contract nucleus.
+
+Target behavior:
+
+* provenance-aware distrust,
+* raw artifact fallback where needed,
+* contradiction or integrity warning when boundary and source diverge.
+
+#### 10A.3.4 Contradiction flooding attacks
+
+The graph is saturated with low-value or strategically noisy contradiction edges.
+
+Examples:
+
+* duplicate contradictions on the same issue,
+* many weak contradictions inserted around irrelevant artifacts,
+* stale resolved contradictions left open to raise noise.
+
+Target behavior:
+
+* deduplication,
+* severity-aware prioritization,
+* resistance to retrieval displacement caused by contradiction spam.
+
+#### 10A.3.5 Dependency distortion attacks
+
+The dependency substrate is manipulated so that blast radius and stale propagation become inaccurate.
+
+Examples:
+
+* false consumer edges added,
+* true contract edges removed or obscured,
+* parser ambiguity exploited to suppress imports/exports,
+* generated artifacts designed to confuse dependency extraction.
+
+Target behavior:
+
+* partial-analysis warnings,
+* conservative fallback when extraction is uncertain,
+* no false certainty from incomplete structural knowledge.
+
+#### 10A.3.6 Policy tamper attacks
+
+Policies are changed to weaken thresholds or normalize unsafe pathways.
+
+Examples:
+
+* lower minimum confidence threshold quietly,
+* downgrade blocking contradiction classes to warnings,
+* raise maximum auto blast radius without review.
+
+Target behavior:
+
+* policy version auditability,
+* tamper visibility,
+* strict attribution and, where configured, approval gating for policy changes.
+
+#### 10A.3.7 Override abuse attacks
+
+Overrides are used repeatedly or strategically to bypass the substrate.
+
+Examples:
+
+* habitual emergency override use,
+* repeated override for one failure class,
+* override without follow-up obligation closure,
+* override granted by actor outside intended authority tier.
+
+Target behavior:
+
+* durable audit trail,
+* misuse analytics,
+* escalation or friction for recurring override abuse.
+
+#### 10A.3.8 Cross-branch confusion attacks
+
+Artifacts valid on one branch are incorrectly treated as valid on another.
+
+Examples:
+
+* cached boundary view from feature branch used on release branch,
+* test witness reused after checkout,
+* contradiction state merged from incompatible snapshots.
+
+Target behavior:
+
+* branch-bound cache invalidation,
+* snapshot-aware evidence selection,
+* explicit stale-state marking after branch transition.
+
+#### 10A.3.9 Prompt and orchestration poisoning attacks
+
+Prompt templates, remediation instructions, or orchestration assets are altered to steer the AI toward unsafe behavior.
+
+Examples:
+
+* remediation prompt that tells the agent to ignore docs,
+* hidden template addition that downgrades witness importance,
+* orchestration script that treats contradiction classes as informational only.
+
+Target behavior:
+
+* governance treatment of orchestration assets,
+* version-aware analysis,
+* detection of behavioral drift after template change.
+
+#### 10A.3.10 Confidence gaming attacks
+
+An actor manipulates measurable signals to inflate confidence without improving true synchronization.
+
+Examples:
+
+* adding shallow tests that touch lines but not semantics,
+* injecting verbose doc updates that imitate parity without substance,
+* splitting risky changes across small commits to evade blast-radius thresholds,
+* producing many weak witnesses to drown one missing strong witness.
+
+Target behavior:
+
+* quality-weighted evidence scoring,
+* semantics-aware parity evaluation,
+* anti-gaming analytics.
+
+### 10A.4 Adversarial difficulty tiers
+
+Security episodes should also be tiered by difficulty.
+
+* **A1** — one manipulated artifact, easy provenance mismatch
+* **A2** — one stale artifact plus one plausible supporting artifact
+* **A3** — multiple manipulated artifacts across zones (e.g. doc + witness)
+* **A4** — multi-step distortion involving policy, override, or branch confusion
+* **A5** — coordinated attack with noise flooding, plausible provenance, and hidden ground truth
+
+This prevents the benchmark from flattering the system with cartoon-villain attacks only.
+
+### 10A.5 Ground-truth annotation for security episodes
+
+Each adversarial episode should provide a hidden answer key specifying:
+
+* which artifacts are trustworthy,
+* which are stale,
+* which are forged,
+* which are maliciously misleading,
+* the true synchronized outcome if any exists,
+* whether the correct system action is proceed, warn, abstain, remediate, or escalate,
+* and which explanations must be surfaced for a high-quality result.
+
+Ground truth should also indicate whether a safe degraded mode is acceptable. In some episodes the correct behavior is not to solve the task, but to refuse or escalate clearly.
+
+### 10A.6 Security baselines
+
+The adversarial suite should compare Contextual Sync against several weaker trust postures.
+
+#### 10A.6.1 Naive trust baseline
+
+All retrieved artifacts are treated roughly equally unless they obviously fail schema validation.
+
+This baseline reveals how much harm comes from missing provenance and freshness logic.
+
+#### 10A.6.2 Freshness-only baseline
+
+The system discounts stale artifacts but does not model contradictions, provenance strength, or policy governance.
+
+This tests whether freshness alone is enough. It usually is not.
+
+#### 10A.6.3 Provenance-only baseline
+
+The system requires attribution but does not strongly model contradiction salience or anti-gaming behavior.
+
+This tests whether attribution without cross-checking merely produces better-labeled confusion.
+
+#### 10A.6.4 Gate-without-audit baseline
+
+A gate exists, but decisions are not deeply replayable and overrides are weakly governed.
+
+This tests whether decision traceability materially improves trustworthiness.
+
+### 10A.7 Core adversarial metrics
+
+The benchmark should report metrics specific to trust and abuse resistance.
+
+#### 10A.7.1 Detection metrics
+
+* stale artifact detection rate
+* forged witness detection rate
+* poisoned boundary detection rate
+* policy tamper visibility rate
+* override abuse detection rate
+* branch confusion detection rate
+
+#### 10A.7.2 Safety metrics
+
+* unsafe approval rate under adversarial conditions
+* safe abstention rate under adversarial conditions
+* unsafe override completion rate
+* contradiction suppression failure rate
+* false trust rate for manipulated evidence
+
+#### 10A.7.3 Retrieval integrity metrics
+
+* malicious artifact retrieval rate
+* malicious artifact influence rate
+* trustworthy nucleus recall under attack
+* contradiction priority preservation under noise
+* fallback-to-raw-artifact rate when boundary integrity is uncertain
+
+#### 10A.7.4 Governance metrics
+
+* policy change audit completeness
+* override reason-code completeness
+* override recurrence by actor and subsystem
+* delayed follow-up completion rate after override
+
+#### 10A.7.5 Explainability metrics
+
+* percentage of blocks with evidence-citing explanations
+* percentage of approvals with replayable justification
+* percentage of abstentions whose rationale matches ground-truth failure class
+
+### 10A.8 Influence-weighted error analysis
+
+Not every malicious artifact matters equally. A misleading boundary view that is retrieved but ignored is less dangerous than one that changes the gate decision.
+
+Therefore the suite should distinguish:
+
+* **retrieval exposure** — the bad artifact entered context,
+* **reasoning influence** — the bad artifact materially affected decision or patch,
+* **decision corruption** — the bad artifact caused unsafe approval, false block, or wrong remediation.
+
+This layered error model is much more informative than simple detection counts.
+
+### 10A.9 Adversarial budget-sweep experiments
+
+Security should be tested under different token budgets as well. Low-budget settings are especially dangerous because the resolver may over-trust compressed or stale artifacts when it cannot afford full raw inspection.
+
+Run adversarial episodes under:
+
+* severe budget constraint,
+* moderate budget,
+* generous budget.
+
+Then measure how often the system:
+
+* falls back to raw artifacts,
+* over-trusts compressed views,
+* misses contradictions,
+* or incorrectly approves unsafe changes.
+
+This reveals whether the architecture stays honest under scarcity or becomes gullible when rushed.
+
+### 10A.10 Longitudinal adversarial memory tests
+
+Because Contextual Sync stores lessons in the evidence graph, the suite should test whether the system becomes more resistant to recurring attacks over time.
+
+Experimental conditions:
+
+* first exposure to an adversarial pattern,
+* later exposure with memory disabled,
+* later exposure with memory enabled.
+
+Measure whether prior lessons:
+
+* reduce unsafe approval,
+* improve stale or forged evidence detection,
+* or accidentally overgeneralize and create new false blocks.
+
+That last point matters. Memory can harden a system or make it neurotic.
+
+### 10A.11 Red-team generation protocol
+
+In addition to hand-authored adversarial episodes, the benchmark should include a red-team generation protocol. This can produce novel attack episodes by systematically mutating:
+
+* provenance metadata,
+* validity windows,
+* summary content,
+* branch bindings,
+* policy deltas,
+* contradiction statuses,
+* and witness subject mappings.
+
+Generated attacks should be filtered for realism. There is no glory in defeating absurd nonsense that would never occur in a real workflow.
+
+### 10A.12 Human red-team review
+
+A subset of episodes should be reviewed by human evaluators or security-minded engineers who assess:
+
+* whether the attack is realistic,
+* whether the system’s response is appropriate,
+* whether the explanation would help a real team,
+* and whether the architecture failed in a novel way not captured by current taxonomies.
+
+This human loop is vital because adversarial behavior evolves.
+
+### 10A.13 Release criteria for trust-sensitive deployment
+
+A trust-sensitive deployment should not proceed unless held-out adversarial results satisfy strong thresholds such as:
+
+* low unsafe approval under adversarial conditions,
+* high detection of stale and forged evidence,
+* replayable explanations for major decisions,
+* and no catastrophic failure mode in which a single poisoned artifact reliably hijacks the gate.
+
+Exact numeric thresholds depend on deployment domain, but the principle is not optional.
+
+### 10A.14 Why this suite matters
+
+The point of the adversarial suite is not to prove the system invincible. That would be nonsense. The point is to prove that the system behaves *honestly under attack*: it notices uncertainty, cites its reasons, degrades safely, and resists the most likely paths by which engineering truth gets warped.
+
+## 11. Human Factors and Trust Calibration
+
+### 11.1 The system must earn trust gradually
+
+Trust should emerge from repeated accurate behavior, transparent explanations, and honest abstention—not from authoritative UI styling or grand claims.
+
+### 11.2 Good abstention is a trust builder
+
+When the system says:
+
+> I cannot safely approve this because the witness is stale and the dependency hash changed upstream.
+
+and it can show the evidence, that is competence. Developers can work with that. The opposite—smug certainty based on rotten evidence—is how trust dies.
+
+### 11.3 Avoiding learned helplessness
+
+If the system blocks too often or explains poorly, developers will either ignore it or ritualistically override it. Therefore trust calibration must be an ongoing design concern, not an afterthought.
+
+---
+
+## 12. Minimal Security Requirements for a First Production Version
+
+A first production-worthy release should satisfy at least the following:
+
+1. all critical derived artifacts are attributable and versioned,
+2. witnesses are snapshot-bound and freshness-aware,
+3. policies and overrides are versioned and audited,
+4. boundary views are invalidated on relevant contract changes,
+5. gate decisions are replayable,
+6. safe degradation paths are implemented,
+7. contradiction records support provenance and resolution,
+8. and branch confusion protections exist at cache and witness boundaries.
+
+Without these, the system may still be useful as advisory tooling, but it should not be trusted as a strong gatekeeper.
+
+---
+
+## 13. Conclusion
+
+Security in Contextual Sync is not a side topic. It is central to whether the architecture remains a disciplined synchronization substrate or degenerates into a confidence amplifier for stale, forged, or manipulated truth.
+
+The central principle is simple: no layer should be trusted beyond the evidence it can actually justify. Boundary views must be attributable. Witnesses must be fresh and bound to the right snapshot. Contradictions must be explicit and auditable. Policies must be governed. Overrides must leave scars in history. And when the machine does not know enough, it must abstain plainly instead of improvising certainty.
+
+A sync system that cannot defend its own truth machinery is just another source of drift with better branding.
+
+---
+
+## 14. Immediate Next Expansion Targets
+
+This companion section can be deepened next in several directions:
+
+1. formal adversarial benchmark suite for Contextual Sync
+2. cryptographic or signature-backed witness integrity models
+3. policy governance and multi-actor approval design
+4. privacy considerations for traces and evidence retention
+5. secure multi-agent coordination and authority partitioning
+6. incident response playbooks when the sync substrate itself is wrong
+
+---
