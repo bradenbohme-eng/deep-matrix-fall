@@ -10,6 +10,7 @@ import Architecture from "./pages/Architecture";
 import HQ from "./pages/HQ";
 import ContextLab from "./pages/ContextLab";
 import MemoryInspector from "./pages/MemoryInspector";
+import MissionControl from "./pages/MissionControl";
 import { ImageEditor } from "./components/ImageEditor";
 
 const queryClient = new QueryClient();
