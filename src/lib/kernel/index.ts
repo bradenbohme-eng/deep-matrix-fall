@@ -30,3 +30,5 @@ export {
   type CreateProposalInput,
   type ProposalRecord,
 } from './memoryProposals';
+
+export { seedContextSyncAtom } from './seedContextSync';
