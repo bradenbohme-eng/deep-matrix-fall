@@ -203,11 +203,13 @@ export function createSwarmSimulation(query: string): {
 
     // Update agent states based on phase
     const phaseAgentMap: Record<ReasoningPhase, AgentRole[]> = {
-      analysis: ['planner', 'researcher'],
+      analysis: ['planner', 'researcher', 'forecaster'],
       research: ['researcher', 'executor'],
       synthesis: ['planner', 'executor'],
       validation: ['verifier'],
       audit: ['auditor', 'verifier'],
+      crucible: ['inquisitor', 'verifier'],
+      forecast: ['forecaster', 'planner'],
     };
 
     const activeRoles = phaseAgentMap[phase] || ['planner'];

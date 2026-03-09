@@ -50,3 +50,6 @@ verify_jwt = false
 
 [functions.context-sync]
 verify_jwt = false
+
+[functions.polycaste-crucible]
+verify_jwt = false
