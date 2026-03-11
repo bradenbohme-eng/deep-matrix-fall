@@ -1,11 +1,13 @@
-// Right Drawer Content - AI Chat (LIVE), Memory (LIVE), Docs, Surveillance, Evolution, Settings, Approvals
+// Right Drawer Content - AI Chat (LIVE with inline approvals), Memory (LIVE), Docs, Surveillance, Evolution, Settings, Approvals
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Button } from '@/components/ui/button';
 import ReactMarkdown from 'react-markdown';
 import { streamHQChat, type ChatMessage } from '@/lib/hqChatService';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { fetchPendingActions, approveAction, rejectAction, subscribeToActions, type AIAction } from '@/lib/autonomyService';
 import SurveillancePanel from '@/components/matrix/SurveillancePanel';
 import SelfEvolutionPanel from '@/components/matrix/SelfEvolutionPanel';
 import MatrixSettingsPanel from '@/components/matrix/MatrixSettingsPanel';
@@ -14,7 +16,7 @@ import ApprovalPanel from './ApprovalPanel';
 import { 
   Brain, MessageCircle, FileText, Eye, Sparkles, Settings, 
   Send, Bot, Loader2, Database, Network, Layers, CheckCircle2,
-  Shield,
+  Shield, Check, X, Zap, Workflow,
 } from 'lucide-react';
 import type { RightDrawerTab } from './types';
 
@@ -23,19 +25,75 @@ interface RightDrawerContentProps {
   width: number;
 }
 
-// ─── LIVE AI Chat Panel (replaces fake chat) ───
+// ─── Inline Approval Card ───
+const InlineApprovalCard: React.FC<{ action: AIAction; onRefresh: () => void }> = ({ action, onRefresh }) => {
+  const [processing, setProcessing] = useState(false);
+  const iconMap: Record<string, React.ElementType> = {
+    memory_write: Database, evolution_proposal: Zap, task_create: Workflow,
+    plan_create: Workflow, entity_create: Brain, config_change: Settings,
+  };
+  const Icon = iconMap[action.action_type] || Brain;
+
+  const handle = async (approve: boolean) => {
+    setProcessing(true);
+    if (approve) {
+      await approveAction(action.id);
+      toast.success('Approved & executed');
+    } else {
+      await rejectAction(action.id);
+      toast.info('Rejected');
+    }
+    setProcessing(false);
+    onRefresh();
+  };
+
+  return (
+    <div className="bg-warning/5 border border-warning/20 rounded-lg p-2.5 my-2">
+      <div className="flex items-center gap-2 mb-2">
+        <Icon className="w-3.5 h-3.5 text-warning" />
+        <span className="text-[10px] font-mono text-warning uppercase">{action.action_type.replace(/_/g, ' ')}</span>
+      </div>
+      <div className="text-xs font-mono text-foreground mb-1">{action.title}</div>
+      {action.description && <div className="text-[10px] text-muted-foreground mb-2">{action.description}</div>}
+      <div className="flex gap-2">
+        <Button size="sm" disabled={processing} onClick={() => handle(true)}
+          className="flex-1 h-6 text-[10px] bg-success/20 hover:bg-success/30 text-success border border-success/30">
+          {processing ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3 mr-1" />} Approve
+        </Button>
+        <Button size="sm" variant="outline" disabled={processing} onClick={() => handle(false)}
+          className="flex-1 h-6 text-[10px] border-destructive/30 text-destructive hover:bg-destructive/10">
+          <X className="w-3 h-3 mr-1" /> Reject
+        </Button>
+      </div>
+    </div>
+  );
+};
+
+// ─── LIVE AI Chat Panel with inline approvals ───
 const LiveChatPanel: React.FC = () => {
   const [input, setInput] = useState('');
   const [isStreaming, setIsStreaming] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
+  const [pendingActions, setPendingActions] = useState<AIAction[]>([]);
   const [messages, setMessages] = useState<{ id: string; role: 'user' | 'assistant'; content: string; timestamp: Date }[]>([
     { id: '1', role: 'assistant', content: 'HQ Intelligence online. Full cognitive pipeline active — memory, reasoning, planning, and autonomous actions are all available.\n\nI can **remember** things, **create plans**, **assign tasks** to agents, **propose improvements**, and **search** my own knowledge graph. How can I assist?', timestamp: new Date() },
   ]);
 
+  const refreshPending = useCallback(async () => {
+    const actions = await fetchPendingActions();
+    setPendingActions(actions);
+  }, []);
+
+  useEffect(() => {
+    refreshPending();
+    const unsub = subscribeToActions(refreshPending);
+    return unsub;
+  }, [refreshPending]);
+
   useEffect(() => {
     if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-  }, [messages]);
+  }, [messages, pendingActions]);
 
   const handleSend = useCallback(async () => {
     if (!input.trim() || isStreaming) return;
@@ -71,7 +129,12 @@ const LiveChatPanel: React.FC = () => {
     await streamHQChat({
       messages: apiMessages,
       onDelta: upsertAssistant,
-      onDone: () => { setIsStreaming(false); abortRef.current = null; },
+      onDone: () => {
+        setIsStreaming(false);
+        abortRef.current = null;
+        // Check for new pending actions after response
+        setTimeout(refreshPending, 1000);
+      },
       onError: (err) => {
         setIsStreaming(false);
         abortRef.current = null;
@@ -80,7 +143,7 @@ const LiveChatPanel: React.FC = () => {
       },
       signal: controller.signal,
     });
-  }, [input, isStreaming, messages]);
+  }, [input, isStreaming, messages, refreshPending]);
 
   return (
     <div className="h-full flex flex-col">
@@ -88,6 +151,11 @@ const LiveChatPanel: React.FC = () => {
         <MessageCircle className="w-5 h-5 text-primary" />
         <span className="font-mono text-sm font-bold">HQ INTELLIGENCE</span>
         <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-success/20 text-success">LIVE</span>
+        {pendingActions.length > 0 && (
+          <span className="text-[9px] font-mono px-1.5 py-0.5 rounded-full bg-warning/20 text-warning ml-auto">
+            {pendingActions.length} pending
+          </span>
+        )}
       </div>
       
       <div ref={scrollRef} className="flex-1 overflow-y-auto p-3">
@@ -110,6 +178,19 @@ const LiveChatPanel: React.FC = () => {
               </div>
             </div>
           ))}
+
+          {/* Inline approval cards for pending actions */}
+          {pendingActions.length > 0 && !isStreaming && (
+            <div className="border-t border-warning/20 pt-2 mt-2">
+              <div className="text-[10px] font-mono uppercase text-warning mb-1 flex items-center gap-1">
+                <Shield className="w-3 h-3" /> Pending Approvals
+              </div>
+              {pendingActions.slice(0, 5).map(action => (
+                <InlineApprovalCard key={action.id} action={action} onRefresh={refreshPending} />
+              ))}
+            </div>
+          )}
+
           {isStreaming && messages[messages.length - 1]?.role !== 'assistant' && (
             <div className="flex items-center gap-2 px-3 py-2">
               <Loader2 className="w-3 h-3 text-primary animate-spin" />
@@ -151,27 +232,31 @@ const LiveChatPanel: React.FC = () => {
 
 // ─── LIVE Memory Panel ───
 const LiveMemoryPanel: React.FC = () => {
-  const [stats, setStats] = useState<{ hot: number; warm: number; cold: number; frozen: number; total: number; entities: number; chains: number; avgKappa: number } | null>(null);
+  const [stats, setStats] = useState<{ hot: number; warm: number; cold: number; frozen: number; total: number; entities: number; chains: number; avgKappa: number; pendingActions: number } | null>(null);
+  const [recentAtoms, setRecentAtoms] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const load = async () => {
       try {
-        const [hot, warm, cold, frozen, entities, chains] = await Promise.all([
+        const [hot, warm, cold, frozen, entities, chains, pending, recent] = await Promise.all([
           supabase.from('aimos_memory_atoms').select('*', { count: 'exact', head: true }).eq('memory_level', 'hot'),
           supabase.from('aimos_memory_atoms').select('*', { count: 'exact', head: true }).eq('memory_level', 'warm'),
           supabase.from('aimos_memory_atoms').select('*', { count: 'exact', head: true }).eq('memory_level', 'cold'),
           supabase.from('aimos_memory_atoms').select('*', { count: 'exact', head: true }).eq('memory_level', 'frozen'),
           supabase.from('aimos_entities').select('*', { count: 'exact', head: true }),
           supabase.from('aimos_reasoning_chains').select('confidence_kappa').order('created_at', { ascending: false }).limit(10),
+          supabase.from('ai_action_queue').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
+          supabase.from('aimos_memory_atoms').select('content, memory_level, confidence_score, content_type, created_at').order('created_at', { ascending: false }).limit(5),
         ]);
         const ks = (chains.data || []).filter((c: any) => c.confidence_kappa).map((c: any) => c.confidence_kappa as number);
         const avgK = ks.length > 0 ? ks.reduce((a, b) => a + b, 0) / ks.length : 0;
         setStats({
           hot: hot.count || 0, warm: warm.count || 0, cold: cold.count || 0, frozen: frozen.count || 0,
           total: (hot.count || 0) + (warm.count || 0) + (cold.count || 0) + (frozen.count || 0),
-          entities: entities.count || 0, chains: ks.length, avgKappa: avgK,
+          entities: entities.count || 0, chains: ks.length, avgKappa: avgK, pendingActions: pending.count || 0,
         });
+        setRecentAtoms(recent.data || []);
       } catch (e) { console.error(e); }
       setLoading(false);
     };
@@ -225,6 +310,31 @@ const LiveMemoryPanel: React.FC = () => {
                 <CheckCircle2 className="w-4 h-4 text-primary/70" />
                 <span className="text-xs font-mono flex-1">Chains — {stats.chains} recent</span>
               </div>
+              {stats.pendingActions > 0 && (
+                <div className="bg-warning/10 rounded p-2.5 flex items-center gap-2 border border-warning/20">
+                  <Shield className="w-4 h-4 text-warning" />
+                  <span className="text-xs font-mono flex-1 text-warning">{stats.pendingActions} pending approvals</span>
+                </div>
+              )}
+            </div>
+
+            {/* Recent atoms */}
+            <div className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground mt-3">Recent Memories</div>
+            <div className="space-y-1.5">
+              {recentAtoms.map((atom, i) => (
+                <div key={i} className="bg-muted/10 rounded p-2 border border-border/50">
+                  <div className="flex items-center gap-1.5 mb-1">
+                    <span className={`text-[8px] font-mono px-1 py-0.5 rounded ${
+                      atom.memory_level === 'hot' ? 'bg-destructive/20 text-destructive' :
+                      atom.memory_level === 'warm' ? 'bg-warning/20 text-warning' :
+                      'bg-muted text-muted-foreground'
+                    }`}>{atom.memory_level?.toUpperCase()}</span>
+                    <span className="text-[8px] font-mono text-muted-foreground">{atom.content_type}</span>
+                    <span className="text-[8px] font-mono text-muted-foreground/50 ml-auto">κ{Math.round((atom.confidence_score || 0.5) * 100)}%</span>
+                  </div>
+                  <p className="text-[10px] text-foreground/70 line-clamp-2">{atom.content?.slice(0, 120)}</p>
+                </div>
+              ))}
             </div>
           </div>
         )}
